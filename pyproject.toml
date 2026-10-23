@@ -1,0 +1,22 @@
+[project]
+name = "ai-operations-workbench"
+version = "0.1.0"
+description = "Connect AI usage to task evidence and reviewable routing recommendations."
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi>=0.115,<1",
+  "uvicorn>=0.30,<1",
+  "axon-llm",
+  "ostiari",
+]
+
+[dependency-groups]
+dev = ["pytest>=8,<9", "httpx>=0.28,<1"]
+
+[tool.uv.sources]
+axon-llm = { git = "https://github.com/hk-775/axonllm", rev = "e24b6dd9a3545132d746a298ee34e35b3235f12a" }
+ostiari = { git = "https://github.com/hk-775/ostiari", rev = "d9abfcf576535327a4aee93d93cc690e85f88a53" }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

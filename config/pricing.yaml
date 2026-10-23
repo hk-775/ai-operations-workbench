@@ -1,0 +1,15 @@
+# USD per 1,000 tokens. Source pages and verification date are in prices.json.
+providers:
+  openai:
+    gpt-4.1-2025-04-14:
+      prompt_token_cost: 0.002
+      completion_token_cost: 0.008
+      cached_token_cost: 0.0005
+    gpt-4.1-mini-2025-04-14:
+      prompt_token_cost: 0.0004
+      completion_token_cost: 0.0016
+      cached_token_cost: 0.0001
+    gpt-4o-mini-2024-07-18:
+      prompt_token_cost: 0.00015
+      completion_token_cost: 0.0006
+      cached_token_cost: 0.000075

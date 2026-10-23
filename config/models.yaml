@@ -1,0 +1,28 @@
+models:
+  - name: gpt-4.1-2025-04-14
+    description: Recorded premium baseline
+    capabilities: [chat]
+    routing_strategy: round-robin
+    providers:
+      - provider: openai
+        model_id: gpt-4.1-2025-04-14
+        weight: 1
+        fallback_order: 0
+  - name: gpt-4.1-mini-2025-04-14
+    description: Lower-cost candidate
+    capabilities: [chat]
+    routing_strategy: round-robin
+    providers:
+      - provider: openai
+        model_id: gpt-4.1-mini-2025-04-14
+        weight: 1
+        fallback_order: 0
+  - name: gpt-4o-mini-2024-07-18
+    description: Compact candidate
+    capabilities: [chat]
+    routing_strategy: round-robin
+    providers:
+      - provider: openai
+        model_id: gpt-4o-mini-2024-07-18
+        weight: 1
+        fallback_order: 0

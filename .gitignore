@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+.pytest_cache/
+.state/
+artifacts/
+.env
+node_modules/
+test-results/
+playwright-report/
+*.partial
+.DS_Store

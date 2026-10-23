@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0D1B2A">
+  <title>AI Operations Workbench</title>
+  <link rel="stylesheet" href="/static/styles.css">
+  <script defer src="/static/app.js"></script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to workspace</a>
+  <div class="shell">
+    <aside class="sidebar">
+      <a class="brand" href="#" aria-label="AI Operations Workbench home">
+        <span class="brandmark" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span>Workbench<small>AI OPERATIONS</small></span>
+      </a>
+      <div class="workspace"><span class="avatar">S</span><span>Streamline<small>Synthetic workspace</small></span><span class="workspace-arrow">⌄</span></div>
+      <p class="nav-label">WORKSPACE</p>
+      <nav aria-label="Workspace">
+        <button data-view="overview" class="nav-item active"><span aria-hidden="true">◫</span> Overview</button>
+        <button data-view="tasks" class="nav-item"><span aria-hidden="true">≡</span> Task explorer</button>
+        <button data-view="compare" class="nav-item"><span aria-hidden="true">⇄</span> Model comparison</button>
+        <button data-view="proposal" class="nav-item"><span aria-hidden="true">↗</span> Routing proposal</button>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="engine-row"><span class="engine-dot"></span><span>AxonLLM <small>MODEL ROUTING</small></span></div>
+        <div class="engine-row"><span class="engine-dot"></span><span>Ostiari <small>GOVERNANCE</small></span></div>
+        <div class="sidebar-note">A local demonstration.<br>Every recommendation has evidence.</div>
+      </div>
+    </aside>
+    <div class="content">
+      <header class="topbar">
+        <span class="breadcrumb">Workspace <span>/</span> <strong id="current-view">Overview</strong></span>
+        <div class="top-actions"><span class="mode-badge"><span></span> Local demonstration</span><button class="button subtle" id="sources-button">Connect usage <span aria-hidden="true">＋</span></button></div>
+      </header>
+      <main id="main" tabindex="-1">
+        <section class="page-heading">
+          <p class="eyebrow">COST · QUALITY · DECISIONS</p>
+          <h1>Know what an AI outcome costs.</h1>
+          <p class="lede">Follow the spend. Test the alternatives. Make a decision you can explain.</p>
+        </section>
+        <section class="journey" aria-label="Demonstration workflow">
+          <button data-step="connect" class="journey-step"><span class="step-number">01</span><span>Connect usage<small>Start with recorded evidence</small></span></button>
+          <div class="connector"><span></span></div>
+          <button data-step="tasks" class="journey-step"><span class="step-number">02</span><span>Inspect a task<small>See each call and its cost</small></span></button>
+          <div class="connector"><span></span></div>
+          <button data-step="compare" class="journey-step"><span class="step-number">03</span><span>Evaluate models<small>Check the same workload</small></span></button>
+          <div class="connector"><span></span></div>
+          <button data-step="proposal" class="journey-step"><span class="step-number">04</span><span>Review a proposal<small>Keep the evidence attached</small></span></button>
+          <button id="motion" class="motion-button" aria-label="Pause workflow animation" aria-pressed="false">Ⅱ</button>
+        </section>
+        <div id="notice" role="status" aria-live="polite"></div>
+        <div id="view"></div>
+        <footer class="page-footer"><span>Built with AxonLLM + Ostiari</span><span>API estimates · hardware unmeasured · no production routing changes</span></footer>
+      </main>
+    </div>
+  </div>
+  <dialog id="sources">
+    <div class="dialog-head"><div><p class="eyebrow">SOURCE CONNECTION</p><h2>Start with evidence.</h2></div><button class="icon-button" data-close="sources" aria-label="Close source dialog">×</button></div>
+    <p>Connect the bundled model run, or import a compatible Workbench recording. Both paths validate usage and prevent duplicate charges in the ledger.</p>
+    <div class="source-option"><span class="source-symbol">A</span><div><h3>Recorded AxonLLM usage</h3><p>Synthetic support cases · three models<br>Token usage, responses, and task latency</p></div><span class="tag">JSON</span></div>
+    <button class="button primary wide" id="connect">Connect recorded run <span>→</span></button>
+    <div class="divider"><span>or import an existing run</span></div>
+    <label class="upload-label">Choose a recording <input id="upload" type="file" accept=".json,application/json"></label>
+    <p class="fine">Native Codex, Cursor, Claude Code and AWS billing connectors are planned. This demo imports the recorded two-stage AxonLLM workflow.</p>
+  </dialog>
+  <dialog id="detail" class="detail-dialog"><div id="detail-content"></div></dialog>
+  <dialog id="about"><div class="dialog-head"><h2>Connected components</h2><button class="icon-button" data-close="about" aria-label="Close component dialog">×</button></div><div id="about-content"></div></dialog>
+</body>
+</html>

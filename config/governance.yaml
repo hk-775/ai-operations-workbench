@@ -1,0 +1,7 @@
+allow:
+  - support.draft
+  - routing.propose
+block:
+  - billing.refund
+  - subscription.cancel
+  - routing.activate
