@@ -22,6 +22,19 @@ jobs:
       fail-fast: false
       matrix:
         python: ["3.12", "3.13"]
+    services:
+      postgres:
+        image: postgres:16.13-alpine@sha256:4e6e670bb069649261c9c18031f0aded7bb249a5b6664ddec29c013a89310d50
+        env:
+          POSTGRES_USER: workbench
+          POSTGRES_DB: workbench
+          POSTGRES_PASSWORD: isolated-ci-database
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U workbench -d workbench"
+          --health-interval 5s --health-timeout 3s --health-retries 20
+    env:
+      WORKBENCH_TEST_DATABASE_URL: postgresql+psycopg://workbench:isolated-ci-database@127.0.0.1:5432/workbench
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -38,6 +51,19 @@ jobs:
     name: Browser journey
     runs-on: ubuntu-24.04
     timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16.13-alpine@sha256:4e6e670bb069649261c9c18031f0aded7bb249a5b6664ddec29c013a89310d50
+        env:
+          POSTGRES_USER: workbench
+          POSTGRES_DB: workbench
+          POSTGRES_PASSWORD: isolated-ci-database
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U workbench -d workbench"
+          --health-interval 5s --health-timeout 3s --health-retries 20
+    env:
+      WORKBENCH_TEST_DATABASE_URL: postgresql+psycopg://workbench:isolated-ci-database@127.0.0.1:5432/workbench
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -53,6 +79,7 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npm test -- --reporter=line
+      - run: npx playwright test --config=playwright.pilot.config.js --reporter=line
       - run: git diff --exit-code -- uv.lock package-lock.json
       - name: Keep browser evidence
         if: always()
@@ -64,6 +91,24 @@ jobs:
             test-results/
           retention-days: 7
           if-no-files-found: ignore
+
+  pilot-container:
+    name: Pilot container and restore
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Build and start an isolated pilot
+        run: |
+          python3 scripts/setup_pilot.py
+          docker compose --env-file .pilot/compose.env -f compose.pilot.yaml up --build --wait
+      - name: Verify bootstrap, offline evaluation, and backup restore
+        run: python3 scripts/check_pilot_stack.py
+      - name: Clean up isolated CI services
+        if: always()
+        run: docker compose --env-file .pilot/compose.env -f compose.pilot.yaml down --volumes
 
   secrets:
     name: Secret scan

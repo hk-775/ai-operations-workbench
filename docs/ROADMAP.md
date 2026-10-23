@@ -18,7 +18,14 @@ The support example gives us an inspectable decision contract. Its “no model
 qualifies” result exercises the product's refusal to recommend an unsupported
 cost reduction.
 
-## 2. Coding-task demonstration
+## 2. Completed first production milestone
+
+The first production milestone has now added a single-team pilot alongside the
+support demonstration: local accounts/RBAC, an AxonLLM application connector,
+PostgreSQL persistence, recoverable evaluation jobs, and saved read-only reviews.
+See the [pilot guide](PILOT.md). The milestones below remain separate follow-up work.
+
+## 3. Coding-task demonstration
 
 Add a reproducible **bug fix plus tests** workflow to address the Codex, Cursor,
 and Claude Code customer conversations directly.
@@ -35,10 +42,12 @@ the entire task, including repair attempts and tool steps. Compare:
 Do not replace the support recording or relabel it as coding evidence. A coding
 adapter needs its own dataset, contract, artifact format, and integrity checks.
 
-## 3. One authentic usage connector
+## 4. Expand connector coverage
 
-Choose one source with reliable exported event IDs and usage semantics. Implement
-and test that connector before advertising a multi-tool company dashboard.
+Implemented for the first pilot: AxonLLM application events with stable
+application IDs, a durable local outbox, authenticated ingestion, source-scoped
+deduplication, and explicit usage/attempt-coverage semantics. This does not
+capture every AI tool or reconcile company-wide spending.
 
 The common event contract needs source, workspace/team, task/session, parent call,
 provider and model, timestamps, reported usage, cost basis, currency, and stable
@@ -49,7 +58,7 @@ Add the remaining Codex, Cursor, Claude Code, and Bedrock sources only after
 validating what their supported exports and APIs actually expose. Product names
 in the roadmap do not imply working integrations.
 
-## 4. Reconcile the bill and attribute outcomes
+## 5. Reconcile the bill and attribute outcomes
 
 Consider AxonLLM Ledger for provider/cloud billing ingestion, then join its
 financial records to the operational task events. Keep invoice reconciliation
@@ -59,10 +68,12 @@ Decide how to attribute subscriptions, shared infrastructure, retries, caches,
 human review, and incomplete traces. Unknown values must remain visible instead
 of being converted to zero.
 
-## 5. Production evidence and controlled changes
+## 6. Production evidence and controlled changes
 
-Add representative held-out workloads, repeated evaluation, independent review,
-provenance and access control, persistence/retention, and observable job handling.
+Provenance, role-based access, durable jobs/results, restart recovery, and
+readiness checks are in the pilot. Next add representative held-out workloads,
+repeated evaluation, independent review, SSO/MFA, scheduled retention, billing
+reconciliation, operational monitoring/alerts, and load/restore objectives.
 
 Only after that, design a reviewed rollout through AxonLLM/Ostiari with a
 canary, rollback, and outcome monitoring. A proposal's projected API savings

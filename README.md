@@ -5,7 +5,9 @@
 [![CI](https://github.com/hk-775/ai-operations-workbench/actions/workflows/ci.yml/badge.svg)](https://github.com/hk-775/ai-operations-workbench/actions/workflows/ci.yml)
 [![License: MIT-0](https://img.shields.io/badge/License-MIT--0-7c3aed.svg)](LICENSE)
 
-Workbench is a separate, runnable local product demonstration. Its first workflow is:
+Workbench connects captured AI usage to task evidence and reviewable model choices.
+It includes a no-key local demonstration and an authenticated single-team pilot.
+The core workflow is:
 
 **Connect recorded usage → inspect an expensive support task → evaluate alternatives → export a justified routing proposal.**
 
@@ -17,7 +19,7 @@ You can explore and regrade that recording without an API key or new model charg
 
 **[Download a release](https://github.com/hk-775/ai-operations-workbench/releases)**
 · [Methodology](docs/METHODOLOGY.md) · [Architecture](docs/ARCHITECTURE.md)
-· [Roadmap](docs/ROADMAP.md)
+· [Team pilot setup](docs/PILOT.md) · [Roadmap](docs/ROADMAP.md)
 
 ## Run it
 
@@ -52,12 +54,35 @@ There is no routing activation endpoint.
 Dependencies download during installation. The browser workflow and evaluation
 replay then run locally; they do not call a model provider.
 
+## Run the authenticated team pilot
+
+The first production milestone adds PostgreSQL persistence, team roles, a durable
+AxonLLM event connector, supervised evaluation jobs, and saved routing reviews.
+
+```bash
+uv run --locked python scripts/setup_pilot.py
+docker compose --env-file .pilot/compose.env -f compose.pilot.yaml up --build -d
+docker compose --env-file .pilot/compose.env -f compose.pilot.yaml exec app \
+  python -m workbench.pilot init --team "My AI team" --username admin
+```
+
+Choose your administrator password at the prompt, then open
+**http://127.0.0.1:8768/**. Docker is required. The
+[pilot guide](docs/PILOT.md) covers connecting an application, token rotation,
+job recovery, backups, remote HTTPS configuration, and current limits.
+
+Pilot mode is opt-in (`WORKBENCH_MODE=pilot`); the default local demo retains its
+original behavior. Usage ingestion handles application metadata; quality
+evaluation currently requires a matching saved support-v1 recording.
+
 ## What is working
 
 | Capability | Current implementation |
 |---|---|
-| Usage connection | Bundled AxonLLM recording or compatible JSON import |
-| Ledger | Local SQLite; transactional imports and provider-event deduplication |
+| Usage connection | AxonLLM metadata capture with a durable outbox and authenticated delivery; bundled recordings and compatible JSON import |
+| Ledger | PostgreSQL in pilot mode; transactional source-scoped application-event deduplication and Decimal API estimates. Original demo uses SQLite |
+| Team access | Single-team pilot with administrator, analyst, viewer roles; revocable sessions and source tokens |
+| Job persistence | Pilot jobs, results, and routing reviews survive restarts; leases, retry recovery, cancellation, and independent timeouts |
 | Task inspection | Synthetic input, both requests and responses, token usage, API estimates, observed latency |
 | Model evaluation | Deterministic decision checks across all saved cases; failures retained |
 | Governance | Actual Ostiari Guard in the evaluation subprocess; draft permission and three blocked action controls |
@@ -67,8 +92,8 @@ replay then run locally; they do not call a model provider.
 
 **Not yet implemented:** native Codex, Cursor, Claude Code, or Bedrock billing
 connectors; subscription invoice reconciliation; a coding workload; multi-company
-authentication; or production routing changes. This is a support-workflow
-demonstration, not a finished company-wide observability service.
+SSO/MFA; arbitrary workload evaluators; or production routing changes. The pilot
+is bounded to a single team, with a support-workflow evaluation contract.
 
 ## See the decision
 
@@ -153,12 +178,15 @@ Browser checks require Node 22 or newer:
 npm ci
 npx playwright install chromium
 npm test
+npx playwright test --config=playwright.pilot.config.js
 ```
 
 Browser tests use a separate temporary ledger and port 18769. Set
 `WORKBENCH_TEST_PORT` if that port is occupied. They cover the full journey,
 cost deduplication, proposal export and threshold changes, animation controls,
-mobile layouts, and invalid imports.
+mobile layouts, and invalid imports. Pilot browser tests use port 18770 and
+their own database/schema. Set `WORKBENCH_TEST_DATABASE_URL_FILE` to exercise
+the pilot against a dedicated PostgreSQL test database; CI does this automatically.
 
 Local state lives in `.state/`; generated reports and screenshots go in
 `artifacts/`. Both are ignored by Git. To use a fresh workspace without deleting
@@ -169,14 +197,16 @@ WORKBENCH_STATE_DIR=/tmp/workbench-new-demo \
   uv run --locked uvicorn workbench.app:app --host 127.0.0.1 --port 8767
 ```
 
-Evaluation results are cached for the running server. After restarting, connected
-recordings persist and you can replay their checks again.
+In demo mode, evaluation results are cached for the running server; recordings
+persist and can be replayed after a restart. Pilot mode persists the jobs,
+evaluation results, and saved reviews in PostgreSQL.
 
 ## Design and next steps
 
 - [Methodology and result interpretation](docs/METHODOLOGY.md)
 - [Component boundaries, data flow, and current limitations](docs/ARCHITECTURE.md)
 - [Product direction and staged roadmap](docs/ROADMAP.md)
+- [Authenticated team pilot and operations guide](docs/PILOT.md)
 - [MIT-0 license](LICENSE)
 - [Contributing](CONTRIBUTING.md), [support](SUPPORT.md), and [security reporting](SECURITY.md)
 - [v0.1.0 release notes](docs/RELEASE-0.1.0.md)

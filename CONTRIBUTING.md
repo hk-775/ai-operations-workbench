@@ -19,10 +19,16 @@ For browser changes, install Node 22, then run:
 npm ci
 npx playwright install chromium
 npm test
+npx playwright test --config=playwright.pilot.config.js
 ```
 
 Browser tests start their own server and temporary ledger. They replay the
 bundled recording without provider credentials or new model calls.
+Pilot checks use isolated test schemas when `WORKBENCH_TEST_DATABASE_URL_FILE`
+points to a dedicated PostgreSQL test database. See [PILOT.md](docs/PILOT.md).
+For container changes, run `uv run --locked python scripts/check_pilot_stack.py`
+against the local pilot stack. It tests bootstrap, evaluation, and backup restore
+in temporary databases; CI runs the same check.
 
 Run the app with `uv run --locked uvicorn workbench.app:app --host 127.0.0.1 --port 8767`.
 See [README.md](README.md) for the guided workflow.
@@ -38,6 +44,8 @@ See [README.md](README.md) for the guided workflow.
 - Keep replay offline. New live collection must remain a separate, explicit,
   bounded operation.
 - Do not activate production routing through this local demonstration.
+- Preserve pilot role/source boundaries, job fencing and restart persistence.
+  Never treat fixtures as a measured routing recommendation.
 - Use the shared stage colors and preserve keyboard access, mobile layouts,
   pause controls, and reduced-motion behavior.
 

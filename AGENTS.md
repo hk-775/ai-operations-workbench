@@ -1,6 +1,7 @@
 # AI Operations Workbench
 
-This is a separate local product demonstration. Do not change the upstream
+This is a separate product with a local demo and an opt-in single-team pilot.
+Do not change the upstream
 AxonLLM, Ostiari, or Ledger repositories to make this app work.
 
 - Use `uv sync --locked` and `uv run --locked`.
@@ -22,4 +23,9 @@ AxonLLM, Ostiari, or Ledger repositories to make this app work.
   Animated workflow markers are small solid circles with pause and
   reduced-motion support.
 - Keep monetary values as Decimal text. Missing cost is unknown, not zero.
+- Pilot mode requires PostgreSQL, authenticated access, server-derived team/source
+  scope, metadata-only ingestion, and durable worker leases/results. Preserve the
+  default loopback-only demo. No paid model calls are part of verification.
+- Keep `.pilot/`, outboxes, token/password files, and private recordings out of Git
+  and Docker build contexts. Schema changes require explicit migration behavior.
 - Run the meaningful accounting, recommendation, integration, and browser tests.

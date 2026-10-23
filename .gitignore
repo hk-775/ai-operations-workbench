@@ -9,3 +9,6 @@ test-results/
 playwright-report/
 *.partial
 .DS_Store
+.pilot/
+*.outbox.db*
+*.outbox.db.inflight/
