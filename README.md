@@ -2,6 +2,9 @@
 
 **Follow the cost of an AI task, inspect its outcome, and compare models before changing a route.**
 
+[![CI](https://github.com/hk-775/ai-operations-workbench/actions/workflows/ci.yml/badge.svg)](https://github.com/hk-775/ai-operations-workbench/actions/workflows/ci.yml)
+[![License: MIT-0](https://img.shields.io/badge/License-MIT--0-7c3aed.svg)](LICENSE)
+
 Workbench is a separate, runnable local product demonstration. Its first workflow is:
 
 **Connect recorded usage → inspect an expensive support task → evaluate alternatives → export a justified routing proposal.**
@@ -10,17 +13,28 @@ It uses actual AxonLLM model calls and actual Ostiari Guard decisions. The bundl
 evidence contains **144 recorded API calls across 24 synthetic cases and three models**.
 You can explore and regrade that recording without an API key or new model charges.
 
+![Workbench overview: recorded API cost, model counts, and a yellow task investigation panel](docs/images/overview.png)
+
+**[Download a release](https://github.com/hk-775/ai-operations-workbench/releases)**
+· [Methodology](docs/METHODOLOGY.md) · [Architecture](docs/ARCHITECTURE.md)
+· [Roadmap](docs/ROADMAP.md)
+
 ## Run it
 
 Requirements: Git and [uv](https://docs.astral.sh/uv/). Python 3.13 is the tested
 runtime; `uv` can install it. Node is only needed for browser tests.
 
-From this directory:
+Clone the repository, then install the locked dependencies:
 
 ```bash
+git clone https://github.com/hk-775/ai-operations-workbench.git
+cd ai-operations-workbench
 uv sync --locked --python 3.13
 uv run --locked uvicorn workbench.app:app --host 127.0.0.1 --port 8767
 ```
+
+If you downloaded a release archive, extract it and start with `uv sync` from
+the extracted directory. No provider credentials are needed for replay.
 
 Open **http://127.0.0.1:8767/**.
 
@@ -55,6 +69,22 @@ replay then run locally; they do not call a model provider.
 connectors; subscription invoice reconciliation; a coding workload; multi-company
 authentication; or production routing changes. This is a support-workflow
 demonstration, not a finished company-wide observability service.
+
+## See the decision
+
+![Model comparison showing cost, case pass rates, critical failures, and Ostiari controls](docs/images/comparison.png)
+
+The comparison keeps failures visible. All three recorded models fail at least
+one critical decision check, so the default proposal recommends no route change.
+The screenshots show actual saved model evidence on fictional support cases.
+
+## How the pieces connect
+
+[![Implemented local Workbench architecture](docs/architecture/workbench.svg)](docs/ARCHITECTURE.md)
+
+[Editable draw.io source](docs/architecture/workbench.drawio)
+· [PNG diagram](docs/architecture/workbench.png)
+· [Publication scope and AWS architecture decision](docs/PUBLICATION.md)
 
 ## Recorded result
 
@@ -148,6 +178,8 @@ recordings persist and you can replay their checks again.
 - [Component boundaries, data flow, and current limitations](docs/ARCHITECTURE.md)
 - [Product direction and staged roadmap](docs/ROADMAP.md)
 - [MIT-0 license](LICENSE)
+- [Contributing](CONTRIBUTING.md), [support](SUPPORT.md), and [security reporting](SECURITY.md)
+- [v0.1.0 release notes](docs/RELEASE-0.1.0.md)
 
 AxonLLM and Ostiari are pinned to immutable Git revisions in `pyproject.toml` and
 `uv.lock`. They remain separate projects; this app does not patch their source.

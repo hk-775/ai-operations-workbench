@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability privately
+    url: https://github.com/hk-775/ai-operations-workbench/security/advisories/new
+    about: Do not disclose vulnerabilities or sensitive data in a public issue.

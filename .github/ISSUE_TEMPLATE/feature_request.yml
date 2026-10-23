@@ -1,0 +1,16 @@
+name: Feature request
+description: Describe an AI operations problem Workbench could help solve.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What decision are you trying to make?
+      description: Describe the workload, available usage evidence, and missing capability.
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: What would a useful outcome look like?
+      description: Explain what you would measure or verify. Use fictional examples.

@@ -53,7 +53,7 @@
           <h1>Know what an AI outcome <span class="heading-accent">costs.</span></h1>
           <p class="lede">Follow the spend. Test the alternatives. Make a decision you can explain.</p>
         </section>
-        <section class="journey" aria-label="Demonstration workflow">
+        <section class="journey" aria-label="Demonstration workflow" aria-describedby="workflow-motion-note">
           <button data-step="connect" data-flow="connect" class="journey-step"><span class="step-symbol"><svg class="ui-icon" aria-hidden="true"><use href="#icon-usage"/></svg><span class="step-number">01</span></span><span>Connect usage<small>Start with recorded evidence</small></span></button>
           <div class="connector" data-flow="connect" aria-hidden="true"><span></span></div>
           <button data-step="tasks" data-flow="tasks" class="journey-step"><span class="step-symbol"><svg class="ui-icon" aria-hidden="true"><use href="#icon-tasks"/></svg><span class="step-number">02</span></span><span>Inspect a task<small>See each call and its cost</small></span></button>
@@ -63,6 +63,7 @@
           <button data-step="proposal" data-flow="proposal" class="journey-step"><span class="step-symbol"><svg class="ui-icon" aria-hidden="true"><use href="#icon-proposal"/></svg><span class="step-number">04</span></span><span>Review a proposal<small>Keep the evidence attached</small></span></button>
           <button id="motion" class="motion-button" aria-label="Pause workflow animation" aria-pressed="false">Ⅱ</button>
         </section>
+        <p id="workflow-motion-note" class="workflow-note">Illustrative workflow · replay uses saved evidence</p>
         <div id="notice" role="status" aria-live="polite"></div>
         <div id="view"></div>
         <footer class="page-footer"><span>Built with AxonLLM + Ostiari</span><span>API estimates · hardware unmeasured · no production routing changes</span></footer>

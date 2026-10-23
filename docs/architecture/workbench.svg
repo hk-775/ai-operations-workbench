@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" role="img" aria-labelledby="title desc">
+<title id="title">AI Operations Workbench: implemented local replay architecture</title>
+<desc id="desc">Recorded usage is validated into a local ledger, inspected in the browser, replayed through contract checks and Ostiari, and exported with a routing proposal. Optional fresh collection uses paid model APIs through a separately budgeted CLI.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10Z" fill="#78716c"/></marker></defs>
+<rect width="1280" height="720" fill="#fafaf9"/>
+<g font-family="Inter,Arial,sans-serif">
+<text x="60" y="55" font-size="29" font-weight="700" fill="#1c1917">From recorded usage to a reviewable decision.</text>
+<text x="60" y="86" font-size="15" fill="#57534e">IMPLEMENTED LOCAL ARCHITECTURE · AI OPERATIONS WORKBENCH v0.1.0</text>
+<rect x="60" y="160" width="320" height="140" rx="14" fill="#f0f9ff" stroke="#bae6fd" stroke-width="2"/>
+<rect x="82" y="184" width="5" height="23" rx="2" fill="#0369a1"/>
+<text x="100" y="202" font-size="20" font-weight="700" fill="#1c1917">Recorded usage</text>
+<text x="82" y="241" font-size="13" fill="#57534e">Fictional cases · actual model responses</text>
+<text x="82" y="265" font-size="13" fill="#57534e">144 calls · 24 cases · 3 model snapshots</text>
+<rect x="475" y="160" width="320" height="140" rx="14" fill="#f0f9ff" stroke="#bae6fd" stroke-width="2"/>
+<rect x="497" y="184" width="5" height="23" rx="2" fill="#0369a1"/>
+<text x="515" y="202" font-size="20" font-weight="700" fill="#1c1917">Validated local ledger</text>
+<text x="497" y="241" font-size="13" fill="#57534e">Schema, cost checks, and deduplication</text>
+<text x="497" y="265" font-size="13" fill="#57534e">SQLite · one active recording</text>
+<rect x="900" y="160" width="320" height="140" rx="14" fill="#fefce8" stroke="#facc15" stroke-width="2"/>
+<rect x="922" y="184" width="5" height="23" rx="2" fill="#facc15"/>
+<text x="940" y="202" font-size="20" font-weight="700" fill="#1c1917">Workbench UI</text>
+<text x="922" y="241" font-size="13" fill="#57534e">Inspect tasks, calls, and API estimates</text>
+<text x="922" y="265" font-size="13" fill="#57534e">FastAPI + browser · localhost only</text>
+<rect x="60" y="400" width="320" height="140" rx="14" fill="#f5f3ff" stroke="#ddd6fe" stroke-width="2"/>
+<rect x="82" y="424" width="5" height="23" rx="2" fill="#7c3aed"/>
+<text x="100" y="442" font-size="20" font-weight="700" fill="#1c1917">Contract checks + Ostiari</text>
+<text x="82" y="481" font-size="13" fill="#57534e">Decision correctness and critical failures</text>
+<text x="82" y="505" font-size="13" fill="#57534e">Actual Ostiari Guard · draft-only policy</text>
+<rect x="475" y="400" width="320" height="140" rx="14" fill="#f5f3ff" stroke="#ddd6fe" stroke-width="2"/>
+<rect x="497" y="424" width="5" height="23" rx="2" fill="#7c3aed"/>
+<text x="515" y="442" font-size="20" font-weight="700" fill="#1c1917">Offline replay worker</text>
+<text x="497" y="481" font-size="13" fill="#57534e">Read and regrade saved responses</text>
+<text x="497" y="505" font-size="13" fill="#57534e">No model API calls during replay</text>
+<rect x="900" y="400" width="320" height="140" rx="14" fill="#f0fdfa" stroke="#99f6e4" stroke-width="2"/>
+<rect x="922" y="424" width="5" height="23" rx="2" fill="#0f766e"/>
+<text x="940" y="442" font-size="20" font-weight="700" fill="#1c1917">Routing proposal</text>
+<text x="922" y="481" font-size="13" fill="#57534e">Quality, critical failures, latency, cost</text>
+<text x="922" y="505" font-size="13" fill="#57534e">Export evidence · no route activation</text>
+<path d="M380 230 L475 230" fill="none" stroke="#78716c" stroke-width="1.6" marker-end="url(#arrow)"/>
+<text x="427.5" y="217" text-anchor="middle" font-size="12" fill="#57534e">import</text>
+<path d="M795 230 L900 230" fill="none" stroke="#78716c" stroke-width="1.6" marker-end="url(#arrow)"/>
+<text x="847.5" y="217" text-anchor="middle" font-size="12" fill="#57534e">inspect</text>
+<path d="M635 300 L635 400" fill="none" stroke="#78716c" stroke-width="1.6" marker-end="url(#arrow)"/>
+<text x="648" y="354.0" text-anchor="start" font-size="12" fill="#57534e">replay</text>
+<path d="M475 470 L380 470" fill="none" stroke="#78716c" stroke-width="1.6" marker-end="url(#arrow)"/>
+<text x="427.5" y="457" text-anchor="middle" font-size="12" fill="#57534e">evaluate</text>
+<path d="M795 470 L900 470" fill="none" stroke="#78716c" stroke-width="1.6" marker-end="url(#arrow)"/>
+<text x="847.5" y="457" text-anchor="middle" font-size="12" fill="#57534e">compare</text>
+<path d="M1060 400 L1060 300" fill="none" stroke="#78716c" stroke-width="1.6" marker-end="url(#arrow)"/>
+<text x="1073" y="354.0" text-anchor="start" font-size="12" fill="#57534e">review</text>
+<rect x="60" y="594" width="1160" height="83" rx="12" fill="#ffffff" stroke="#d6d3d1"/>
+<text x="82" y="624" font-size="15" font-weight="700" fill="#1c1917">Optional fresh collection · paid and explicitly budgeted</text>
+<text x="82" y="652" font-size="14" fill="#57534e">Collection CLI → Ostiari Guard → AxonLLM → external model API → new recording. Browser replay never runs this path.</text>
+</g></svg>
