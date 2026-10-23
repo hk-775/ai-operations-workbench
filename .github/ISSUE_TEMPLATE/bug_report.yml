@@ -1,0 +1,25 @@
+name: Bug report
+description: Report a reproducible Workbench problem.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: "For security vulnerabilities, use private reporting in SECURITY.md. Do not include credentials, customer tickets, or private recordings."
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction steps
+      description: Include the command or screen, expected behavior, and actual behavior.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version and environment
+      placeholder: v0.1.0, macOS or Linux, Python version, browser
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Redacted error or minimal fictional example

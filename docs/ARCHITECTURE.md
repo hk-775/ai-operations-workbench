@@ -3,6 +3,14 @@
 Workbench owns the local interface, usage ledger, evidence validation, comparison,
 and proposal. Existing projects provide the model routing and governance engines.
 
+![Implemented local replay architecture](architecture/workbench.svg)
+
+[Edit in draw.io](architecture/workbench.drawio) · [Download PNG](architecture/workbench.png)
+
+The diagram describes the current workstation application. No AWS infrastructure
+or remote hosting is deployed by this repository; see the
+[publication architecture decision](PUBLICATION.md#aws-services-reference-architecture-not-applicable-to-v010).
+
 ```mermaid
 flowchart LR
     CLI["Explicit collection CLI"] --> Guard["Ostiari Guard"]

@@ -206,6 +206,7 @@ dialog[data-flow] { border-color:var(--accent-line);border-top:3px solid var(--a
   font-size:8px;font-weight:700;
 }
 .motion-button { top:2px;right:6px; }
+.workflow-note { color:var(--muted);font-size:10px;margin:-19px 0 23px;padding-left:3px; }
 .metric[data-flow] {
   position:relative;overflow:hidden;padding:20px;
   border:1px solid var(--accent-line);border-radius:13px;

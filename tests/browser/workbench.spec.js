@@ -15,8 +15,10 @@ test.beforeEach(async ({request},testInfo)=>{
 
 test('complete customer journey uses actual saved evidence and exports a justified proposal', async ({page,baseURL})=>{
   const external=[];
+  const sockets=[];
   const errors=[];
   page.on('request',request=>{if(!request.url().startsWith(baseURL+'/'))external.push(request.url());});
+  page.on('websocket',socket=>sockets.push(socket.url()));
   page.on('pageerror',error=>errors.push(error.message));
   await page.goto('/');
   await expect(page.getByRole('heading',{name:'Your next optimization starts with one task.'})).toBeVisible();
@@ -57,6 +59,7 @@ test('complete customer journey uses actual saved evidence and exports a justifi
   await expect(page.getByText('Critical decision checks failed',{exact:true})).toHaveCount(3);
   await expect(page.getByText('NO MODEL MEETS THESE CRITERIA',{exact:true})).toBeVisible();
   expect(external).toEqual([]);
+  expect(sockets).toEqual([]);
   expect(errors).toEqual([]);
 });
 
