@@ -49,7 +49,7 @@ replay then run locally; they do not call a model provider.
 | Governance | Actual Ostiari Guard in the evaluation subprocess; draft permission and three blocked action controls |
 | Model selection | Complete evidence, minimum pass rate, zero critical failures, p95 limit, then lowest cost per passing task |
 | Review | Adjustable criteria and portable evidence export; no deployment |
-| Interface | Navy/cyan/cream; desktop and mobile; small moving circles with pause and reduced-motion support |
+| Interface | AxonLLM/Ostiari light palette; blue usage, yellow inspection, violet comparison, and teal review accents shared across cards and workflow; desktop and mobile; small moving circles with pause and reduced-motion support |
 
 **Not yet implemented:** native Codex, Cursor, Claude Code, or Bedrock billing
 connectors; subscription invoice reconciliation; a coding workload; multi-company

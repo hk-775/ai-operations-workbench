@@ -3,12 +3,24 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#0D1B2A">
+  <meta name="theme-color" content="#fafaf9">
+  <meta name="color-scheme" content="light">
   <title>AI Operations Workbench</title>
   <link rel="stylesheet" href="/static/styles.css">
   <script defer src="/static/app.js"></script>
 </head>
 <body>
+  <svg class="icon-library" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <symbol id="icon-usage" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M7 15v-3m5 3V8m5 7v-5"/></symbol>
+      <symbol id="icon-tasks" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5M8 11l2 2 3-4"/></symbol>
+      <symbol id="icon-compare" viewBox="0 0 24 24"><path d="M8 3v3m0 4v11M16 3v11m0 4v3"/><circle cx="8" cy="8" r="2"/><circle cx="16" cy="16" r="2"/></symbol>
+      <symbol id="icon-proposal" viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 4 4 7 8 9 4-2 8-5 8-9V6Z"/><path d="m8.5 12 2.5 2.5 4.5-5"/></symbol>
+      <symbol id="icon-cost" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="15" rx="3"/><path d="M3 9h18m-6 5h6M7 5V3h10v2"/><circle cx="16" cy="14.5" r=".5"/></symbol>
+      <symbol id="icon-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+      <symbol id="icon-hardware" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 3v3m6-3v3M9 18v3m6-3v3M3 9h3m-3 6h3m12-6h3m-3 6h3"/><rect x="9" y="9" width="6" height="6" rx="1"/></symbol>
+    </defs>
+  </svg>
   <a class="skip" href="#main">Skip to workspace</a>
   <div class="shell">
     <aside class="sidebar">
@@ -19,10 +31,10 @@
       <div class="workspace"><span class="avatar">S</span><span>Streamline<small>Synthetic workspace</small></span><span class="workspace-arrow">⌄</span></div>
       <p class="nav-label">WORKSPACE</p>
       <nav aria-label="Workspace">
-        <button data-view="overview" class="nav-item active"><span aria-hidden="true">◫</span> Overview</button>
-        <button data-view="tasks" class="nav-item"><span aria-hidden="true">≡</span> Task explorer</button>
-        <button data-view="compare" class="nav-item"><span aria-hidden="true">⇄</span> Model comparison</button>
-        <button data-view="proposal" class="nav-item"><span aria-hidden="true">↗</span> Routing proposal</button>
+        <button data-view="overview" data-flow="connect" class="nav-item active"><svg class="ui-icon" aria-hidden="true"><use href="#icon-usage"/></svg> Overview</button>
+        <button data-view="tasks" data-flow="tasks" class="nav-item"><svg class="ui-icon" aria-hidden="true"><use href="#icon-tasks"/></svg> Task explorer</button>
+        <button data-view="compare" data-flow="compare" class="nav-item"><svg class="ui-icon" aria-hidden="true"><use href="#icon-compare"/></svg> Model comparison</button>
+        <button data-view="proposal" data-flow="proposal" class="nav-item"><svg class="ui-icon" aria-hidden="true"><use href="#icon-proposal"/></svg> Routing proposal</button>
       </nav>
       <div class="sidebar-bottom">
         <div class="engine-row"><span class="engine-dot"></span><span>AxonLLM <small>MODEL ROUTING</small></span></div>
@@ -32,23 +44,23 @@
     </aside>
     <div class="content">
       <header class="topbar">
-        <span class="breadcrumb">Workspace <span>/</span> <strong id="current-view">Overview</strong></span>
-        <div class="top-actions"><span class="mode-badge"><span></span> Local demonstration</span><button class="button subtle" id="sources-button">Connect usage <span aria-hidden="true">＋</span></button></div>
+        <span class="breadcrumb">Workspace <span>/</span> <strong id="current-view" data-flow="connect">Overview</strong></span>
+        <div class="top-actions"><span class="mode-badge"><span></span> Local demonstration</span><button class="button subtle" id="sources-button" data-flow="connect">Connect usage <span aria-hidden="true">＋</span></button></div>
       </header>
       <main id="main" tabindex="-1">
         <section class="page-heading">
           <p class="eyebrow">COST · QUALITY · DECISIONS</p>
-          <h1>Know what an AI outcome costs.</h1>
+          <h1>Know what an AI outcome <span class="heading-accent">costs.</span></h1>
           <p class="lede">Follow the spend. Test the alternatives. Make a decision you can explain.</p>
         </section>
         <section class="journey" aria-label="Demonstration workflow">
-          <button data-step="connect" class="journey-step"><span class="step-number">01</span><span>Connect usage<small>Start with recorded evidence</small></span></button>
-          <div class="connector"><span></span></div>
-          <button data-step="tasks" class="journey-step"><span class="step-number">02</span><span>Inspect a task<small>See each call and its cost</small></span></button>
-          <div class="connector"><span></span></div>
-          <button data-step="compare" class="journey-step"><span class="step-number">03</span><span>Evaluate models<small>Check the same workload</small></span></button>
-          <div class="connector"><span></span></div>
-          <button data-step="proposal" class="journey-step"><span class="step-number">04</span><span>Review a proposal<small>Keep the evidence attached</small></span></button>
+          <button data-step="connect" data-flow="connect" class="journey-step"><span class="step-symbol"><svg class="ui-icon" aria-hidden="true"><use href="#icon-usage"/></svg><span class="step-number">01</span></span><span>Connect usage<small>Start with recorded evidence</small></span></button>
+          <div class="connector" data-flow="connect" aria-hidden="true"><span></span></div>
+          <button data-step="tasks" data-flow="tasks" class="journey-step"><span class="step-symbol"><svg class="ui-icon" aria-hidden="true"><use href="#icon-tasks"/></svg><span class="step-number">02</span></span><span>Inspect a task<small>See each call and its cost</small></span></button>
+          <div class="connector" data-flow="tasks" aria-hidden="true"><span></span></div>
+          <button data-step="compare" data-flow="compare" class="journey-step"><span class="step-symbol"><svg class="ui-icon" aria-hidden="true"><use href="#icon-compare"/></svg><span class="step-number">03</span></span><span>Evaluate models<small>Check the same workload</small></span></button>
+          <div class="connector" data-flow="compare" aria-hidden="true"><span></span></div>
+          <button data-step="proposal" data-flow="proposal" class="journey-step"><span class="step-symbol"><svg class="ui-icon" aria-hidden="true"><use href="#icon-proposal"/></svg><span class="step-number">04</span></span><span>Review a proposal<small>Keep the evidence attached</small></span></button>
           <button id="motion" class="motion-button" aria-label="Pause workflow animation" aria-pressed="false">Ⅱ</button>
         </section>
         <div id="notice" role="status" aria-live="polite"></div>
@@ -57,7 +69,7 @@
       </main>
     </div>
   </div>
-  <dialog id="sources">
+  <dialog id="sources" data-flow="connect">
     <div class="dialog-head"><div><p class="eyebrow">SOURCE CONNECTION</p><h2>Start with evidence.</h2></div><button class="icon-button" data-close="sources" aria-label="Close source dialog">×</button></div>
     <p>Connect the bundled model run, or import a compatible Workbench recording. Both paths validate usage and prevent duplicate charges in the ledger.</p>
     <div class="source-option"><span class="source-symbol">A</span><div><h3>Recorded AxonLLM usage</h3><p>Synthetic support cases · three models<br>Token usage, responses, and task latency</p></div><span class="tag">JSON</span></div>
@@ -66,7 +78,7 @@
     <label class="upload-label">Choose a recording <input id="upload" type="file" accept=".json,application/json"></label>
     <p class="fine">Native Codex, Cursor, Claude Code and AWS billing connectors are planned. This demo imports the recorded two-stage AxonLLM workflow.</p>
   </dialog>
-  <dialog id="detail" class="detail-dialog"><div id="detail-content"></div></dialog>
-  <dialog id="about"><div class="dialog-head"><h2>Connected components</h2><button class="icon-button" data-close="about" aria-label="Close component dialog">×</button></div><div id="about-content"></div></dialog>
+  <dialog id="detail" class="detail-dialog" data-flow="compare"><div id="detail-content"></div></dialog>
+  <dialog id="about" data-flow="connect"><div class="dialog-head"><h2>Connected components</h2><button class="icon-button" data-close="about" aria-label="Close component dialog">×</button></div><div id="about-content"></div></dialog>
 </body>
 </html>
