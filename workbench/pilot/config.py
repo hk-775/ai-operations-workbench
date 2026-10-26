@@ -19,6 +19,7 @@ class Settings:
     max_job_attempts: int = 3
     max_queued_jobs: int = 20
     production: bool = False
+    hosted_test: bool = False
     oidc_issuer: str = ""
     oidc_client_id: str = ""
     oidc_client_secret: str = field(default="", repr=False)
@@ -66,7 +67,7 @@ class Settings:
             return
         if not self.oidc_issuer or self.local_login:
             raise ValueError("Production requires company OIDC with local login disabled")
-        if not self.oidc_required_amr and not self.oidc_required_acr:
+        if not self.hosted_test and not self.oidc_required_amr and not self.oidc_required_acr:
             raise ValueError("Production requires a verified MFA amr or acr claim")
         if not self.metrics_token:
             raise ValueError("Production requires a private metrics token")
@@ -92,6 +93,7 @@ class Settings:
 
         production = os.environ.get("WORKBENCH_PRODUCTION", "false").lower() == "true"
         return cls(database_url=url, production=production,
+                   hosted_test=os.environ.get("WORKBENCH_HOSTED_TEST", "false").lower() == "true",
                    public_origin=os.environ.get("WORKBENCH_PUBLIC_ORIGIN",
                                                 "http://127.0.0.1:8768").rstrip("/"),
                    oidc_issuer=os.environ.get("WORKBENCH_OIDC_ISSUER", ""),

@@ -30,7 +30,7 @@ test('operations are available to administrators and fit a mobile viewport',asyn
   await page.setViewportSize({width:390,height:844});
   await login(page);
   await page.getByRole('button',{name:'Operations',exact:true}).click();
-  await expect(page.getByRole('heading',{name:'Know when your evidence needs attention.'})).toBeVisible();
+  await expect(page.getByRole('heading',{name:'Check that Workbench is running properly.'})).toBeVisible();
   await expect(page.locator('#operations-metrics .metric')).toHaveCount(4);
   await expect(page.locator('#operations-retention')).toContainText('not enabled');
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);

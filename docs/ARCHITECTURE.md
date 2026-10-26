@@ -3,6 +3,14 @@
 Workbench owns the interface, usage ledger, evidence validation, comparison,
 and proposal. Existing projects provide the model routing and governance engines.
 
+Open **Interactive architecture** from either dashboard's footer, or open
+`/static/architecture.html` on the running application. The
+[standalone page](../web/architecture.html) also works directly from the downloaded
+source with its adjacent CSS and JavaScript files. It offers product and AWS
+views, component explanations, step-by-step flows, moving solid circles,
+pause/resume, and reduced-motion support. It makes no API or cloud requests;
+motion illustrates architecture rather than live traffic.
+
 The first sections and existing draw.io diagram below describe the original demo.
 The [authenticated pilot](#authenticated-team-pilot) and
 [self-hosted production profile](#self-hosted-production-profile) are documented
@@ -12,9 +20,25 @@ separately. Team mode is explicitly selected with `WORKBENCH_MODE=pilot`.
 
 [Edit in draw.io](architecture/workbench.drawio) · [Download PNG](architecture/workbench.png)
 
-The diagram describes the current workstation application. No AWS infrastructure
-or remote hosting is deployed by this repository; see the
-[publication architecture decision](PUBLICATION.md#aws-services-reference-architecture-not-applicable-to-this-release).
+The diagram above describes the original workstation application. The optional
+[AWS hosted acceptance topology](#aws-hosted-acceptance) is a separate deployment
+added on `main` after the v0.2.0 release.
+
+## AWS hosted acceptance
+
+![Implemented AWS hosted test topology](architecture/aws-hosted-test.png)
+
+[Edit the AWS diagram in draw.io](architecture/aws-hosted-test.drawio).
+The topology is defined in `deploy/aws/hosted-test.json` and was exercised by the
+[dated hosted acceptance run](VERIFICATION-HOSTED-2026-10-26.md).
+It shows company-neutral service boundaries; installation identifiers are private.
+This is an opt-in single-host test with password-only SSO, separate demo/clean
+databases, private origin access, scheduled S3 backups, and CloudWatch/SNS/SQS
+alert delivery. Human on-call delivery and high availability are not configured.
+See [the hosted installation guide](HOSTED-TEST.md) for its internal HTTP hops,
+backup retention, IAM boundaries, and recovery limits.
+
+## Original local replay flow
 
 ```mermaid
 flowchart LR

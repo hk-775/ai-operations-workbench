@@ -1,0 +1,27 @@
+let buckets = Resources.*[ Type == "AWS::S3::Bucket" ]
+let servers = Resources.*[ Type == "AWS::EC2::Instance" ]
+let groups = Resources.*[ Type == "AWS::EC2::SecurityGroup" ]
+let distributions = Resources.*[ Type == "AWS::CloudFront::Distribution" ]
+
+rule private_encrypted_backups {
+    %buckets.Properties.PublicAccessBlockConfiguration.BlockPublicAcls == true
+    %buckets.Properties.PublicAccessBlockConfiguration.IgnorePublicAcls == true
+    %buckets.Properties.PublicAccessBlockConfiguration.BlockPublicPolicy == true
+    %buckets.Properties.PublicAccessBlockConfiguration.RestrictPublicBuckets == true
+    %buckets.Properties.BucketEncryption exists
+    %buckets.Properties.VersioningConfiguration.Status == "Enabled"
+    %buckets.DeletionPolicy == "Retain"
+}
+rule protected_server {
+    %servers.Properties.MetadataOptions.HttpTokens == "required"
+    %servers.Properties.MetadataOptions.HttpPutResponseHopLimit == 1
+    %servers.Properties.BlockDeviceMappings.*.Ebs.Encrypted == true
+    %servers.Properties.BlockDeviceMappings.*.Ebs.DeleteOnTermination == false
+    %groups.Properties.SecurityGroupIngress.*.CidrIp !exists
+    %groups.Properties.SecurityGroupIngress.*.SourcePrefixListId exists
+}
+rule uncached_https {
+    %distributions.Properties.DistributionConfig.DefaultCacheBehavior.ViewerProtocolPolicy == "redirect-to-https"
+    %distributions.Properties.DistributionConfig.DefaultCacheBehavior.CachePolicyId == "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
+    %distributions.Properties.DistributionConfig.Origins.*.VpcOriginConfig exists
+}

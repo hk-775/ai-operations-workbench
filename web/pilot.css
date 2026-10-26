@@ -47,3 +47,63 @@
 #company-login { margin:16px 0;width:100%; }
 #operations-alerts .tag { margin-right:8px; }
 @media(max-width:720px) { .pagination { flex-wrap:wrap; } }
+
+/* The overview uses the same sky surface as its selected navigation item. */
+#page-usage .metric, #page-usage .panel {
+  background:var(--accent-soft);border-color:var(--accent-line);
+}
+#page-usage .metric-sub { border-color:var(--accent-line); }
+.screen-guide { line-height:1.7; }
+.screen-guide h2 { font-size:20px; }
+.screen-guide p + p, .screen-guide h2 + p { margin-top:10px; }
+.screen-guide .row-actions, .screen-guide > .button { margin-top:16px; }
+.help-details { margin:18px 0; }
+.help-details > summary { font-weight:600;font-size:12px; }
+.help-details > p { margin:10px 0;font-size:12px;line-height:1.7;color:#57534e; }
+.help-details .fine { overflow-wrap:anywhere; }
+.help-details a { text-decoration:underline; }
+.screen-steps { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;counter-reset:guide;list-style:none;padding:0;margin:22px 0; }
+.screen-steps li { padding:16px;background:var(--accent-soft);border:1px solid var(--accent-line);border-radius:12px; }
+.screen-steps strong,.screen-steps span { display:block;font-size:12px; }
+.screen-steps strong::before { counter-increment:guide;content:counter(guide) ". ";color:var(--accent-strong); }
+.screen-steps span { color:#57534e;margin-top:8px; }
+.task-card { padding:12px; }
+.task-card summary { align-items:center;gap:18px;padding:16px; }
+.task-summary-main { flex:1;min-width:0; }
+.task-summary-main strong { display:block;font-size:17px;line-height:1.4; }
+.task-summary-main small,.task-summary-cost small { display:block;font-size:11px;color:#57534e;margin-top:6px; }
+.task-card summary strong { max-width:100%; }
+.task-summary-cost { text-align:right;flex-shrink:0; }
+.task-summary-cost strong { font-variant-numeric:tabular-nums;font-size:18px; }
+.expand-cue { display:block;margin-top:9px;font-size:11px;color:var(--accent-strong); }
+.task-card[open] .expand-cue { display:none; }
+.task-body { padding:6px 16px 16px; }
+.task-request { margin:18px 0;padding-left:16px;border-left:3px solid var(--accent); }
+.task-request .eyebrow { font-size:9px;margin-bottom:7px; }
+.task-request > p:last-child { font-size:15px;line-height:1.7; }
+.task-steps { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;list-style:none;padding:0;margin:22px 0; }
+.task-steps > li { padding:18px;border:1px solid var(--accent-line);border-radius:12px;background:var(--accent-soft);min-width:0; }
+.task-steps .section-head { align-items:flex-start;flex-wrap:wrap;margin-bottom:9px; }
+.task-steps p { font-size:12px;color:#57534e; }
+.task-steps .call-cost { font-size:23px;color:var(--text);font-weight:600;margin:17px 0;overflow-wrap:anywhere; }
+.call-cost small { display:block;font-weight:400;font-size:10px; }
+.task-total { display:flex;justify-content:space-between;align-items:center;gap:15px;padding:16px 0;border-top:1px solid var(--accent-line); }
+.task-total small { display:block;margin-top:6px;font-size:11px;color:#57534e; }
+.task-total > strong { font-size:20px;overflow-wrap:anywhere; }
+.task-next { margin-top:8px; }
+.role-guide,.result-guide { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;margin:18px 0; }
+.result-guide { grid-template-columns:repeat(2,minmax(0,1fr)); }
+.role-guide dt,.result-guide dt { font-weight:600;font-size:12px; }
+.role-guide dd,.result-guide dd { margin:6px 0 0;font-size:12px;color:#57534e;line-height:1.65; }
+.field small { font-size:11px;font-weight:400;color:#57534e;line-height:1.5; }
+#proposal-form .controls { align-items:start; }
+#proposal-form .controls > .field { min-width:0; }
+#evaluation-help { margin-top:14px; }
+.journey-step[aria-current="step"] { outline:2px solid var(--accent-line);outline-offset:2px; }
+@media(max-width:800px) {
+  .screen-steps,.role-guide,.result-guide,.task-steps { grid-template-columns:1fr; }
+  .task-card summary { align-items:flex-start; }
+  .task-summary-cost { flex-basis:100%;text-align:left; }
+  .task-total { flex-wrap:wrap; }
+  .task-total > strong { width:100%; }
+}

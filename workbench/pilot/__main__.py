@@ -70,7 +70,10 @@ def main():
             if not settings.production:
                 raise ValueError("WORKBENCH_PRODUCTION must be true")
             settings.validate_production_app()
-            print("Production configuration and schema checks passed. Verify SSO, TLS, alerts, and restore on the target host before accepting traffic.")
+            if settings.hosted_test:
+                print("Hosted TEST configuration and schema checks passed. MFA may be disabled in this explicitly selected test profile; this is not production MFA acceptance.")
+            else:
+                print("Production configuration and schema checks passed. Verify SSO, TLS, alerts, and restore on the target host before accepting traffic.")
         elif args.command == "link-identity":
             from sqlalchemy import insert, select
             from .database import identities, users

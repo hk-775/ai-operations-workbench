@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Interactive architecture · AI Operations Workbench</title>
+  <link rel="stylesheet" href="architecture.css">
+  <script src="architecture.js" defer></script>
+</head>
+<body>
+  <a class="skip" href="#architecture">Skip to architecture</a>
+  <header>
+    <div class="brand"><span class="brandmark" aria-hidden="true">W</span><span>Workbench<small>AI OPERATIONS</small></span></div>
+    <span class="badge">Architecture explorer</span>
+  </header>
+  <main id="architecture">
+    <div class="intro">
+      <p class="eyebrow">FROM CAPTURED USAGE TO A JUSTIFIED MODEL CHOICE</p>
+      <h1>Follow the evidence.</h1>
+      <p>Explore what each component does, how the pieces connect, and where a recommendation gets its proof.</p>
+    </div>
+    <div class="toolbar">
+      <div class="views" role="group" aria-label="Architecture view">
+        <button data-view="product" aria-pressed="true">Product flow</button>
+        <button data-view="aws" aria-pressed="false">AWS hosted test</button>
+      </div>
+      <button id="motion" aria-pressed="false">Pause motion</button>
+    </div>
+    <section class="explorer" aria-label="Interactive architecture">
+      <article class="canvas">
+        <div class="canvas-heading"><div><p class="eyebrow" id="scope"></p><h2 id="diagram-title"></h2></div><span class="motion-note">Illustrative flow · no live traffic</span></div>
+        <div id="flows" class="flows" role="group" aria-label="Flow to explore"></div>
+        <p class="diagram-help">Select a component for details, or follow the walkthrough. On a small screen, scroll the diagram sideways.</p>
+        <div class="diagram-scroll" tabindex="0" aria-label="Architecture diagram, scrollable">
+          <svg id="diagram" viewBox="0 0 980 710" role="group" aria-labelledby="svg-title svg-description"></svg>
+        </div>
+        <div class="walkthrough">
+          <button id="previous">Previous step</button>
+          <p id="step-label" role="status"></p>
+          <button id="next">Next step</button>
+        </div>
+      </article>
+      <aside class="details" aria-label="Selected component">
+        <p class="eyebrow" id="detail-owner"></p><h2 id="detail-title"></h2>
+        <p id="detail-copy"></p>
+        <dl><dt>What passes through</dt><dd id="detail-data"></dd><dt>What this establishes</dt><dd id="detail-proof"></dd></dl>
+        <div class="boundary"><p class="eyebrow">BOUNDARY TO KEEP IN MIND</p><p id="detail-boundary"></p></div>
+      </aside>
+    </section>
+    <section class="scope-note"><h2 id="limit-title"></h2><p id="limit-copy"></p></section>
+    <footer>AI Operations Workbench · AxonLLM + Ostiari Guard · Company-neutral architecture · MIT-0</footer>
+    <noscript><p>This explorer needs JavaScript. Static architecture exports are included in docs/architecture.</p></noscript>
+  </main>
+</body>
+</html>

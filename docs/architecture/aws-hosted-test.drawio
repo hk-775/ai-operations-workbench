@@ -1,0 +1,134 @@
+<?xml version='1.0' encoding='utf-8'?>
+<mxfile host="app.diagrams.net" agent="AI Operations Workbench" version="26.0.0">
+  <diagram id="aws-hosted-test" name="AWS hosted acceptance">
+    <mxGraphModel dx="1740" dy="1200" grid="1" gridSize="10" page="1" pageWidth="1740" pageHeight="1200" background="#fafaf9">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" value="&lt;b&gt;Workbench · AWS hosted acceptance&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontFamily=Arial;fontSize=30;fontColor=#1c1917;" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="1620" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="subtitle" value="Implemented optional test deployment · us-east-1 · separate seeded and clean workspaces" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontFamily=Arial;fontSize=18;fontColor=#1c1917;" vertex="1" parent="1">
+          <mxGeometry x="40" y="82" width="1620" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="browser" value="&lt;b&gt;User browser&lt;/b&gt;&lt;br&gt;&lt;br&gt;Two HTTPS origins" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0f9ff;strokeColor=#bae6fd;fontColor=#1c1917;fontFamily=Arial;fontSize=17;spacing=15;arcSize=12;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="40" y="170" width="210" height="95" as="geometry" />
+        </mxCell>
+        <mxCell id="edge" value="&lt;b&gt;Amazon CloudFront + AWS WAF&lt;/b&gt;&lt;br&gt;&lt;br&gt;Two distributions · caching disabled&lt;br&gt;IP rate limit · HTTPS termination" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0f9ff;strokeColor=#bae6fd;fontColor=#1c1917;fontFamily=Arial;fontSize=17;spacing=15;arcSize=12;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="350" y="155" width="490" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="cognito" value="&lt;b&gt;Amazon Cognito&lt;/b&gt;&lt;br&gt;&lt;br&gt;Dedicated test user pool · two app clients&lt;br&gt;Password-only SSO · administrator-created accounts" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f3ff;strokeColor=#ddd6fe;fontColor=#1c1917;fontFamily=Arial;fontSize=17;spacing=15;arcSize=12;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="1010" y="155" width="610" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="vpc" value="&lt;b&gt;Amazon VPC · private CloudFront origin access&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f4;strokeColor=#a8a29e;fontColor=#1c1917;fontFamily=Arial;fontSize=17;spacing=15;arcSize=12;strokeWidth=1.5;container=1;collapsible=0;verticalAlign=top;align=left;spacingTop=14;" vertex="1" parent="1">
+          <mxGeometry x="285" y="360" width="1000" height="620" as="geometry" />
+        </mxCell>
+        <mxCell id="server" value="&lt;b&gt;Amazon EC2 · one t3a.large host · encrypted Amazon EBS&lt;/b&gt;&lt;br&gt;&lt;br&gt;IAM instance profile · IMDSv2, hop limit 1 · no SSH ingress" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6d3d1;fontColor=#1c1917;fontFamily=Arial;fontSize=17;spacing=15;arcSize=12;strokeWidth=1.5;container=1;collapsible=0;verticalAlign=top;align=left;spacingTop=14;" vertex="1" parent="vpc">
+          <mxGeometry x="20" y="55" width="955" height="540" as="geometry" />
+        </mxCell>
+        <mxCell id="origin" value="&lt;b&gt;Caddy origin proxy&lt;/b&gt;&lt;br&gt;&lt;br&gt;Routes each hostname to its workspace" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0f9ff;strokeColor=#bae6fd;fontColor=#1c1917;fontFamily=Arial;fontSize=16;spacing=15;arcSize=12;strokeWidth=1.5;" vertex="1" parent="server">
+          <mxGeometry x="300" y="100" width="350" height="75" as="geometry" />
+        </mxCell>
+        <mxCell id="demo" value="&lt;b&gt;Seeded demo workspace&lt;/b&gt;&lt;br&gt;&lt;br&gt;API · evaluation worker · maintenance&lt;br&gt;Separate credentials and sessions" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fefce8;strokeColor=#fef08a;fontColor=#1c1917;fontFamily=Arial;fontSize=17;spacing=15;arcSize=12;strokeWidth=1.5;" vertex="1" parent="server">
+          <mxGeometry x="40" y="220" width="395" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="clean" value="&lt;b&gt;Clean workspace&lt;/b&gt;&lt;br&gt;&lt;br&gt;API · evaluation worker · maintenance&lt;br&gt;Separate credentials and sessions" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f3ff;strokeColor=#ddd6fe;fontColor=#1c1917;fontFamily=Arial;fontSize=17;spacing=15;arcSize=12;strokeWidth=1.5;" vertex="1" parent="server">
+          <mxGeometry x="485" y="220" width="395" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="demo-db" value="&lt;b&gt;PostgreSQL · demo&lt;/b&gt;&lt;br&gt;&lt;br&gt;Recorded support comparison" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fefce8;strokeColor=#fef08a;fontColor=#1c1917;fontFamily=Arial;fontSize=16;spacing=15;arcSize=12;strokeWidth=1.5;" vertex="1" parent="server">
+          <mxGeometry x="40" y="360" width="395" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="clean-db" value="&lt;b&gt;PostgreSQL · clean&lt;/b&gt;&lt;br&gt;&lt;br&gt;Starts with no application data" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f3ff;strokeColor=#ddd6fe;fontColor=#1c1917;fontFamily=Arial;fontSize=16;spacing=15;arcSize=12;strokeWidth=1.5;" vertex="1" parent="server">
+          <mxGeometry x="485" y="360" width="395" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="timers" value="&lt;b&gt;Host timers&lt;/b&gt;&lt;br&gt;&lt;br&gt;Daily database backups · minutely readiness and backup-age checks" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0fdfa;strokeColor=#99f6e4;fontColor=#1c1917;fontFamily=Arial;fontSize=15;spacing=15;arcSize=12;strokeWidth=1.5;" vertex="1" parent="server">
+          <mxGeometry x="130" y="450" width="750" height="75" as="geometry" />
+        </mxCell>
+        <mxCell id="ssm" value="&lt;b&gt;AWS Systems Manager&lt;/b&gt;&lt;br&gt;&lt;br&gt;Operator access&lt;br&gt;SSM agent on the host" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f3ff;strokeColor=#ddd6fe;fontColor=#1c1917;fontFamily=Arial;fontSize=16;spacing=15;arcSize=12;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="35" y="580" width="210" height="115" as="geometry" />
+        </mxCell>
+        <mxCell id="s3" value="&lt;b&gt;Amazon S3&lt;/b&gt;&lt;br&gt;&lt;br&gt;Encrypted, versioned backups&lt;br&gt;Private bucket · 30-day expiry" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0fdfa;strokeColor=#99f6e4;fontColor=#1c1917;fontFamily=Arial;fontSize=16;spacing=15;arcSize=12;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="1395" y="445" width="300" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="cw" value="&lt;b&gt;Amazon CloudWatch&lt;/b&gt;&lt;br&gt;&lt;br&gt;Readiness + backup-age alarms&lt;br&gt;Two alarms per workspace" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f3ff;strokeColor=#ddd6fe;fontColor=#1c1917;fontFamily=Arial;fontSize=16;spacing=15;arcSize=12;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="1395" y="635" width="300" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="sns" value="&lt;b&gt;Amazon SNS&lt;/b&gt;&lt;br&gt;&lt;br&gt;Encrypted alarm topic" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f3ff;strokeColor=#ddd6fe;fontColor=#1c1917;fontFamily=Arial;fontSize=16;spacing=15;arcSize=12;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="1320" y="805" width="180" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="sqs" value="&lt;b&gt;Amazon SQS&lt;/b&gt;&lt;br&gt;&lt;br&gt;Private receipt queue&lt;br&gt;No human recipient" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0fdfa;strokeColor=#99f6e4;fontColor=#1c1917;fontFamily=Arial;fontSize=16;spacing=15;arcSize=12;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="1545" y="805" width="180" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="kms" value="&lt;b&gt;AWS KMS&lt;/b&gt;&lt;br&gt;&lt;br&gt;Encrypts the SNS topic" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f3ff;strokeColor=#ddd6fe;fontColor=#1c1917;fontFamily=Arial;fontSize=16;spacing=15;arcSize=12;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="1360" y="950" width="280" height="75" as="geometry" />
+        </mxCell>
+        <mxCell id="https" value="HTTPS" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#0284c7;strokeWidth=2;fontFamily=Arial;fontSize=14;fontColor=#44403c;labelBackgroundColor=#fafaf9;" edge="1" parent="1" source="browser" target="edge">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="signin" value="SSO sign-in via browser" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#7c3aed;strokeWidth=2;fontFamily=Arial;fontSize=14;fontColor=#44403c;labelBackgroundColor=#fafaf9;exitX=0.5;exitY=0;entryX=0.5;entryY=0;" edge="1" parent="1" source="browser" target="cognito">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="145" y="130" />
+              <mxPoint x="1315" y="130" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="origin-access" value="CloudFront VPC origin · private HTTP" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#0284c7;strokeWidth=2;fontFamily=Arial;fontSize=14;fontColor=#44403c;labelBackgroundColor=#fafaf9;exitX=0.5;exitY=1;entryX=1;entryY=0.5;" edge="1" parent="1" source="edge" target="origin">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="595" y="325" />
+              <mxPoint x="1130" y="325" />
+              <mxPoint x="1130" y="550" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="route-demo" value="Host routing" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#78716c;strokeWidth=2;fontFamily=Arial;fontSize=14;fontColor=#44403c;labelBackgroundColor=#fafaf9;" edge="1" parent="1" source="origin" target="demo">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="route-clean" value="Host routing" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#78716c;strokeWidth=2;fontFamily=Arial;fontSize=14;fontColor=#44403c;labelBackgroundColor=#fafaf9;" edge="1" parent="1" source="origin" target="clean">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="demo-data" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#a16207;strokeWidth=2;fontFamily=Arial;fontSize=14;fontColor=#44403c;labelBackgroundColor=#fafaf9;" edge="1" parent="1" source="demo" target="demo-db">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="clean-data" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#7c3aed;strokeWidth=2;fontFamily=Arial;fontSize=14;fontColor=#44403c;labelBackgroundColor=#fafaf9;" edge="1" parent="1" source="clean" target="clean-db">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="management" value="Managed access" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#7c3aed;strokeWidth=2;fontFamily=Arial;fontSize=14;fontColor=#44403c;labelBackgroundColor=#fafaf9;exitX=1;exitY=0.5;entryX=0;entryY=0.42;" edge="1" parent="1" source="ssm" target="server">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="backup" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#0d9488;strokeWidth=2;fontFamily=Arial;fontSize=14;fontColor=#44403c;labelBackgroundColor=#fafaf9;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="timers" target="s3">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1295" y="902" />
+              <mxPoint x="1295" y="500" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="metrics" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#7c3aed;strokeWidth=2;fontFamily=Arial;fontSize=14;fontColor=#44403c;labelBackgroundColor=#fafaf9;exitX=1;exitY=0.9;entryX=0;entryY=0.5;" edge="1" parent="1" source="timers" target="cw">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1310" y="930" />
+              <mxPoint x="1310" y="685" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="alarm" value="Alarm + recovery" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#7c3aed;strokeWidth=2;fontFamily=Arial;fontSize=14;fontColor=#44403c;labelBackgroundColor=#fafaf9;" edge="1" parent="1" source="cw" target="sns">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="delivery" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#0d9488;strokeWidth=2;fontFamily=Arial;fontSize=14;fontColor=#44403c;labelBackgroundColor=#fafaf9;" edge="1" parent="1" source="sns" target="sqs">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="encryption" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#a8a29e;strokeWidth=2;fontFamily=Arial;fontSize=14;fontColor=#44403c;labelBackgroundColor=#fafaf9;" edge="1" parent="1" source="kms" target="sns">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="limits" value="&lt;b&gt;Test boundaries&lt;/b&gt;&lt;br&gt;Single host; no high-availability claim. TLS ends at CloudFront; internal VPC/container hops use HTTP.&lt;br&gt;MFA is disabled only by the explicit hosted-test profile. Standard company production keeps its MFA requirement." style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontFamily=Arial;fontSize=17;fontColor=#1c1917;" vertex="1" parent="1">
+          <mxGeometry x="40" y="1060" width="1670" height="85" as="geometry" />
+        </mxCell>
+        <mxCell id="source" value="Source: deploy/aws/hosted-test.json and hosted acceptance report · Installation identifiers and credentials omitted · Authored diagram, MIT-0" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontFamily=Arial;fontSize=14;fontColor=#1c1917;" vertex="1" parent="1">
+          <mxGeometry x="40" y="1160" width="1670" height="30" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

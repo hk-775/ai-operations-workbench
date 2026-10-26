@@ -5,8 +5,8 @@
   <meta name="theme-color" content="#ffffff"><meta name="color-scheme" content="light">
   <title>Team workspace · AI Operations Workbench</title>
   <link rel="stylesheet" href="/static/styles.css?v=5d412360ea41">
-  <link rel="stylesheet" href="/static/pilot.css?v=cbbae2abad8f">
-  <script src="/static/pilot.js?v=8143246cec73" defer></script>
+  <link rel="stylesheet" href="/static/pilot.css?v=2e9bfb4e25a1">
+  <script src="/static/pilot.js?v=efa68ec31424" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -14,8 +14,8 @@
   <section class="login-story" data-flow="compare">
     <a class="brand" href="/"><span class="brandmark" aria-hidden="true"><i></i><i></i><i></i></span><span>Workbench<small>AI OPERATIONS</small></span></a>
     <div><p class="eyebrow">YOUR TEAM’S AI OPERATIONS</p><h1>Every task has a cost.<br>Every recommendation needs evidence.</h1>
-    <p class="lede">Connect AxonLLM usage, inspect a task, and evaluate saved model outputs before making a routing decision.</p></div>
-    <p class="fine">Team workspace · PostgreSQL ledger · Offline evidence replay</p>
+    <p class="lede">See what your AI tasks cost, compare the quality of model answers, and review which model meets your requirements.</p></div>
+    <p class="fine">Explore saved examples or connect your application. Every model recommendation includes the evidence behind it.</p>
   </section>
   <main id="main" class="login-form">
     <p class="eyebrow">TEAM ACCESS</p><h2>Sign in to Workbench</h2>
@@ -49,73 +49,81 @@
     <main id="workspace-main">
       <div id="message" class="notice" role="status" hidden></div>
       <div class="journey" aria-label="Evidence workflow">
-        <div class="journey-step" data-flow="connect"><span class="step-number">1</span>Connect usage</div><div class="connector" data-flow="connect"><span></span></div>
-        <div class="journey-step" data-flow="tasks"><span class="step-number">2</span>Inspect a task</div><div class="connector" data-flow="tasks"><span></span></div>
-        <div class="journey-step" data-flow="compare"><span class="step-number">3</span>Evaluate outputs</div><div class="connector" data-flow="compare"><span></span></div>
-        <div class="journey-step" data-flow="proposal"><span class="step-number">4</span>Review proposal</div>
+        <button class="journey-step" data-goto="sources" data-flow="connect"><span class="step-number">1</span>Connect usage</button><div class="connector" data-flow="connect"><span></span></div>
+        <button class="journey-step" data-goto="tasks" data-flow="tasks"><span class="step-number">2</span>Inspect a task</button><div class="connector" data-flow="tasks"><span></span></div>
+        <button class="journey-step" data-goto="evaluations" data-flow="compare"><span class="step-number">3</span>Check answer quality</button><div class="connector" data-flow="compare"><span></span></div>
+        <button class="journey-step" data-goto="proposals" data-flow="proposal"><span class="step-number">4</span>Review model choice</button>
         <button id="motion" class="motion-button" aria-pressed="false">Pause motion</button>
       </div>
       <section id="page-usage" data-flow="connect">
-        <div class="page-heading"><p class="eyebrow">USAGE OVERVIEW</p><h1>Know what your tasks cost.</h1><p class="lede">Captured calls, their price basis, and the gaps that still need attention.</p></div>
+        <div class="page-heading"><p class="eyebrow">USAGE OVERVIEW</p><h1>Know what your tasks cost.</h1><p class="lede">See how much the captured model calls cost, how many task runs they belong to, and where information is missing.</p></div>
+        <article id="usage-guide" class="panel screen-guide" aria-live="polite"></article>
         <form id="filters" class="panel controls">
           <label class="field">Project<input name="project" placeholder="All projects" maxlength="100"></label>
           <label class="field">Source<select name="source_id" id="source-filter"><option value="">All sources</option></select></label>
           <label class="field">From (UTC)<input name="start" type="date"></label>
           <label class="field">Before (UTC)<input name="end" type="date"></label>
-          <label class="check"><input name="include_fixtures" type="checkbox"> Include fixtures</label><button class="button primary">Apply filters</button>
+          <label class="check"><input name="include_fixtures" type="checkbox"> Include synthetic test data</label><button class="button primary">Apply filters</button>
         </form>
         <div id="metrics" class="metrics"></div>
-        <div class="grid-two"><article class="panel"><h2>What this subtotal covers</h2><p class="data-note" id="cost-note"></p><p id="evidence-counts" class="fine"></p><p class="fine">Hardware / electricity: unmeasured. Invoice reconciliation: unavailable. Final-response-only capture can omit failed attempts and retries.</p></article>
-        <article class="panel spotlight"><p class="eyebrow">NEXT STEP</p><h2>Follow a costly task.</h2><p class="lede">See each captured call and whether its token usage and rate card support the estimate.</p><button class="button primary" data-goto="tasks">Open task explorer</button></article></div>
+        <div class="grid-two"><article class="panel"><h2>How to read these costs</h2><p class="data-note" id="cost-note"></p><p id="evidence-counts" class="fine"></p><details class="help-details"><summary>What is included in the estimate?</summary><p>Token counts reported by the provider are multiplied by the saved model prices. Calls with missing usage or unsupported prices remain unknown. A known subtotal can therefore be lower than the full cost.</p><p>Hardware and electricity are unmeasured. Provider invoices have not been reconciled. Calls captured only at the final response may omit retries and failed attempts. Synthetic test data is excluded unless you select it above.</p></details></article>
+        <article class="panel spotlight"><p class="eyebrow">NEXT STEP</p><h2>See what happened inside a task.</h2><p class="lede">Open a task to follow its model calls, see the cost of each step, and choose what to investigate.</p><button class="button primary" data-goto="tasks">Open task explorer</button></article></div>
       </section>
       <section id="page-tasks" data-flow="tasks" hidden>
-        <div class="page-heading"><p class="eyebrow">TASK EXPLORER</p><h1>Follow the cost, call by call.</h1><p class="lede">The overview filters also apply here. A captured-call subtotal may exclude unobserved work.</p></div>
-        <article class="panel spotlight"><h2>Inspect before you optimize.</h2><p class="lede">Expand a task to see the provider, model, usage basis, and attempt coverage behind every amount.</p></article>
+        <div class="page-heading"><p class="eyebrow">TASK EXPLORER</p><h1>See the work behind each cost.</h1><p class="lede">A task run groups the model calls used for one piece of work. Open a card to follow the steps and their estimated API cost.</p></div>
+        <article class="panel spotlight screen-guide"><h2>One task can need several model calls.</h2><p id="task-guide" class="lede">For example, handling a support request can involve classifying the request, then drafting a reply. Your application groups related calls into a task run.</p><p class="fine">Sorted by known cost, highest first. The filters on Usage overview also apply here. Missing calls and unknown prices are not included in the subtotal.</p><button class="button" data-goto="usage">Change usage filters</button></article>
         <div id="task-list"></div>
         <div class="pagination" aria-label="Task pages"><button id="tasks-previous" class="button" disabled>Previous tasks</button><span id="tasks-page" class="fine" aria-live="polite"></span><button id="tasks-next" class="button" disabled>Next tasks</button></div>
       </section>
       <section id="page-evaluations" data-flow="compare" hidden>
-        <div class="page-heading"><p class="eyebrow">MODEL EVALUATIONS</p><h1>Does the cheaper model do the job?</h1><p class="lede">Replay the support-v1 evidence contract. Results and job progress persist when you leave.</p></div>
+        <div class="page-heading"><p class="eyebrow">MODEL EVALUATIONS</p><h1>Does the cheaper model do the job?</h1><p class="lede">Check saved model answers against the subscription-support rules. Compare correctness, critical failures, response time, and cost before choosing a model.</p></div>
         <article class="panel"><div class="section-head"><div><h2>Saved support comparison</h2><p>24 authored tickets · three models · structured decision and Ostiari Guard checks</p></div><span id="worker-status" class="tag">Checking worker</span></div>
-          <p class="data-note">Usage metadata alone cannot establish response quality. Upload a matching support-v1 recording or load the bundled recorded example. Replaying it makes no model API calls.</p>
+          <ol class="screen-steps"><li><strong>Choose saved answers</strong><span>Load the example or upload a compatible recording.</span></li><li><strong>Run the checks</strong><span>Test policy decisions and whether actions stayed within the allowed boundaries.</span></li><li><strong>Review the model results</strong><span>See which tickets passed and what prevents a model from qualifying.</span></li></ol>
+          <p class="data-note">Running these checks uses saved answers and makes no new model API calls. Usage costs alone cannot tell you whether an answer was correct.</p>
           <div class="controls" data-analyst><button id="load-example" class="button soft">Load recorded example</button><label class="upload-label">Upload support-v1 recording<input id="recording-upload" type="file" accept=".json,application/json"></label></div>
-          <form id="evaluate-form" class="controls" data-analyst><label class="field">Recording<select id="recording-select" required></select></label><button class="button primary">Queue offline evaluation</button></form>
+          <form id="evaluate-form" class="controls" data-analyst><label class="field">Saved answers to evaluate<select id="recording-select" required></select></label><button class="button primary" disabled>Run evaluation</button></form>
+          <p id="evaluation-help" class="fine"></p>
+          <details class="help-details"><summary>Which answers can I evaluate here?</summary><p>This comparison checks the supplied subscription-support workload: refund eligibility, cancellation timing, identity verification, and escalation. Uploaded recordings must use the matching support-v1 cases and format. Evaluations for other company tasks need their own relevant cases and checks.</p></details>
         </article>
         <div id="jobs"></div><div id="evaluation-result"></div>
       </section>
       <section id="page-proposals" data-flow="proposal" hidden>
-        <div class="page-heading"><p class="eyebrow">ROUTING REVIEW</p><h1>A recommendation you can inspect.</h1><p class="lede">Saved criteria, evaluation provenance, and reasons for exclusion. Proposals never change a route.</p></div>
+        <div class="page-heading"><p class="eyebrow">ROUTING REVIEW</p><h1>Choose a model with evidence.</h1><p class="lede">Set the quality and response-time requirements for a completed evaluation. Workbench recommends the qualifying model with the lowest cost per passing ticket and explains any exclusions.</p></div>
+        <article class="panel screen-guide"><h2>This saves a recommendation for human review.</h2><p>It does not switch models or change your application. Every candidate must have zero critical failures. If none meet your requirements, the result will explain why no model qualifies.</p><p id="review-help" class="fine"></p><button class="button" data-goto="evaluations">Go to model evaluations</button></article>
         <form id="proposal-form" class="panel" data-analyst>
           <h2>Review a completed evaluation</h2><div class="controls">
-            <label class="field">Evaluation<select id="proposal-job" required></select></label>
-            <label class="field">Minimum pass rate (%)<input name="pass" type="number" min="0" max="100" value="95" step="1" required></label>
-            <label class="field">Maximum p95 (ms)<input name="latency" type="number" min="1" max="3600000" value="20000" required></label>
-            <label class="field">Monthly task assumption<input name="volume" type="number" min="1" max="10000000" value="10000" required></label>
-            <button class="button primary">Save routing review</button></div>
-          <p class="data-note">Zero critical failures is always required. This comparison supports the saved support workload; it does not establish quality for unrelated captured tasks.</p>
+            <label class="field">Completed evaluation<select id="proposal-job" required></select></label>
+            <label class="field">Minimum tickets passed (%)<input name="pass" type="number" min="0" max="100" value="95" step="1" required><small>95 means at least 95% must pass all checks.</small></label>
+            <label class="field">Response-time limit, p95 (ms)<input name="latency" type="number" min="1" max="3600000" value="20000" required><small>95% of recorded task runs must finish within this time. 20,000 ms = 20 seconds.</small></label>
+            <label class="field">Expected task runs per month<input name="volume" type="number" min="1" max="10000000" value="10000" required><small>An assumption for projecting API savings, not measured monthly traffic.</small></label>
+            <button class="button primary" disabled>Save routing review</button></div>
+          <p class="data-note">These results apply to the saved support comparison. Evaluate your own representative workload before using a model for a different job.</p>
         </form><div id="proposals"></div>
       </section>
       <section id="page-sources" data-flow="connect" hidden>
-        <div class="page-heading"><p class="eyebrow">USAGE SOURCES</p><h1>Bring AxonLLM into view.</h1><p class="lede">Each source has its own token and event history. Retrying the same event does not add another charge.</p></div>
+        <div class="page-heading"><p class="eyebrow">USAGE SOURCES</p><h1>Connect the application you want to understand.</h1><p class="lede">A source identifies where usage comes from, such as your support application. Each application gets its own connection token and call history.</p></div>
+        <article class="panel screen-guide"><h2>Choose how to bring usage into Workbench.</h2><p><strong>Explore first:</strong> load the saved comparison in Model evaluations. It appears here as a recorded source.</p><p><strong>Connect an application:</strong> create a source below, create a connection token, then configure your application’s AxonLLM connector to send usage.</p><p class="fine">Creating a source alone does not start collecting calls. Prompt text and model responses stay out of the usage ledger.</p><button class="button" data-goto="evaluations">Explore the recorded example</button></article>
         <form id="source-form" class="panel controls" data-admin><label class="field">Source name<input name="name" placeholder="Support application" required maxlength="100"></label><button class="button primary">Create AxonLLM source</button></form>
         <article id="token-panel" class="panel" hidden><h2>Save this ingestion token</h2><p class="data-note">Shown once. Store it in a private token file on the application host. It expires in 30 days; rotate before expiry.</p><label class="field">Ingestion token<textarea id="token-value" readonly spellcheck="false"></textarea></label><button id="dismiss-token" class="button">I have saved the token</button></article>
         <div id="sources"></div>
-        <article class="panel"><h2>Connect your application</h2><p class="data-note">Use Workbench’s capture_completion adapter with a durable outbox and a separate delivery process. Only usage metadata is sent; prompts and model responses stay out of the usage ledger.</p><p class="fine">Setup instructions: docs/PILOT.md in the repository. For a first delivery test, backfill the bundled recording; those events remain labeled “recorded.” Create a separate source for each application.</p></article>
+        <details class="panel help-details"><summary>Developer connection instructions</summary><p>Use Workbench’s capture_completion adapter to save call metadata to a durable outbox. A separate delivery process sends it with the connection token. Retrying delivery of the same event does not count it twice.</p><p>Follow the connector setup in <a href="https://github.com/hk-775/ai-operations-workbench/blob/main/docs/PILOT.md" target="_blank" rel="noopener noreferrer">the application connection guide</a>. Tokens are shown once and expire after 30 days; store them privately and replace them before expiry.</p></details>
       </section>
       <section id="page-operations" data-flow="compare" hidden>
-        <div class="page-heading"><p class="eyebrow">OPERATIONS</p><h1>Know when your evidence needs attention.</h1><p class="lede">Worker availability, evaluation failures, cost coverage, and scheduled maintenance.</p></div>
+        <div class="page-heading"><p class="eyebrow">OPERATIONS</p><h1>Check that Workbench is running properly.</h1><p class="lede">See whether evaluations can run, whether jobs need attention, and whether incoming calls have enough information to estimate their cost.</p></div>
+        <article class="panel screen-guide"><h2>What to check here</h2><p><strong>Evaluation service unavailable?</strong> Ask your operator to check the worker process. <strong>Jobs waiting or failing?</strong> Inspect the evaluation results and service logs. <strong>Costs missing?</strong> Check the application’s usage capture and supported model prices.</p><p class="fine">Call-cost coverage below uses newly observed application traffic from the last 24 hours. Saved examples and synthetic test data are excluded, so these counts can be zero even when the demo has tasks.</p></article>
         <div class="section-head"><span id="operations-status" class="tag">Checking services</span><button id="refresh-operations" class="button">Refresh health</button></div>
         <div id="operations-metrics" class="metrics"></div>
         <article class="panel"><h2>Needs attention</h2><div id="operations-alerts" role="status"></div></article>
         <article class="panel"><h2>Data lifecycle</h2><p id="operations-retention" class="data-note"></p><p class="fine">Observed-call coverage covers the last 24 hours. Recorded examples and fixtures are excluded. Monitoring reports coverage gaps; it cannot establish complete provider billing.</p></article>
       </section>
       <section id="page-team" hidden>
-        <div class="page-heading"><p class="eyebrow">TEAM &amp; AUDIT</p><h1>Give each person the access they need.</h1><p class="lede">Viewers inspect evidence. Analysts import and evaluate. Administrators manage access and connectors.</p></div>
+        <div class="page-heading"><p class="eyebrow">TEAM &amp; AUDIT</p><h1>Manage access and review team activity.</h1><p class="lede">Choose who can inspect results, run evaluations, and administer the workspace. The activity log records changes made by the team and background services.</p></div>
+        <article class="panel screen-guide"><h2>Choose a role based on what the person needs to do.</h2><dl class="role-guide"><div><dt>Viewer</dt><dd>Read usage, evaluations, and saved recommendations.</dd></div><div><dt>Analyst</dt><dd>Also import recordings, run evaluations, and save reviews.</dd></div><div><dt>Administrator</dt><dd>Also manage people, application connections, and operations.</dd></div></dl><p class="fine">Disabling an account also ends its active sessions.</p></article>
         <form id="user-form" class="panel controls"><label class="field">Username<input name="username" required minlength="3" maxlength="80" autocomplete="off"></label><label class="field">Initial password<input name="password" type="password" required minlength="14" maxlength="128" autocomplete="new-password"></label><label class="field">Role<select name="role"><option value="viewer">Viewer</option><option value="analyst">Analyst</option><option value="admin">Administrator</option></select></label><button class="button primary">Add team member</button></form>
         <form id="identity-form" class="panel controls" hidden><label class="field">Username<input name="username" required minlength="3" maxlength="80" autocomplete="off"></label><label class="field">Company identity subject<input name="subject" required maxlength="255" autocomplete="off"></label><label class="field">Role<select name="role"><option value="viewer">Viewer</option><option value="analyst">Analyst</option><option value="admin">Administrator</option></select></label><button class="button primary">Add company member</button><p class="fine">Use the exact subject identifier supplied by your identity administrator. Email addresses do not automatically grant access.</p></form>
-        <div id="users"></div><article class="panel"><h2>Recent audit events</h2><div id="audit" class="table-wrap"></div></article>
+        <div id="users"></div><article class="panel"><h2>Recent team activity</h2><div id="audit" class="table-wrap"></div></article>
       </section>
-      <footer class="page-footer"><span>AI Operations Workbench · Self-hosted workspace</span><span>API estimates ≠ invoices · Routing changes require a separate process</span></footer>
+      <footer class="page-footer"><span>AI Operations Workbench · <a href="/static/architecture.html">Interactive architecture</a></span><span>API estimates ≠ invoices · Routing changes require a separate process</span></footer>
     </main>
   </div>
 </div>

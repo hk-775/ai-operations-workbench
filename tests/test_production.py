@@ -200,6 +200,27 @@ def test_production_configuration_fails_closed(settings):
     config.validate_production_app()
 
 
+def test_hosted_single_factor_exception_keeps_other_production_requirements(settings):
+    config = replace(settings, production=True, hosted_test=True,
+                     public_origin="https://workbench.example",
+                     oidc_issuer="https://identity.example", oidc_client_id="app",
+                     oidc_client_secret=secrets.token_urlsafe(32), local_login=False,
+                     metrics_token=secrets.token_urlsafe(32), retention_days=30,
+                     evidence_retention_days=365, audit_retention_days=365)
+    config.validate_production_app()
+    for changes, message in [
+        ({"hosted_test": False}, "MFA"),
+        ({"local_login": True}, "OIDC"),
+        ({"oidc_issuer": "", "oidc_client_secret": "", "oidc_client_id": ""}, "OIDC"),
+        ({"metrics_token": ""}, "metrics"),
+        ({"retention_days": 0}, "retention"),
+        ({"evidence_retention_days": 0}, "retention"),
+        ({"audit_retention_days": 0}, "retention"),
+    ]:
+        with pytest.raises(ValueError, match=message):
+            replace(config, **changes).validate_production_app()
+
+
 def test_existing_local_sessions_cannot_bypass_production_sso(pilot):
     raw = pilot.client.cookies.get(auth.COOKIE)
     config = replace(pilot.settings,production=True,public_origin="https://workbench.example")

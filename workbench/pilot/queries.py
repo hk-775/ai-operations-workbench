@@ -7,8 +7,8 @@ from decimal import Decimal
 
 from sqlalchemy import and_, case, func, select
 
-from workbench.domain import money
-from .database import events, facts
+from workbench.domain import cases, money
+from .database import events, facts, recordings
 
 
 def timestamp(value):
@@ -71,12 +71,28 @@ def usage(database, team, project=None, source_id=None, include_fixtures=False, 
                                        .group_by(events.c.evidence)).all())
             selected = db.execute(task_query.order_by(amount.desc(), events.c.source_id, events.c.task_id)
                                   .limit(page_size).offset(page * page_size)).mappings().all()
+            # Only validated, team-owned recordings can use the authored support
+            # titles. An application's arbitrary case_id is not a support case.
+            recorded_sources = dict(db.execute(select(recordings.c.source_id, recordings.c.id).where(
+                recordings.c.team_id == team,
+                recordings.c.source_id.in_([row["source_id"] for row in selected]))).all())
+            catalog = {item["id"]: item for item in cases()} if recorded_sources else {}
             tasks = []
             for row in selected:
                 calls = call_rows(db, [*where, events.c.source_id == row["source_id"],
                                       events.c.task_id == row["task_id"]])
+                context = None
+                case_ids = {call.get("case_id") for call in calls}
+                if (len(case_ids) == 1 and calls and row["source_id"] in recorded_sources
+                        and all(call.get("recording_id") == recorded_sources[row["source_id"]]
+                                and call["evidence"] in {"recorded", "fixture"} for call in calls)):
+                    case_id = next(iter(case_ids))
+                    if item := catalog.get(case_id):
+                        context = {"kind": "support_comparison", "case_id": case_id,
+                                   "title": item["title"], "request": item["ticket"]}
                 tasks.append({"source_id": row["source_id"], "task_id": row["task_id"],
                     "project": row["project"], "occurred_at": row["occurred_at"], "calls": calls,
+                    "context": context,
                     "api_estimate_usd": money(Decimal(row["nanos"]) / 1_000_000_000),
                     "call_count": row["calls"], "unknown_cost_calls": row["unknown"],
                     "uncovered_attempt_calls": row["uncovered"], "calls_has_more": row["calls"] > len(calls)})

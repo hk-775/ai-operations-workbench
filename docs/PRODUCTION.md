@@ -232,6 +232,11 @@ Representative held-out workload evaluation is required before acting on a revie
 The bundled 24-case example is product demonstration evidence, not a universal
 validation of a company's models.
 
+The opt-in [AWS hosted acceptance test](HOSTED-TEST.md) exercises a dedicated
+server with separate seeded and clean workspaces. Its explicitly selected
+password-only SSO profile is a test exception; standard production still
+requires a verified MFA claim.
+
 ## Runtime image maintenance
 
 The application uses a minimal Alpine runtime without build tools. The database

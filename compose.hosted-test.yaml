@@ -1,0 +1,14 @@
+# Overlay on compose.production.yaml for the explicitly selected no-MFA test.
+name: ${WORKBENCH_HOSTED_PROJECT:?Set the isolated hosted project name}
+services:
+  app:
+    environment:
+      WORKBENCH_HOSTED_TEST: "true"
+      WORKBENCH_COOKIE_NAMESPACE: "${WORKBENCH_HOSTED_PROJECT}"
+    secrets:
+      - hosted_admin_password
+  proxy:
+    profiles: ["external-origin"]
+secrets:
+  hosted_admin_password:
+    file: .pilot/admin_password
