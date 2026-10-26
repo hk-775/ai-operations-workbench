@@ -13,7 +13,7 @@ from sqlalchemy import delete, func, insert, or_, select, update
 from sqlalchemy.exc import IntegrityError
 
 from .database import (Conflict, Database, hash_secret, login_failures,
-                       sessions, teams, uid, users)
+                       sessions, sso_sessions, teams, uid, users)
 
 hasher = PasswordHasher(time_cost=3, memory_cost=65536, parallelism=2)
 dummy_hash = hasher.hash(secrets.token_urlsafe(32))
@@ -82,11 +82,14 @@ def principal(database: Database, token: str | None, settings):
         return None
     now = int(time.time())
     with database.engine.begin() as db:
-        row = db.execute(select(users.c.id, users.c.team_id, users.c.username, users.c.role,
+        query = select(users.c.id, users.c.team_id, users.c.username, users.c.role,
             teams.c.name.label("team_name"), sessions.c.last_seen).select_from(
                 sessions.join(users).join(teams)).where(
             sessions.c.id == hash_secret(token), sessions.c.expires_at > now,
-            sessions.c.last_seen > now - settings.idle_seconds, users.c.active.is_(True))).mappings().first()
+            sessions.c.last_seen > now - settings.idle_seconds, users.c.active.is_(True))
+        if settings.production:
+            query = query.where(sessions.c.id.in_(select(sso_sessions.c.session_id)))
+        row = db.execute(query).mappings().first()
         if not row:
             return None
         if row["last_seen"] < now - 60:

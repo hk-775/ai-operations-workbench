@@ -24,7 +24,7 @@ jobs:
         python: ["3.12", "3.13"]
     services:
       postgres:
-        image: postgres:16.13-alpine@sha256:4e6e670bb069649261c9c18031f0aded7bb249a5b6664ddec29c013a89310d50
+        image: postgres:16-alpine@sha256:0cefaabd882e42bcb2a2f3dc56d3ce4770560ba62fd7f197f1a2e008fd5731ab
         env:
           POSTGRES_USER: workbench
           POSTGRES_DB: workbench
@@ -53,7 +53,7 @@ jobs:
     timeout-minutes: 15
     services:
       postgres:
-        image: postgres:16.13-alpine@sha256:4e6e670bb069649261c9c18031f0aded7bb249a5b6664ddec29c013a89310d50
+        image: postgres:16-alpine@sha256:0cefaabd882e42bcb2a2f3dc56d3ce4770560ba62fd7f197f1a2e008fd5731ab
         env:
           POSTGRES_USER: workbench
           POSTGRES_DB: workbench
@@ -95,7 +95,7 @@ jobs:
   pilot-container:
     name: Pilot container and restore
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -106,9 +106,44 @@ jobs:
           docker compose --env-file .pilot/compose.env -f compose.pilot.yaml up --build --wait
       - name: Verify bootstrap, offline evaluation, and backup restore
         run: python3 scripts/check_pilot_stack.py
+      - name: Verify seeded and clean customer deployments
+        run: |
+          python3 scripts/deploy_instances.py
+          python3 scripts/verify_instances.py
+          python3 scripts/check_pilot_stack.py --env-file .pilot/instances/demo/compose.env --compose-file compose.instances.yaml
+      - name: Install verified container scanner
+        run: |
+          curl --fail --silent --show-error --location \
+            https://github.com/aquasecurity/trivy/releases/download/v0.76.1/trivy_0.76.1_Linux-64bit.tar.gz \
+            --output "$RUNNER_TEMP/trivy.tar.gz"
+          echo "c7cbe3137fb8a48a17574bede3dd6beb16742d1e9772929940fc90082c39d9c0  $RUNNER_TEMP/trivy.tar.gz" | sha256sum --check
+          tar -xzf "$RUNNER_TEMP/trivy.tar.gz" -C "$RUNNER_TEMP" trivy
+      - name: Check runtime images for high and critical vulnerabilities
+        run: |
+          docker build -f deploy/images/Dockerfile.proxy -t ai-operations-workbench-proxy:0.2.0 deploy/images
+          "$RUNNER_TEMP/trivy" image --exit-code 1 --scanners vuln --severity HIGH,CRITICAL ai-operations-workbench:test-release
+          "$RUNNER_TEMP/trivy" image --exit-code 1 --scanners vuln --severity HIGH,CRITICAL ai-operations-workbench-postgres:0.2.0
+          "$RUNNER_TEMP/trivy" image --exit-code 1 --scanners vuln --severity HIGH,CRITICAL ai-operations-workbench-proxy:0.2.0
       - name: Clean up isolated CI services
         if: always()
-        run: docker compose --env-file .pilot/compose.env -f compose.pilot.yaml down --volumes
+        run: |
+          docker compose --env-file .pilot/compose.env -f compose.pilot.yaml down --volumes
+          if test -f .pilot/instances/demo/compose.env; then docker compose --env-file .pilot/instances/demo/compose.env -f compose.instances.yaml down --volumes; fi
+          if test -f .pilot/instances/clean/compose.env; then docker compose --env-file .pilot/instances/clean/compose.env -f compose.instances.yaml down --volumes; fi
+
+  dependency-audit:
+    name: Dependency vulnerability audit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e
+        with:
+          version: "0.10.7"
+      - run: uv export --locked --no-dev --no-hashes --no-emit-project --no-emit-package axon-llm --no-emit-package ostiari --output-file "$RUNNER_TEMP/requirements.txt" > /dev/null
+      - run: uvx --from pip-audit==2.9.0 pip-audit --disable-pip --no-deps --requirement "$RUNNER_TEMP/requirements.txt"
 
   secrets:
     name: Secret scan

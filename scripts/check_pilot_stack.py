@@ -1,11 +1,16 @@
 """Validate a fresh isolated database and restore using the shipped container."""
 import json
+import argparse
 import secrets
 import subprocess
 import tempfile
 from pathlib import Path
 
-compose = ["docker", "compose", "--env-file", ".pilot/compose.env", "-f", "compose.pilot.yaml"]
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument("--env-file",default=".pilot/compose.env")
+parser.add_argument("--compose-file",default="compose.pilot.yaml")
+args = parser.parse_args()
+compose = ["docker", "compose", "--env-file", args.env_file, "-f", args.compose_file]
 identity = "pilot_smoke_" + secrets.token_hex(5)
 restored = identity + "_restore"
 

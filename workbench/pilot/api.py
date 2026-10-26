@@ -4,13 +4,14 @@ from __future__ import annotations
 import asyncio
 import hmac
 import json
+import logging
 from contextlib import asynccontextmanager
 from typing import Literal
 from urllib.parse import urlsplit
 
-from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field, SecretStr
 from sqlalchemy import select
@@ -21,8 +22,11 @@ from workbench.domain import ROOT, evaluation_revision, strict_json
 from workbench.evidence import recommend
 from . import auth
 from .config import Settings
-from .database import Conflict, Database, audits, recordings, users
+from .database import Conflict, Database, audits, recordings, users, events
 from .events import EventBatch
+from .identity import BINDING_COOKIE, CALLBACK, CompanyIdentity, provision
+from .operations import Instrumentation, Metrics, snapshot
+from .queries import call_rows, conditions
 
 
 class Boundary:
@@ -105,6 +109,11 @@ class NewUser(Login):
     password: SecretStr = Field(min_length=14, max_length=128)
     role: Literal["admin", "analyst", "viewer"]
 
+class NewIdentity(Input):
+    username: str = Field(min_length=3, max_length=80)
+    subject: str = Field(min_length=1, max_length=255)
+    role: Literal["admin", "analyst", "viewer"]
+
 
 class SourceName(Input):
     name: str = Field(min_length=1, max_length=100, pattern=r".*\S.*")
@@ -122,8 +131,14 @@ class Constraints(Input):
 
 def create_pilot_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or Settings.from_env()
+    settings.validate_production_app()
     database = Database(settings.database_url)
-    database.migrate()
+    database.check_schema() if settings.production else database.migrate()
+    company = CompanyIdentity(database, settings) if settings.oidc_issuer else None
+    metrics = Metrics()
+    cookie_name = auth.COOKIE + ("_" + settings.cookie_namespace if settings.cookie_namespace else "")
+    binding_cookie = BINDING_COOKIE + ("_" + settings.cookie_namespace if settings.cookie_namespace else "")
+    logging.getLogger("workbench.operations").setLevel(logging.INFO)
 
     @asynccontextmanager
     async def lifespan(app):
@@ -133,7 +148,9 @@ def create_pilot_app(settings: Settings | None = None) -> FastAPI:
     app = FastAPI(title="AI Operations Workbench · Team pilot", docs_url=None,
                   redoc_url=None, openapi_url=None, lifespan=lifespan)
     app.state.database, app.state.settings = database, settings
+    app.state.company_identity = company
     app.add_middleware(Boundary, settings=settings)
+    app.add_middleware(Instrumentation, metrics=metrics)
 
     @app.exception_handler(RequestValidationError)
     async def invalid(request, exc):
@@ -153,7 +170,7 @@ def create_pilot_app(settings: Settings | None = None) -> FastAPI:
         return JSONResponse({"detail": "Database unavailable; retry shortly"}, status_code=503)
 
     def member(request: Request):
-        token = request.cookies.get(auth.COOKIE)
+        token = request.cookies.get(cookie_name)
         actor = auth.principal(database, token, settings)
         if not actor:
             raise HTTPException(401, "Sign in to your team")
@@ -180,18 +197,77 @@ def create_pilot_app(settings: Settings | None = None) -> FastAPI:
     @app.get("/health/ready")
     def ready():
         healthy = database.worker_healthy()
+        if settings.production:
+            state = snapshot(database, settings)
+            healthy = healthy and state["maintenance_age_seconds"] is not None and state["maintenance_age_seconds"] < 7200
         return JSONResponse({"status": "ready" if healthy else "worker_unavailable"},
                             status_code=200 if healthy else 503)
 
+    @app.get("/metrics")
+    def operational_metrics(request: Request):
+        token = request.headers.get("authorization", "")
+        expected = "Bearer " + settings.metrics_token
+        if not settings.metrics_token or not token.isascii() or not hmac.compare_digest(token, expected):
+            raise HTTPException(401, "Valid monitoring credentials required")
+        return Response(metrics.render(snapshot(database, settings)),
+                        media_type="text/plain; version=0.0.4; charset=utf-8")
+
+    @app.get("/api/pilot/operations")
+    def operations(actor=Depends(admin)):
+        return snapshot(database, settings, actor["team_id"])
+
     @app.get("/api/auth/session")
     def session(request: Request):
-        token = request.cookies.get(auth.COOKIE)
+        token = request.cookies.get(cookie_name)
         actor = auth.principal(database, token, settings)
         return {"initialized": database.initialized(), "user": actor,
-                "csrf": auth.csrf_token(token) if actor else None}
+                "csrf": auth.csrf_token(token) if actor else None,
+                "login_methods": {"local": settings.local_login, "company": company is not None}}
+
+    def signed_in(token):
+        response = JSONResponse({"user": auth.principal(database, token, settings),
+                                 "csrf": auth.csrf_token(token)})
+        response.set_cookie(cookie_name, token, max_age=settings.session_seconds,
+                            httponly=True, secure=settings.secure_cookie, samesite="strict", path="/")
+        return response
+
+    @app.get("/api/auth/oidc/start")
+    async def company_login():
+        if company is None:
+            raise HTTPException(404, "Company sign-in is not configured")
+        try:
+            url, binding = await company.begin()
+        except Conflict:
+            raise HTTPException(429, "Company sign-in is busy; retry shortly") from None
+        except Exception:
+            raise HTTPException(503, "Company sign-in is unavailable; contact your administrator") from None
+        response = RedirectResponse(url, status_code=302)
+        response.set_cookie(binding_cookie, binding, max_age=600, httponly=True,
+                            secure=settings.secure_cookie, samesite="lax", path="/api/auth/oidc")
+        return response
+
+    @app.get(CALLBACK)
+    async def company_callback(request: Request):
+        if company is None:
+            raise HTTPException(404, "Company sign-in is not configured")
+        try:
+            token = await company.complete(request.query_params.get("state"),
+                request.cookies.get(binding_cookie), request.query_params.get("code"))
+        except Exception:
+            # Never reflect identity-provider errors, authorization codes, or token content.
+            response = RedirectResponse("/?signin=failed", status_code=303)
+        else:
+            response = RedirectResponse("/", status_code=303)
+            response.set_cookie(cookie_name, token, max_age=settings.session_seconds,
+                httponly=True, secure=settings.secure_cookie, samesite="strict", path="/")
+        response.delete_cookie(binding_cookie, path="/api/auth/oidc", secure=settings.secure_cookie,
+                               httponly=True, samesite="lax")
+        return response
 
     @app.post("/api/auth/login")
     def login(payload: Login, request: Request):
+        if not settings.local_login:
+            raise HTTPException(403, "Use company sign-in")
         try:
             token = auth.authenticate(database, payload.username, payload.password.get_secret_value(),
                 request.client.host if request.client else "unknown", settings)
@@ -201,17 +277,13 @@ def create_pilot_app(settings: Settings | None = None) -> FastAPI:
             token = None
         if not token:
             raise HTTPException(401, "Invalid username or password")
-        response = JSONResponse({"user": auth.principal(database, token, settings),
-                                 "csrf": auth.csrf_token(token)})
-        response.set_cookie(auth.COOKIE, token, max_age=settings.session_seconds,
-                            httponly=True, secure=settings.secure_cookie, samesite="strict", path="/")
-        return response
+        return signed_in(token)
 
     @app.post("/api/auth/logout")
     def logout(request: Request, actor=Depends(member)):
-        auth.logout(database, request.cookies[auth.COOKIE], actor)
+        auth.logout(database, request.cookies[cookie_name], actor)
         response = JSONResponse({"signed_out": True})
-        response.delete_cookie(auth.COOKIE, path="/", secure=settings.secure_cookie,
+        response.delete_cookie(cookie_name, path="/", secure=settings.secure_cookie,
                                httponly=True, samesite="strict")
         return response
 
@@ -235,8 +307,29 @@ def create_pilot_app(settings: Settings | None = None) -> FastAPI:
 
     @app.get("/api/pilot/usage")
     def usage(project: str | None = None, source_id: str | None = None,
-              task_id: str | None = None, include_fixtures: bool = False, actor=Depends(member)):
-        return database.usage(actor["team_id"], project, source_id, include_fixtures, task_id)
+              task_id: str | None = None, include_fixtures: bool = False,
+              start: str | None = Query(None, max_length=50), end: str | None = Query(None, max_length=50),
+              page: int = Query(0, ge=0, le=100_000), page_size: int = Query(50, ge=1, le=100),
+              actor=Depends(member)):
+        try:
+            return database.usage(actor["team_id"], project, source_id, include_fixtures, task_id,
+                                  start=start, end=end, page=page, page_size=page_size)
+        except ValueError:
+            raise HTTPException(422, "Invalid usage filters") from None
+
+    @app.get("/api/pilot/calls")
+    def calls(source_id: str, task_id: str, project: str | None = None,
+              start: str | None = None, end: str | None = None,
+              include_fixtures: bool = False, offset: int = Query(0, ge=0, le=1_000_000),
+              actor=Depends(member)):
+        try:
+            where = conditions(actor["team_id"], project=project, source_id=source_id, task_id=task_id,
+                               include_fixtures=include_fixtures, start=start, end=end)
+        except ValueError:
+            raise HTTPException(422, "Invalid time window") from None
+        with database.engine.connect() as db:
+            rows = call_rows(db, where, limit=101, offset=offset)
+        return {"calls": rows[:100], "has_more": len(rows) > 100, "offset": offset}
 
     @app.get("/api/pilot/sources")
     def sources(actor=Depends(member)):
@@ -340,6 +433,8 @@ def create_pilot_app(settings: Settings | None = None) -> FastAPI:
 
     @app.post("/api/pilot/users")
     def new_user(payload: NewUser, actor=Depends(admin)):
+        if not settings.local_login:
+            raise HTTPException(403, "Provision a company identity instead")
         try:
             return auth.create_user(database, actor, payload.username,
                                     payload.password.get_secret_value(), payload.role)
@@ -347,6 +442,18 @@ def create_pilot_app(settings: Settings | None = None) -> FastAPI:
             if isinstance(exc, Conflict):
                 raise
             raise HTTPException(422, "Invalid username or password length") from None
+
+    @app.post("/api/pilot/identities")
+    def new_identity(payload: NewIdentity, actor=Depends(admin)):
+        if company is None:
+            raise HTTPException(409, "Configure company sign-in first")
+        try:
+            return provision(database, actor, payload.username, payload.subject,
+                             payload.role, settings.oidc_issuer)
+        except Conflict:
+            raise
+        except ValueError:
+            raise HTTPException(422, "Invalid company identity") from None
 
     @app.post("/api/pilot/users/{identity}/disable")
     def disable(identity: str, actor=Depends(admin)):

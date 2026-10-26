@@ -23,7 +23,11 @@ x-runtime: &runtime
 
 services:
   db:
-    image: postgres:16.13-alpine@sha256:4e6e670bb069649261c9c18031f0aded7bb249a5b6664ddec29c013a89310d50
+    image: ai-operations-workbench-postgres:0.2.0
+    build:
+      context: ./deploy/images
+      dockerfile: Dockerfile.postgres
+      args: {GOPROXY: "${WORKBENCH_GOPROXY:-https://proxy.golang.org,direct}"}
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres

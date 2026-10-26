@@ -23,6 +23,8 @@ function nav(next) {
   $('#current-view').textContent = ({overview:'Overview',tasks:'Task explorer',compare:'Model comparison',proposal:'Routing proposal'})[view];
   $('#current-view').dataset.flow = view === 'overview' ? 'connect' : view;
   render();
+  $('.content').scrollTo({top:0,behavior:'instant'});
+  window.scrollTo({top:0,behavior:'instant'});
 }
 async function refresh() {
   state = await api('/api/state');
@@ -152,7 +154,7 @@ document.addEventListener('click',async event=>{
   const step=event.target.closest('[data-step]');
   if(step) { if(step.dataset.step==='connect') $('#sources').showModal(); else nav(step.dataset.step); return; }
   const task=event.target.closest('[data-task]');
-  if(task) {selected=state.tasks.find(t=>t.id===task.dataset.task);nav('tasks');window.scrollTo({top:0,behavior:'instant'});return;}
+  if(task) {selected=state.tasks.find(t=>t.id===task.dataset.task);nav('tasks');return;}
   const caseButton=event.target.closest('[data-case]');
   if(caseButton) {$('#detail').close();inspectCase(analysis.tasks.find(t=>t.id===caseButton.dataset.case));return;}
   const caseList=event.target.closest('[data-model-cases]');

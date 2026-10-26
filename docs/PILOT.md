@@ -2,7 +2,8 @@
 
 This milestone adds one authenticated team, an AxonLLM usage connector, a
 PostgreSQL usage ledger, durable offline evaluation jobs, and saved routing
-reviews. It is a self-hosted pilot with local accounts. Enterprise SSO, billing
+reviews. It is a self-hosted pilot with local accounts. Company OIDC/MFA and
+production operations are available in the [production profile](PRODUCTION.md). Billing
 reconciliation, arbitrary evaluation plugins, and routing activation remain
 outside this milestone.
 
@@ -210,11 +211,10 @@ separately. Hardware/electricity and invoice costs remain unmeasured. Source
 authentication identifies who submitted data; it does not attest provider
 provenance or prove that unobserved calls do not exist.
 
-The pilot query is bounded to 10,000 events per selected project/source and
-returns an explicit error above that limit. The task screen lists the 200 most
-expensive captured tasks in the filtered result. Pagination, time-window
-aggregation, budgets, retention scheduling, and high-volume ingestion are
-follow-up work.
+Usage totals are aggregated in the database, with paginated task and call details
+and optional UTC time windows. The former 10,000-event working-set limit is
+removed. The production profile adds retention scheduling and monitoring.
+Invoice reconciliation and cost-enforcement budgets remain separate features.
 
 ## Persistence and recovery
 
@@ -303,9 +303,10 @@ uploaded code. This is not a general-purpose sandbox. The app/worker containers
 have read-only filesystems, temporary scratch space, resource limits, dropped
 capabilities, and no routing-activation endpoint.
 
-This milestone does not deploy a cloud service, configure SSO/MFA, assert SaaS
+This local-account configuration does not deploy a cloud service or assert SaaS
 tenant isolation, certify compliance, or establish operating SLOs. Those are
-separate production milestones after a representative team pilot.
+customer-specific operational checks. The production profile configures company
+SSO/MFA without embedding any company's identity information in the release.
 
 ## Verify changes
 

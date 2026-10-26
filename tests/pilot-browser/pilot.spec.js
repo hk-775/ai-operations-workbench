@@ -68,6 +68,29 @@ test('viewer can inspect evidence but cannot administer or queue work',async({pa
   await page.getByRole('button',{name:'Usage sources',exact:true}).click();
   await expect(page.getByRole('button',{name:'Create AxonLLM source'})).toBeHidden();
 });
+
+test('desktop task list has a visible scrollbar and supports keyboard scrolling',async({page})=>{
+  await page.setViewportSize({width:1280,height:650});
+  await login(page);
+  await recorded(page);
+  await page.getByRole('button',{name:'Task explorer',exact:true}).click();
+  await expect(page.locator('.task-card').first()).toBeVisible();
+  const workspace=page.getByRole('region',{name:'Workspace content'});
+  const sidebarTop=(await page.locator('.sidebar').boundingBox()).y;
+  expect(await workspace.evaluate(el=>el.offsetWidth-el.clientWidth)).toBeGreaterThan(0);
+  await page.mouse.move(1000,450);
+  await page.mouse.wheel(0,450);
+  await expect.poll(()=>workspace.evaluate(el=>el.scrollTop)).toBeGreaterThan(0);
+  expect(await page.evaluate(()=>window.scrollY)).toBe(0);
+  expect((await page.locator('.sidebar').boundingBox()).y).toBe(sidebarTop);
+  await workspace.focus();
+  await page.keyboard.press('End');
+  await expect(page.locator('.page-footer')).toBeInViewport();
+  await page.getByRole('button',{name:'Usage overview',exact:true}).click();
+  await expect.poll(()=>workspace.evaluate(el=>el.scrollTop)).toBe(0);
+  await expect(page.getByRole('button',{name:'Sign out',exact:true})).toBeInViewport();
+});
+
 test('solid workflow circles move, pause, and respect reduced motion',async({page})=>{
   await login(page);
   const marker=page.locator('.connector>span').first();

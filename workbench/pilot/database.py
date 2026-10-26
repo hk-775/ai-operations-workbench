@@ -9,7 +9,7 @@ import uuid
 from collections import defaultdict
 from decimal import Decimal
 
-from sqlalchemy import (BigInteger, Boolean, Column, ForeignKey, Index, Integer, event,
+from sqlalchemy import (BigInteger, Boolean, Column, ForeignKey, ForeignKeyConstraint, Index, Integer, event,
                         MetaData, String, Table, Text, UniqueConstraint, and_,
                         create_engine, delete, func, insert, or_, select, update)
 from sqlalchemy.exc import IntegrityError
@@ -34,6 +34,8 @@ sessions = Table("wb_sessions", metadata, Column("id", String(64), primary_key=T
                  Column("created_at", BigInteger, nullable=False),
                  Column("expires_at", BigInteger, nullable=False),
                  Column("last_seen", BigInteger, nullable=False))
+sso_sessions = Table("wb_sso_sessions", metadata,
+                     Column("session_id", ForeignKey("wb_sessions.id", ondelete="CASCADE"), primary_key=True))
 login_failures = Table("wb_login_failures", metadata,
                        Column("id", String(36), primary_key=True),
                        Column("username_hash", String(64), nullable=False),
@@ -68,6 +70,25 @@ events = Table("wb_events", metadata,
                Column("received_at", BigInteger, nullable=False))
 Index("wb_events_team_task", events.c.team_id, events.c.source_id, events.c.task_id)
 Index("wb_events_team_time", events.c.team_id, events.c.occurred_at)
+facts = Table("wb_event_facts", metadata,
+              Column("source_id", String(36), primary_key=True),
+              Column("event_id", String(160), primary_key=True),
+              Column("api_nanodollars", BigInteger),
+              Column("attempt_complete", Boolean, nullable=False),
+              ForeignKeyConstraint(["source_id", "event_id"],
+                                   ["wb_events.source_id", "wb_events.event_id"], ondelete="CASCADE"))
+identities = Table("wb_identities", metadata,
+                   Column("issuer", String(512), primary_key=True),
+                   Column("subject", String(255), primary_key=True),
+                   Column("user_id", ForeignKey("wb_users.id"), nullable=False, unique=True))
+oidc_states = Table("wb_oidc_states", metadata,
+                    Column("id", String(64), primary_key=True),
+                    Column("payload", Text, nullable=False),
+                    Column("expires_at", BigInteger, nullable=False))
+maintenance = Table("wb_maintenance", metadata,
+                    Column("id", String(40), primary_key=True),
+                    Column("payload", Text, nullable=False),
+                    Column("updated_at", BigInteger, nullable=False))
 recordings = Table("wb_recordings", metadata,
                    Column("team_id", ForeignKey("wb_teams.id"), primary_key=True),
                    Column("id", String(64), primary_key=True),
@@ -133,15 +154,39 @@ class Database:
         with self.engine.begin() as db:
             if self.engine.dialect.name == "postgresql":
                 db.exec_driver_sql("SELECT pg_advisory_xact_lock(2026102301)")
-            metadata.create_all(db)
+            schema.create(db, checkfirst=True)
             versions = db.execute(select(schema.c.version)).scalars().all()
-            if not versions:
-                db.execute(insert(schema).values(version=1))
-            elif versions != [1]:
+            if versions and versions not in ([1], [2]):
                 raise RuntimeError("Unsupported pilot database schema")
+            metadata.create_all(db)
+            if versions != [2]:
+                # Only copy persisted accounting: repricing would rewrite historical evidence.
+                while True:
+                    batch = db.execute(select(events.c.source_id, events.c.event_id, events.c.accounting)
+                        .outerjoin(facts, and_(events.c.source_id == facts.c.source_id,
+                                              events.c.event_id == facts.c.event_id))
+                        .where(facts.c.event_id.is_(None)).limit(1000)).mappings().all()
+                    if not batch:
+                        break
+                    db.execute(insert(facts), [self.fact(row["source_id"], row["event_id"],
+                                                        json.loads(row["accounting"])) for row in batch])
+                db.execute(delete(schema))
+                db.execute(insert(schema).values(version=2))
             book = pricebook()
             if not db.execute(select(books.c.id).where(books.c.id == book["id"])).first():
                 db.execute(insert(books).values(id=book["id"], payload=json.dumps(book["snapshot"])))
+
+    def check_schema(self):
+        with self.engine.connect() as db:
+            if db.execute(select(schema.c.version)).scalars().all() != [2]:
+                raise RuntimeError("Run the explicit database migration before starting this release")
+
+    @staticmethod
+    def fact(source_id, event_id, charge):
+        amount = charge["api_estimate_usd"]
+        return {"source_id": source_id, "event_id": event_id,
+                "api_nanodollars": None if amount is None else int(Decimal(amount) * 1_000_000_000),
+                "attempt_complete": charge["attempt_cost_complete"]}
 
     @staticmethod
     def audit(db, team_id, actor, action, entity):
@@ -207,24 +252,39 @@ class Database:
             sources.c.team_id == team_id).with_for_update()).mappings().first()
         if not source:
             raise KeyError("Source not found")
+        policy = db.execute(select(maintenance.c.payload).where(
+            maintenance.c.id == "retention_cutoff")).scalar_one_or_none()
+        if source["kind"] != "recording" and policy:
+            cutoff = json.loads(policy)["occurred_before"]
+            if any(event.occurred_at < cutoff for event in batch):
+                raise Conflict("Batch contains events older than the active retention boundary")
         book, added, duplicated = pricebook(), 0, 0
+        existing_ids = dict(db.execute(select(events.c.event_id, events.c.fingerprint).where(
+            events.c.source_id == source_id,
+            events.c.event_id.in_({event.event_id for event in batch}))).all())
+        new_events, new_facts = [], []
         for event in batch:
             payload = event.model_dump()
             fingerprint = digest(payload)
-            existing = db.execute(select(events.c.fingerprint).where(
-                events.c.source_id == source_id, events.c.event_id == event.event_id)).scalar_one_or_none()
+            existing = existing_ids.get(event.event_id)
             if existing is not None:
                 if existing != fingerprint:
                     raise Conflict("An event ID was reused with different data; batch rolled back")
                 duplicated += 1
                 continue
-            db.execute(insert(events).values(source_id=source_id, event_id=event.event_id,
+            charge = account(event, book)
+            new_events.append(dict(source_id=source_id, event_id=event.event_id,
                 team_id=team_id, task_id=event.task_id, project=event.project,
                 occurred_at=event.occurred_at, evidence=event.evidence,
                 recording_id=event.recording_id, fingerprint=fingerprint,
-                payload=json.dumps(payload), accounting=json.dumps(account(event, book)),
+                payload=json.dumps(payload), accounting=json.dumps(charge),
                 received_at=int(time.time())))
+            new_facts.append(self.fact(source_id, event.event_id, charge))
+            existing_ids[event.event_id] = fingerprint
             added += 1
+        if new_events:
+            db.execute(insert(events), new_events)
+            db.execute(insert(facts), new_facts)
         return {"added_events": added, "duplicate_events": duplicated}
 
     def ingest(self, team_id: str, source_id: str, batch: list[UsageEvent]):
@@ -303,46 +363,9 @@ class Database:
             self.audit(db, team_id, actor, "source.token_revoked", token_id)
 
     def usage(self, team_id: str, project: str | None = None, source_id: str | None = None,
-              include_fixtures=False, task_id: str | None = None):
-        query = select(events).where(events.c.team_id == team_id)
-        if not include_fixtures:
-            query = query.where(events.c.evidence != "fixture")
-        if project:
-            query = query.where(events.c.project == project)
-        if source_id:
-            query = query.where(events.c.source_id == source_id)
-        if task_id:
-            query = query.where(events.c.task_id == task_id)
-        # Bound the first pilot's query working set explicitly rather than silently truncating.
-        with self.engine.connect() as db:
-            rows = db.execute(query.order_by(events.c.occurred_at.desc()).limit(10001)).mappings().all()
-        if len(rows) > 10000:
-            raise Conflict("This pilot view is limited to 10,000 events; filter by project or source")
-        grouped, kinds = {}, defaultdict(int)
-        known, unknown, uncovered = Decimal(0), 0, 0
-        for row in rows:
-            event, charge = json.loads(row["payload"]), json.loads(row["accounting"])
-            kinds[event["evidence"]] += 1
-            amount = charge["api_estimate_usd"]
-            known += Decimal(amount) if amount is not None else Decimal(0)
-            unknown += amount is None
-            uncovered += not charge["attempt_cost_complete"]
-            key = (row["source_id"], row["task_id"])
-            task = grouped.setdefault(key, {"source_id": row["source_id"], "task_id": row["task_id"],
-                "project": row["project"], "occurred_at": row["occurred_at"], "calls": [],
-                "known": Decimal(0), "unknown_cost_calls": 0, "uncovered_attempt_calls": 0})
-            task["known"] += Decimal(amount) if amount is not None else Decimal(0)
-            task["unknown_cost_calls"] += amount is None
-            task["uncovered_attempt_calls"] += not charge["attempt_cost_complete"]
-            task["calls"].append(event | charge | {"received_at": row["received_at"]})
-        for task in grouped.values():
-            task["api_estimate_usd"] = money(task.pop("known"))
-            task["call_count"] = len(task["calls"])
-        return {"api_estimate_usd": money(known), "events": len(rows), "tasks": list(grouped.values()),
-                "task_count": len(grouped), "unknown_cost_calls": unknown,
-                "uncovered_attempt_calls": uncovered, "evidence_counts": dict(kinds),
-                "invoice_usd": None, "hardware_electricity_usd": None,
-                "cost_note": "Subtotal for recorded calls; provider invoices and missing calls are not reconciled."}
+              include_fixtures=False, task_id: str | None = None, **pagination):
+        from .queries import usage
+        return usage(self, team_id, project, source_id, include_fixtures, task_id, **pagination)
 
     def enqueue(self, team_id: str, recording_id: str, actor: str, max_queued=20):
         revision, now = evaluation_revision()["sha256"], int(time.time())

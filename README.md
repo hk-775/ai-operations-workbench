@@ -6,7 +6,9 @@
 [![License: MIT-0](https://img.shields.io/badge/License-MIT--0-7c3aed.svg)](LICENSE)
 
 Workbench connects captured AI usage to task evidence and reviewable model choices.
-It includes a no-key local demonstration and an authenticated single-team pilot.
+It includes a no-key local demonstration and a self-hosted workspace for one company.
+The production profile supports company OIDC/MFA, PostgreSQL, scheduled retention,
+operational monitoring, and a customer-owned HTTPS deployment.
 The core workflow is:
 
 **Connect recorded usage → inspect an expensive support task → evaluate alternatives → export a justified routing proposal.**
@@ -19,7 +21,23 @@ You can explore and regrade that recording without an API key or new model charg
 
 **[Download a release](https://github.com/hk-775/ai-operations-workbench/releases)**
 · [Methodology](docs/METHODOLOGY.md) · [Architecture](docs/ARCHITECTURE.md)
+· [Production installation and two test deployments](docs/PRODUCTION.md)
 · [Team pilot setup](docs/PILOT.md) · [Roadmap](docs/ROADMAP.md)
+
+## Test the complete product
+
+Run two isolated Docker deployments: one seeded with the saved comparison and
+one clean instance for onboarding. Neither makes paid model calls.
+
+```bash
+python3 scripts/deploy_instances.py
+```
+
+Open the demo at `http://127.0.0.1:8770/` and the clean workspace at
+`http://127.0.0.1:8771/`. Each has username `admin` and its own privately generated
+password. See [deployment credentials and lifecycle](docs/PRODUCTION.md#try-the-seeded-and-clean-deployments).
+Company deployments supply their own domain, OIDC provider, MFA policy, and
+secrets during setup; no company configuration is embedded in the release.
 
 ## Run it
 
@@ -81,18 +99,20 @@ evaluation currently requires a matching saved support-v1 recording.
 |---|---|
 | Usage connection | AxonLLM metadata capture with a durable outbox and authenticated delivery; bundled recordings and compatible JSON import |
 | Ledger | PostgreSQL in pilot mode; transactional source-scoped application-event deduplication and Decimal API estimates. Original demo uses SQLite |
-| Team access | Single-team pilot with administrator, analyst, viewer roles; revocable sessions and source tokens |
+| Team access | Company OIDC/MFA or local test accounts; explicit administrator, analyst, viewer roles; revocable sessions and source tokens |
+| Operations | Administrator health dashboard, private Prometheus metrics, alert rules, structured request logs, and scheduled retention |
+| Scale | SQL totals, UTC time windows, paginated tasks and calls; historical prices and unknown costs preserved |
 | Job persistence | Pilot jobs, results, and routing reviews survive restarts; leases, retry recovery, cancellation, and independent timeouts |
 | Task inspection | Synthetic input, both requests and responses, token usage, API estimates, observed latency |
 | Model evaluation | Deterministic decision checks across all saved cases; failures retained |
 | Governance | Actual Ostiari Guard in the evaluation subprocess; draft permission and three blocked action controls |
 | Model selection | Complete evidence, minimum pass rate, zero critical failures, p95 limit, then lowest cost per passing task |
 | Review | Adjustable criteria and portable evidence export; no deployment |
-| Interface | AxonLLM/Ostiari light palette; blue usage, yellow inspection, violet comparison, and teal review accents shared across cards and workflow; desktop and mobile; small moving circles with pause and reduced-motion support |
+| Interface | Ostiari control-plane palette: white navigation and cards, stone backgrounds, violet buttons, and matching sky/yellow/violet/teal workflow accents; desktop and mobile; small moving circles with pause and reduced-motion support |
 
 **Not yet implemented:** native Codex, Cursor, Claude Code, or Bedrock billing
 connectors; subscription invoice reconciliation; a coding workload; multi-company
-SSO/MFA; arbitrary workload evaluators; or production routing changes. The pilot
+SaaS tenant management; arbitrary workload evaluators; or production routing changes. The pilot
 is bounded to a single team, with a support-workflow evaluation contract.
 
 ## See the decision

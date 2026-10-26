@@ -5,6 +5,7 @@ const date = value => value ? new Date(value * 1000).toLocaleString() : 'Not rec
 const badge = (text, kind='accent') => `<span class="tag ${kind}">${escape(text)}</span>`;
 let session, page = 'usage', usage, jobRows = [], proposalRows = [], filters = '';
 let generation = 0;
+let taskPage = 0, loginMethods = {local:true,company:false}, usageRequest = 0;
 const canEdit = () => session?.user && session.user.role !== 'viewer';
 const isAdmin = () => session?.user?.role === 'admin';
 
@@ -32,23 +33,31 @@ function showLogin() {
   session = null; generation++;
   usage = null; jobRows = []; proposalRows = [];
   for (const id of ['metrics','task-list','sources','jobs','evaluation-result','proposals','users','audit',
-                    'recording-select','proposal-job','evidence-counts','cost-note']) $(id).replaceChildren();
+                    'recording-select','proposal-job','evidence-counts','cost-note',
+                    'operations-metrics','operations-alerts','operations-retention']) $(id).replaceChildren();
   $('team-view').hidden = true; $('login-view').hidden = false;
   $('token-value').value = ''; $('token-panel').hidden = true;
   $('setup-note').textContent = 'Sign in with the account your team administrator created.';
+  $('login-form').hidden = !loginMethods.local;
+  $('company-login').hidden = !loginMethods.company;
 }
 function navigate(next) {
-  if (next === 'team' && !isAdmin()) return;
+  if (['team','operations'].includes(next) && !isAdmin()) return;
   page = next;
   document.querySelectorAll('[id^="page-"]').forEach(el => { if (el.tagName === 'SECTION') el.hidden = el.id !== `page-${page}`; });
   document.querySelectorAll('[data-page]').forEach(el => el.classList.toggle('active', el.dataset.page === page));
   $('page-label').textContent = document.querySelector(`[data-page="${page}"]`).textContent;
+  document.querySelector('.content').scrollTo({top:0,behavior:'instant'});
+  window.scrollTo({top:0,behavior:'instant'});
   if (page === 'proposals') action(loadProposals);
   if (page === 'team') action(loadTeam);
+  if (page === 'operations') action(loadOperations);
 }
 function access() {
   document.querySelectorAll('[data-admin]').forEach(el => el.hidden = !isAdmin());
   document.querySelectorAll('[data-analyst]').forEach(el => el.hidden = !canEdit());
+  $('user-form').hidden = !loginMethods.local;
+  $('identity-form').hidden = !loginMethods.company;
 }
 async function enter() {
   generation++;
@@ -64,8 +73,11 @@ function metric(label, value, note, flow) {
 }
 async function loadUsage() {
   const epoch = generation;
-  const result = await api(`/api/pilot/usage${filters}`);
-  if (epoch !== generation) return;
+  const request = ++usageRequest;
+  const params = new URLSearchParams(filters);
+  params.set('page',String(taskPage));
+  const result = await api(`/api/pilot/usage?${params}`);
+  if (epoch !== generation || request !== usageRequest) return;
   usage = result;
   $('metrics').innerHTML = metric('Captured API subtotal', amount(usage.api_estimate_usd), 'Published-rate estimate · USD','connect') +
     metric('Captured tasks', usage.task_count, `${usage.events} call events`,'tasks') +
@@ -73,17 +85,33 @@ async function loadUsage() {
     metric('Calls with coverage gaps', usage.uncovered_attempt_calls, 'Costs or attempt coverage incomplete','proposal');
   $('cost-note').textContent = usage.cost_note;
   $('evidence-counts').textContent = Object.entries(usage.evidence_counts).map(([k,v])=>`${k}: ${v} calls`).join(' · ') || 'No events yet. Create a source or load the recorded comparison.';
-  const tasks = [...usage.tasks].sort((a,b)=>Number(b.api_estimate_usd)-Number(a.api_estimate_usd));
-  $('task-list').innerHTML = tasks.slice(0,200).map(task => `<details class="panel task-card">
+  const tasks = usage.tasks;
+  $('task-list').innerHTML = tasks.map((task,index) => `<details class="panel task-card">
     <summary><strong>${escape(task.calls[0]?.case_id ? `${task.calls[0].case_id} · ${task.calls[0].model}` : task.task_id)}</strong><span>${escape(amount(task.api_estimate_usd))} · ${task.call_count} calls</span></summary>
     <p class="data-note">${escape(task.project)} · ${task.unknown_cost_calls} unknown costs · ${task.uncovered_attempt_calls} coverage gaps</p>
     <div class="table-wrap"><table><thead><tr><th>Stage / evidence</th><th>Provider / model</th><th>API estimate</th><th>Usage &amp; coverage</th><th>Latency</th></tr></thead><tbody>${task.calls.map(c=>`<tr>
       <td>${escape(c.stage)}<br>${badge(c.evidence)} ${badge(c.status,c.status==='success'?'good':'warn')}</td>
       <td>${escape(c.provider)}<br>${escape(c.model)}</td><td>${escape(amount(c.api_estimate_usd))}<br><small>${escape(c.unknown_reason || `Rate card ${c.pricebook_id.slice(0,12)}`)}</small></td>
       <td>${escape(c.usage_basis)}<br>${escape(c.attempt_coverage)}<br><small>${c.usage ? `${c.usage.prompt_tokens} input / ${c.usage.completion_tokens} output / ${c.usage.cached_tokens} cached` : 'Tokens unknown'}</small></td>
-      <td>${escape(c.latency_ms)} ms</td></tr>`).join('')}</tbody></table></div></details>`).join('') ||
+      <td>${escape(c.latency_ms)} ms</td></tr>`).join('')}</tbody></table></div>
+      ${task.calls_has_more?`<button class="button" data-more-calls="${index}">Load more calls</button>`:''}</details>`).join('') ||
       '<article class="panel"><h2>No tasks in this view yet.</h2><p class="data-note">Connect an AxonLLM source or load the recorded example from Model evaluations.</p></article>';
-  if (tasks.length > 200) $('task-list').insertAdjacentHTML('afterbegin', '<p class="notice">Showing the 200 most expensive captured tasks. Narrow the overview filters to inspect more.</p>');
+  $('tasks-page').textContent = usage.task_count ? `Page ${usage.page+1} · ${usage.task_count} tasks · most expensive first` : 'No tasks';
+  $('tasks-previous').disabled = taskPage === 0;
+  $('tasks-next').disabled = !usage.has_more;
+}
+async function moreCalls(button) {
+  const task = usage.tasks[Number(button.dataset.moreCalls)];
+  const params = new URLSearchParams(filters);
+  params.set('source_id',task.source_id); params.set('task_id',task.task_id);
+  params.set('offset',String(task.calls.length));
+  button.disabled = true;
+  try {
+    const result = await api(`/api/pilot/calls?${params}`);
+    task.calls.push(...result.calls);
+    button.closest('details').querySelector('tbody').insertAdjacentHTML('beforeend', result.calls.map(c=>`<tr><td>${escape(c.stage)}<br>${badge(c.evidence)} ${badge(c.status,c.status==='success'?'good':'warn')}</td><td>${escape(c.provider)}<br>${escape(c.model)}</td><td>${escape(amount(c.api_estimate_usd))}<br><small>${escape(c.unknown_reason || `Rate card ${c.pricebook_id.slice(0,12)}`)}</small></td><td>${escape(c.usage_basis)}<br>${escape(c.attempt_coverage)}<br><small>${c.usage?`${c.usage.prompt_tokens} input / ${c.usage.completion_tokens} output / ${c.usage.cached_tokens} cached`:'Tokens unknown'}</small></td><td>${escape(c.latency_ms)} ms</td></tr>`).join(''));
+    button.hidden = !result.has_more;
+  } finally { button.disabled=false; }
 }
 async function loadSources() {
   const result = await api('/api/pilot/sources');
@@ -140,6 +168,17 @@ async function loadTeam() {
   $('users').innerHTML = members.users.map(u=>`<article class="panel user-row"><div><strong>${escape(u.username)}</strong> ${badge(u.role)} ${!u.active?badge('Disabled','warn'):''}</div>${u.active?`<button class="button" data-disable="${u.id}">Disable account</button>`:''}</article>`).join('');
   $('audit').innerHTML = `<table><thead><tr><th>When</th><th>Actor</th><th>Action</th></tr></thead><tbody>${audit.events.map(e=>`<tr><td>${escape(date(e.created_at))}</td><td>${escape(e.actor)}</td><td>${escape(e.action)}</td></tr>`).join('')}</tbody></table>`;
 }
+async function loadOperations() {
+  const state = await api('/api/pilot/operations');
+  $('operations-status').textContent = state.status === 'healthy' ? 'Services healthy' : 'Needs attention';
+  $('operations-status').className = `tag ${state.status === 'healthy'?'good':'warn'}`;
+  $('operations-metrics').innerHTML = metric('Evaluation worker',state.worker_healthy?'Connected':'Unavailable','Checked against persisted heartbeat','connect') +
+    metric('Waiting evaluations',state.jobs.queued || 0,`Oldest wait: ${state.oldest_queued_seconds} seconds`,'tasks') +
+    metric('Failed evaluations',state.failed_jobs_24h,'Last 24 hours','compare') +
+    metric('Unknown call costs',state.unknown_cost_calls_24h,`${state.observed_calls_24h} observed calls in 24 hours`,'proposal');
+  $('operations-alerts').innerHTML = state.alerts.length ? state.alerts.map(a=>`<p class="data-note">${badge(a.severity,a.severity==='critical'?'warn':'accent')} ${escape(a.message)}</p>`).join('') : '<p class="data-note">No active operational alerts.</p>';
+  $('operations-retention').textContent = `${state.retention_days ? `Usage metadata: ${state.retention_days} days. Evidence and saved reviews: ${state.evidence_retention_days || 'unlimited'} days. Audit history: ${state.audit_retention_days || 'unlimited'} days.` : 'Scheduled data retention is not enabled in this local environment.'} ${state.maintenance_age_seconds===null?'Maintenance has not run yet.':`Last maintenance completed ${Math.floor(state.maintenance_age_seconds/60)} minutes ago.`}`;
+}
 function download(name, data) {
   const url = URL.createObjectURL(new Blob([JSON.stringify(data,null,2)], {type:'application/json'}));
   const link = document.createElement('a'); link.href=url; link.download=name; link.click();
@@ -167,9 +206,14 @@ $('motion').onclick = ()=>{
   $('motion').textContent=paused?'Resume motion':'Pause motion'; $('motion').setAttribute('aria-pressed',String(paused));
 };
 submit('filters', async data=>{
-  filters='?'+new URLSearchParams({project:data.get('project'),source_id:data.get('source_id'),include_fixtures:String(data.has('include_fixtures'))});
+  const params = new URLSearchParams({project:data.get('project'),source_id:data.get('source_id'),include_fixtures:String(data.has('include_fixtures'))});
+  for (const key of ['start','end']) if (data.get(key)) params.set(key,`${data.get(key)}T00:00:00Z`);
+  filters=params.toString(); taskPage=0;
   await loadUsage();
 });
+$('tasks-previous').onclick = ()=>action(async()=>{taskPage=Math.max(0,taskPage-1); await loadUsage(); navigate('tasks');});
+$('tasks-next').onclick = ()=>action(async()=>{taskPage++; await loadUsage(); navigate('tasks');});
+$('refresh-operations').onclick = ()=>action(loadOperations);
 submit('source-form', async data=>{await api('/api/pilot/sources',{name:data.get('name')}); $('source-form').reset(); await loadSources(); notice('Source created. Issue a token to connect the application.');});
 submit('evaluate-form', async()=>{await api('/api/pilot/evaluations',{recording_id:$('recording-select').value}); await loadJobs(); notice('Evaluation queued. You can leave this page; the worker will save its result.');});
 submit('proposal-form', async data=>{
@@ -177,6 +221,7 @@ submit('proposal-form', async data=>{
   await loadProposals(); notice('Routing review saved. No route was changed.');
 });
 submit('user-form', async data=>{await api('/api/pilot/users',Object.fromEntries(data)); $('user-form').reset(); await loadTeam(); notice('Team member added.');});
+submit('identity-form', async data=>{await api('/api/pilot/identities',Object.fromEntries(data)); $('identity-form').reset(); await loadTeam(); notice('Company member added.');});
 $('load-example').onclick = ()=>action(async()=>{
   await api('/api/pilot/recordings/example',{}); await Promise.all([loadUsage(),loadRecordings(),loadSources()]);
   notice('Loaded the saved comparison. These are recorded model calls on authored tickets, not new traffic.');
@@ -192,6 +237,7 @@ document.addEventListener('click', event=>{
   const button=event.target.closest('button'); if (!button) return;
   const d=button.dataset;
   if (d.page || d.goto) navigate(d.page || d.goto);
+  if (d.moreCalls !== undefined) action(()=>moreCalls(button));
   if (d.result) action(()=>showResult(d.result));
   if (d.cancel) action(async()=>{await api(`/api/pilot/evaluations/${d.cancel}/cancel`,{}); await loadJobs();});
   if (d.token) action(async()=>{const token=await api(`/api/pilot/sources/${d.token}/token`,{}); $('token-value').value=token.token; $('token-panel').hidden=false; await loadSources(); $('token-panel').scrollIntoView();});
@@ -202,9 +248,18 @@ document.addEventListener('click', event=>{
 });
 setInterval(()=>{ if (session && page==='evaluations' && !document.hidden) action(loadJobs); },3000);
 setInterval(()=>{ if (session?.user && page==='usage' && !document.hidden) action(loadUsage); },10000);
+setInterval(()=>{ if (session?.user && page==='operations' && !document.hidden) action(loadOperations); },15000);
 (async()=>{
   try {
     session=await api('/api/auth/session');
+    loginMethods=session.login_methods;
+    $('login-form').hidden=!loginMethods.local;
+    $('company-login').hidden=!loginMethods.company;
+    if (new URLSearchParams(location.search).get('signin')==='failed') {
+      $('login-error').textContent='Company sign-in failed. Check your MFA method and account access with your administrator.';
+      $('login-error').hidden=false;
+      history.replaceState(null,'','/');
+    }
     if (session.user) await enter();
     else $('setup-note').textContent = session.initialized ? 'Use the account your team administrator created.' :
       'An operator must initialize this team first. Follow the pilot setup instructions in docs/PILOT.md.';

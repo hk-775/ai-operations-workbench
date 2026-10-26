@@ -23,7 +23,14 @@ cost reduction.
 The first production milestone has now added a single-team pilot alongside the
 support demonstration: local accounts/RBAC, an AxonLLM application connector,
 PostgreSQL persistence, recoverable evaluation jobs, and saved read-only reviews.
-See the [pilot guide](PILOT.md). The milestones below remain separate follow-up work.
+See the [pilot guide](PILOT.md).
+
+The 0.2 self-hosted release adds company OIDC/MFA, PostgreSQL query pagination,
+time-window totals, private metrics and an Operations page, scheduled data
+retention, schema migration, HTTPS deployment, and isolated seeded/clean test
+deployments. See [production installation](PRODUCTION.md).
+The product scope remains one organization; the feature expansions below are
+not implied by the presence of a production deployment profile.
 
 ## 3. Coding-task demonstration
 
@@ -72,8 +79,9 @@ of being converted to zero.
 
 Provenance, role-based access, durable jobs/results, restart recovery, and
 readiness checks are in the pilot. Next add representative held-out workloads,
-repeated evaluation, independent review, SSO/MFA, scheduled retention, billing
-reconciliation, operational monitoring/alerts, and load/restore objectives.
+repeated evaluation, independent review, billing reconciliation, and customer-specific
+load/restore objectives. SSO/MFA, scheduled retention, monitoring/alert rules,
+and repeatable local load/restore checks are implemented in 0.2.
 
 Only after that, design a reviewed rollout through AxonLLM/Ostiari with a
 canary, rollback, and outcome monitoring. A proposal's projected API savings

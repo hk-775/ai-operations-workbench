@@ -2,10 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Team pilot · AI Operations Workbench</title>
-  <link rel="stylesheet" href="/static/styles.css">
-  <link rel="stylesheet" href="/static/pilot.css">
-  <script src="/static/pilot.js" defer></script>
+  <meta name="theme-color" content="#ffffff"><meta name="color-scheme" content="light">
+  <title>Team workspace · AI Operations Workbench</title>
+  <link rel="stylesheet" href="/static/styles.css?v=5d412360ea41">
+  <link rel="stylesheet" href="/static/pilot.css?v=cbbae2abad8f">
+  <script src="/static/pilot.js?v=8143246cec73" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -14,12 +15,13 @@
     <a class="brand" href="/"><span class="brandmark" aria-hidden="true"><i></i><i></i><i></i></span><span>Workbench<small>AI OPERATIONS</small></span></a>
     <div><p class="eyebrow">YOUR TEAM’S AI OPERATIONS</p><h1>Every task has a cost.<br>Every recommendation needs evidence.</h1>
     <p class="lede">Connect AxonLLM usage, inspect a task, and evaluate saved model outputs before making a routing decision.</p></div>
-    <p class="fine">Team pilot · PostgreSQL ledger · Offline evidence replay</p>
+    <p class="fine">Team workspace · PostgreSQL ledger · Offline evidence replay</p>
   </section>
   <main id="main" class="login-form">
     <p class="eyebrow">TEAM ACCESS</p><h2>Sign in to Workbench</h2>
     <p id="setup-note" class="data-note">Checking team setup…</p>
     <div id="login-error" class="notice error" role="alert" hidden></div>
+    <a id="company-login" class="button primary" href="/api/auth/oidc/start" hidden>Sign in with your company</a>
     <form id="login-form">
       <label class="field">Username<input name="username" required autocomplete="username" minlength="3" maxlength="80"></label>
       <label class="field">Password<input name="password" type="password" required autocomplete="current-password" maxlength="128"></label>
@@ -37,12 +39,13 @@
       <button class="nav-item" data-page="evaluations" data-flow="compare">Model evaluations</button>
       <button class="nav-item" data-page="proposals" data-flow="proposal">Routing review</button>
       <button class="nav-item" data-page="sources" data-flow="connect">Usage sources</button>
+      <button class="nav-item" data-page="operations" data-flow="compare" data-admin>Operations</button>
       <button class="nav-item" data-page="team" data-admin>Team &amp; audit</button>
     </nav>
     <div class="sidebar-bottom"><p class="sidebar-note">Recorded costs stay separate from invoices. Routing proposals require human review.</p></div>
   </aside>
-  <div class="content">
-    <header class="topbar"><p class="breadcrumb">Team pilot <span>/</span><strong id="page-label">Usage overview</strong></p><div class="top-actions"><span id="signed-in" class="fine"></span><button id="logout" class="button">Sign out</button></div></header>
+  <div class="content" role="region" aria-label="Workspace content" tabindex="0">
+    <header class="topbar"><p class="breadcrumb">Team workspace <span>/</span><strong id="page-label">Usage overview</strong></p><div class="top-actions"><span id="signed-in" class="fine"></span><button id="logout" class="button">Sign out</button></div></header>
     <main id="workspace-main">
       <div id="message" class="notice" role="status" hidden></div>
       <div class="journey" aria-label="Evidence workflow">
@@ -57,6 +60,8 @@
         <form id="filters" class="panel controls">
           <label class="field">Project<input name="project" placeholder="All projects" maxlength="100"></label>
           <label class="field">Source<select name="source_id" id="source-filter"><option value="">All sources</option></select></label>
+          <label class="field">From (UTC)<input name="start" type="date"></label>
+          <label class="field">Before (UTC)<input name="end" type="date"></label>
           <label class="check"><input name="include_fixtures" type="checkbox"> Include fixtures</label><button class="button primary">Apply filters</button>
         </form>
         <div id="metrics" class="metrics"></div>
@@ -67,6 +72,7 @@
         <div class="page-heading"><p class="eyebrow">TASK EXPLORER</p><h1>Follow the cost, call by call.</h1><p class="lede">The overview filters also apply here. A captured-call subtotal may exclude unobserved work.</p></div>
         <article class="panel spotlight"><h2>Inspect before you optimize.</h2><p class="lede">Expand a task to see the provider, model, usage basis, and attempt coverage behind every amount.</p></article>
         <div id="task-list"></div>
+        <div class="pagination" aria-label="Task pages"><button id="tasks-previous" class="button" disabled>Previous tasks</button><span id="tasks-page" class="fine" aria-live="polite"></span><button id="tasks-next" class="button" disabled>Next tasks</button></div>
       </section>
       <section id="page-evaluations" data-flow="compare" hidden>
         <div class="page-heading"><p class="eyebrow">MODEL EVALUATIONS</p><h1>Does the cheaper model do the job?</h1><p class="lede">Replay the support-v1 evidence contract. Results and job progress persist when you leave.</p></div>
@@ -96,12 +102,20 @@
         <div id="sources"></div>
         <article class="panel"><h2>Connect your application</h2><p class="data-note">Use Workbench’s capture_completion adapter with a durable outbox and a separate delivery process. Only usage metadata is sent; prompts and model responses stay out of the usage ledger.</p><p class="fine">Setup instructions: docs/PILOT.md in the repository. For a first delivery test, backfill the bundled recording; those events remain labeled “recorded.” Create a separate source for each application.</p></article>
       </section>
+      <section id="page-operations" data-flow="compare" hidden>
+        <div class="page-heading"><p class="eyebrow">OPERATIONS</p><h1>Know when your evidence needs attention.</h1><p class="lede">Worker availability, evaluation failures, cost coverage, and scheduled maintenance.</p></div>
+        <div class="section-head"><span id="operations-status" class="tag">Checking services</span><button id="refresh-operations" class="button">Refresh health</button></div>
+        <div id="operations-metrics" class="metrics"></div>
+        <article class="panel"><h2>Needs attention</h2><div id="operations-alerts" role="status"></div></article>
+        <article class="panel"><h2>Data lifecycle</h2><p id="operations-retention" class="data-note"></p><p class="fine">Observed-call coverage covers the last 24 hours. Recorded examples and fixtures are excluded. Monitoring reports coverage gaps; it cannot establish complete provider billing.</p></article>
+      </section>
       <section id="page-team" hidden>
         <div class="page-heading"><p class="eyebrow">TEAM &amp; AUDIT</p><h1>Give each person the access they need.</h1><p class="lede">Viewers inspect evidence. Analysts import and evaluate. Administrators manage access and connectors.</p></div>
         <form id="user-form" class="panel controls"><label class="field">Username<input name="username" required minlength="3" maxlength="80" autocomplete="off"></label><label class="field">Initial password<input name="password" type="password" required minlength="14" maxlength="128" autocomplete="new-password"></label><label class="field">Role<select name="role"><option value="viewer">Viewer</option><option value="analyst">Analyst</option><option value="admin">Administrator</option></select></label><button class="button primary">Add team member</button></form>
+        <form id="identity-form" class="panel controls" hidden><label class="field">Username<input name="username" required minlength="3" maxlength="80" autocomplete="off"></label><label class="field">Company identity subject<input name="subject" required maxlength="255" autocomplete="off"></label><label class="field">Role<select name="role"><option value="viewer">Viewer</option><option value="analyst">Analyst</option><option value="admin">Administrator</option></select></label><button class="button primary">Add company member</button><p class="fine">Use the exact subject identifier supplied by your identity administrator. Email addresses do not automatically grant access.</p></form>
         <div id="users"></div><article class="panel"><h2>Recent audit events</h2><div id="audit" class="table-wrap"></div></article>
       </section>
-      <footer class="page-footer"><span>AI Operations Workbench · Single-team pilot</span><span>API estimates ≠ invoices · Routing changes require a separate process</span></footer>
+      <footer class="page-footer"><span>AI Operations Workbench · Self-hosted workspace</span><span>API estimates ≠ invoices · Routing changes require a separate process</span></footer>
     </main>
   </div>
 </div>

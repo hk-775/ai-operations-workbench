@@ -153,3 +153,35 @@ activation endpoint. Usage metadata is separate from the support-v1 recordings
 required for quality evaluation. The app uses a nonsuperuser database role.
 This stack deploys no AWS infrastructure. See the [pilot guide](PILOT.md) for
 roles, credentials, event semantics, data limits, and deployment/restore steps.
+
+## Self-hosted production profile
+
+```mermaid
+flowchart LR
+    Employee["Company employee"] --> TLS["Company HTTPS endpoint"]
+    Identity["Company OIDC + MFA"] --> TLS
+    TLS --> API["Workbench API + dashboard"]
+    Connector["AxonLLM outbox"] --> TLS
+    API --> Database[("Private PostgreSQL")]
+    Database --> Worker["Leased offline evaluator"]
+    Worker --> Database
+    Maintenance["Scheduled retention"] --> Database
+    API --> Metrics["Authenticated metrics"]
+    Metrics --> Monitor["Company monitoring + on-call"]
+    Database --> Backup["Company encrypted backups"]
+```
+
+Each company owns an independent stack. Login maps verified issuer/subject pairs
+to explicit Workbench roles. Production accepts only sessions issued through the
+verified OIDC/MFA path. The source release contains no company domain or credentials.
+The API and maintenance scheduler share durable state; SQL aggregates preserve
+historical pricing while returning bounded task and call pages.
+
+The runtime image contains the application, locked dependencies, and evaluator
+provenance files. Git, uv, and Python package installers stay outside the runtime
+image. An explicit schema migration precedes production startup.
+
+The local test profile creates separate demo and clean volumes, users, database
+secrets, and browser cookie names. Demo seeding imports the same bundled saved
+evidence and runs the real offline evaluator. The clean profile imports nothing.
+See [production deployment](PRODUCTION.md) for the installer and operational checks.

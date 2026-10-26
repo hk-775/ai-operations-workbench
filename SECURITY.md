@@ -2,7 +2,7 @@
 
 ## Supported release
 
-Security fixes are considered for the latest `0.1.x` release and `main`.
+Security fixes are considered for the latest `0.2.x` release and `main`.
 The project includes a local demonstration and an opt-in, self-hosted team pilot.
 There is no support SLA or claim of enterprise security certification.
 
@@ -39,8 +39,12 @@ database-backed. Pilot mode does not mount the demo's unauthenticated API.
 The supplied pilot Compose stack binds only to loopback and runs app/worker
 containers without root, with read-only filesystems and no provider credentials.
 Remote access requires a managed HTTPS proxy and an explicit public origin;
-cookies become Secure under HTTPS. Workbench does not provide SSO/MFA, application
-encryption at rest, automated retention, or a general evaluator sandbox. The
+cookies become Secure under HTTPS. The production profile requires company OIDC,
+a verified MFA claim, and disabled local sign-in. Subjects are explicitly
+provisioned; email matching does not grant access. Authorization-code/PKCE state
+is browser-bound, expires after ten minutes, and is consumed once.
+Usage, evidence, and audit retention are configurable and scheduled in production.
+Workbench does not provide application encryption at rest or a general evaluator sandbox. The
 pilot's account/team scoping is tested but is not a multi-tenant SaaS guarantee.
 
 PostgreSQL records, outboxes, and backups can contain sensitive metadata and
@@ -52,3 +56,7 @@ Do not attach `.state/`, `.pilot/`, `.env`, outboxes, worker logs, or private re
 See [the architecture](docs/ARCHITECTURE.md) for the implemented boundaries.
 See [pilot operations](docs/PILOT.md) for bootstrap, token rotation, backup,
 restore, and upgrade procedures.
+See [production operations](docs/PRODUCTION.md) for company identity, encrypted
+host/backup requirements, metrics credentials, retention boundaries, and
+customer-specific acceptance checks. Automated dependency scans do not certify
+the security of a company's host, IdP, or application instrumentation.
