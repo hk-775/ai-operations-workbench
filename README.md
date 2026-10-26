@@ -32,6 +32,12 @@ the [AWS hosted test guide](docs/HOSTED-TEST.md) and
 [dated acceptance results](docs/VERIFICATION-HOSTED-2026-10-26.md).
 Deployment addresses and credentials belong to each installer and are not published.
 
+**Explore the architecture:** open **Interactive architecture** in either
+dashboard footer, or `/static/architecture.html` on the running app. The
+[standalone explorer](web/architecture.html) also opens directly from a checkout
+of `main`: clickable components, guided flows, and moving solid circles with
+pause and reduced-motion controls. See the [architecture guide](docs/ARCHITECTURE.md).
+
 ## Test the complete product
 
 Run two isolated Docker deployments: one seeded with the saved comparison and

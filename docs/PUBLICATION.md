@@ -50,6 +50,7 @@ static imitation is published.
 | `docs/architecture/workbench.drawio` | Editable diagram of the original local demonstration workflow |
 | `docs/architecture/workbench.svg` and `.png` | Original vector diagram and static rendered companion; no third-party artwork |
 | `docs/ARCHITECTURE.md` | Editable Mermaid diagrams for the authenticated pilot and self-hosted production profile |
+| `web/architecture.html`, `.css`, and `.js` | Offline-capable interactive product/AWS architecture; served at `/static/architecture.html` and linked from both dashboard footers |
 | `compose*.yaml` and `deploy/` | Company-neutral deployment recipes; installation-specific files are generated privately |
 | AxonLLM and Ostiari | Public MIT-0 dependencies, pinned to immutable Git revisions |
 | Container build recipes | Pinned upstream Python, PostgreSQL, Go, uv, and Caddy images/modules; no prebuilt container images are distributed by this release |
@@ -64,6 +65,12 @@ Upstream dependencies and their transitive packages retain their own licenses.
 The canonical local UI includes moving solid circles, pause/resume, and
 reduced-motion support, exercised by browser tests. Motion is illustrative and
 does not represent live collection or measured execution timing.
+
+The architecture explorer adds clickable components and manual step-by-step
+walkthroughs for capture, evaluation, review, sign-in, backup, and alerts. It
+uses the Workbench palette and needs no API, cloud connection, or third-party
+assets. Browser tests cover both views, keyboard selection, mobile scrolling,
+motion controls, direct file access, and asset loading under a path prefix.
 
 GitHub README images and release screenshots are static platform companions.
 They do not replace the animated workflow in the runnable app.

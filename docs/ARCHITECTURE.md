@@ -3,6 +3,14 @@
 Workbench owns the interface, usage ledger, evidence validation, comparison,
 and proposal. Existing projects provide the model routing and governance engines.
 
+Open **Interactive architecture** from either dashboard's footer, or open
+`/static/architecture.html` on the running application. The
+[standalone page](../web/architecture.html) also works directly from the downloaded
+source with its adjacent CSS and JavaScript files. It offers product and AWS
+views, component explanations, step-by-step flows, moving solid circles,
+pause/resume, and reduced-motion support. It makes no API or cloud requests;
+motion illustrates architecture rather than live traffic.
+
 The first sections and existing draw.io diagram below describe the original demo.
 The [authenticated pilot](#authenticated-team-pilot) and
 [self-hosted production profile](#self-hosted-production-profile) are documented
