@@ -17,7 +17,7 @@ are kept in the private `.pilot/hosted/` directory.
 |---|---|
 | Infrastructure | CloudFormation update complete; both workspaces ready |
 | Real identity provider | Both administrator accounts completed the Cognito browser flow; pool MFA setting is `OFF` |
-| HTTPS and anonymous boundary | All 18 checks passed per workspace, including protected API/metrics access, disabled local login, PKCE, and secure binding cookies |
+| HTTPS and anonymous boundary | All 17 checks passed per workspace, including protected API/metrics access, disabled local login, PKCE, and secure binding cookies |
 | Seeded workspace | 144 recorded call events, 72 tasks, one completed evaluation, and one saved review |
 | Clean workspace | Zero calls, tasks, sources, recordings, evaluations, and reviews |
 | Accounting | Demo captured API estimate exactly `$0.088074750`; clean estimate `$0.000000000` |
@@ -61,6 +61,20 @@ The host timer correction was applied afterward. Verification tools and this
 report were finalized locally after deployment. This records acceptance of the
 hosted candidate; it does not replace the published v0.2.0 release or report
 GitHub CI results for the new changes.
+
+## Subsequent interface verification
+
+The guided interface was then deployed to both workspaces. All seven screens in
+each workspace passed real sign-in, navigation, and scrolling checks in headless
+and interactive browsers. Task Explorer showed the named refund example, its
+classification and reply steps, and the captured cost of each step. Overview
+cards matched the selected sidebar's sky background. The clean workspace stayed
+empty and explained how to begin.
+
+The local pilot browser suite passed all ten checks, covering empty-screen
+guidance, role restrictions, pagination, scrolling, mobile layout, untrusted
+labels, exports, and pause/reduced-motion support. The original demo's seven
+browser checks also passed. This update made no new model calls.
 
 ## Scope and limits
 
