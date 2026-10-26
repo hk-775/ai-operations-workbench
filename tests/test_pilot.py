@@ -246,6 +246,10 @@ def test_recording_costs_and_restart_durability(pilot):
     summary = pilot.client.get("/api/pilot/usage").json()
     assert summary["events"] == 144 and summary["task_count"] == 72
     assert summary["api_estimate_usd"] == "0.088074750"
+    assert all(task["context"]["kind"] == "support_comparison" for task in summary["tasks"])
+    refund = next(task for task in summary["tasks"] if task["context"]["case_id"] == "S01")
+    assert refund["context"]["title"] == "Refund inside the window"
+    assert refund["context"]["request"] == "Please refund my unused subscription."
     queued = pilot.client.post("/api/pilot/evaluations", json={"recording_id": identity}).json()
     assert EvaluationWorker(pilot.db, pilot.settings).run_once()
     completed = pilot.client.get(f"/api/pilot/evaluations/{queued['id']}").json()
@@ -260,6 +264,20 @@ def test_recording_costs_and_restart_durability(pilot):
         assert restarted.get(f"/api/pilot/evaluations/{queued['id']}").json()["analysis"] == completed["analysis"]
         assert restarted.get("/api/pilot/proposals").json()["proposals"][0]["id"] == proposal["id"]
         assert restarted.get("/api/pilot/evaluations").json()["worker_healthy"]
+
+
+def test_application_case_ids_do_not_acquire_recorded_customer_descriptions(pilot):
+    recording = json.loads((ROOT / "data/model-comparison.json").read_text())
+    imported = pilot.db.import_recording(pilot.team, recording, "admin")
+    source = pilot.db.create_source(pilot.team, "unrelated-application", "admin")
+    pilot.db.ingest(pilot.team, source, [
+        sample(case_id="S01"),
+        sample(event_id="spoofed-recording", task_id="another-task", case_id="S01",
+               evidence="recorded", recording_id=imported["recording_id"]),
+    ])
+    summary = pilot.client.get(f"/api/pilot/usage?source_id={source}").json()
+    assert summary["task_count"] == 2
+    assert all(task["context"] is None for task in summary["tasks"])
 
 
 def test_fixture_cannot_support_measured_recommendation(pilot):

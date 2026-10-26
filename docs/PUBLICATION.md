@@ -1,6 +1,27 @@
-# v0.2.0 publication inventory
+# Publication inventory
 
-## Destination and distribution
+## Main branch additions after v0.2.0
+
+The main branch now includes `compose.hosted-test.yaml`, AWS CloudFormation and
+host configuration under `deploy/aws/`, and the hosted acceptance guide/report.
+The optional AWS test has been deployed and verified; private account identifiers,
+addresses, credentials, and operational receipts remain outside source control.
+Public GitHub CI builds and tests code only; it does not deploy this stack.
+
+The company-neutral source packager includes the hosted overlay, host utilities,
+and both AWS architecture files. The editable diagram and its PNG use authored
+draw.io shapes and official AWS service names; no third-party icon artwork is
+bundled. Source and images are project-authored under MIT-0.
+
+The team UI now explains task runs, recorded customer examples, individual model
+steps, evaluation results, review requirements, connections, operations, and roles.
+Overview cards match the selected sidebar fill. The hosted test uses password-only
+Cognito SSO by explicit opt-in; standard production authentication remains unchanged.
+
+These are additions to the repository, not a replacement of the published
+v0.2.0 archive. Publishing another release is a separate operation.
+
+## Published v0.2.0 destination and distribution
 
 - Repository: `hk-775/ai-operations-workbench`.
 - Canonical public entry point: the repository README.
@@ -47,11 +68,19 @@ does not represent live collection or measured execution timing.
 GitHub README images and release screenshots are static platform companions.
 They do not replace the animated workflow in the runnable app.
 
-## AWS services reference architecture: not applicable to this release
+## AWS services reference architecture
+
+The main branch's implemented test topology is available as an
+[editable draw.io file](architecture/aws-hosted-test.drawio) and
+[rendered PNG](architecture/aws-hosted-test.png), embedded in the README and
+architecture guide. It corresponds to the current optional AWS CloudFormation
+template and hosted acceptance results.
+
+### Historical v0.2.0 decision
 
 The supported installation contract is platform-neutral Docker Compose with
 PostgreSQL, an HTTPS proxy, offline workers, and an external OIDC provider.
-Companies choose their host and operating services. This release contains no AWS
+Companies choose their host and operating services. The v0.2.0 archive contains no AWS
 IaC, AWS deployment automation, or selected AWS hosting target. Native Bedrock
 usage ingestion remains a roadmap item.
 

@@ -13,6 +13,18 @@ async function recorded(page) {
   await page.getByRole('button',{name:'Load recorded example'}).click();
   await expect(page.locator('#recording-select option')).toHaveCount(1);
 }
+test('empty workspace explains the next step and prevents reviews without evidence',async({page})=>{
+  await login(page);
+  await expect(page.locator('#usage-guide')).toContainText('Start with an example');
+  await page.getByRole('button',{name:'Task explorer',exact:true}).click();
+  await expect(page.getByRole('heading',{name:'No task runs in this view yet.'})).toBeVisible();
+  await page.getByRole('button',{name:'Explore the recorded example',exact:true}).click();
+  await expect(page.getByRole('button',{name:'Run evaluation',exact:true})).toBeDisabled();
+  await expect(page.locator('#evaluation-help')).toContainText('Load the recorded example');
+  await page.getByRole('button',{name:'Routing review',exact:true}).click();
+  await expect(page.getByRole('button',{name:'Save routing review',exact:true})).toBeDisabled();
+  await expect(page.locator('#review-help')).toContainText('Complete an evaluation');
+});
 test('authenticated team journey persists evidence and exports a read-only proposal',async({page,baseURL})=>{
   const errors=[], external=[];
   page.on('pageerror',error=>errors.push(error.message));
@@ -28,13 +40,22 @@ test('authenticated team journey persists evidence and exports a read-only propo
   await recorded(page);
   await page.getByRole('button',{name:'Usage overview',exact:true}).click();
   await expect(page.getByText('$0.088074750',{exact:true})).toBeVisible();
+  await expect(page.locator('#usage-guide')).toContainText('24 tickets × 3 models = 72 runs');
+  const navFill=await page.locator('nav [data-page="usage"]').evaluate(el=>getComputedStyle(el).backgroundColor);
+  for(const card of await page.locator('#page-usage .metric, #page-usage .panel').all())
+    expect(await card.evaluate(el=>getComputedStyle(el).backgroundColor)).toBe(navFill);
   await page.screenshot({path:'artifacts/screenshots/pilot-overview.png',fullPage:true});
   await page.getByRole('button',{name:'Task explorer',exact:true}).click();
   await page.locator('.task-card summary').first().click();
-  await expect(page.getByRole('cell',{name:/provider_reported/}).first()).toBeVisible();
+  const task=page.locator('.task-card[open]').first();
+  await expect(task.locator('.task-request')).toBeVisible();
+  await expect(task.locator('.task-steps > li').first()).toContainText('Classify request');
+  await expect(task.locator('.task-steps > li').nth(1)).toContainText('Draft decision and reply');
+  await task.getByText('Tokens, timings, and capture details',{exact:true}).click();
+  await expect(task.getByRole('cell',{name:/Tokens reported by provider/}).first()).toBeVisible();
   await page.screenshot({path:'artifacts/screenshots/pilot-task.png',fullPage:false});
   await page.getByRole('button',{name:'Model evaluations',exact:true}).click();
-  await page.getByRole('button',{name:'Queue offline evaluation'}).click();
+  await page.getByRole('button',{name:'Run evaluation',exact:true}).click();
   // The worker continues while this browser is away.
   await page.getByRole('button',{name:'Usage overview',exact:true}).click();
   await page.reload();
@@ -63,7 +84,7 @@ test('viewer can inspect evidence but cannot administer or queue work',async({pa
   await login(page,'viewer');
   await expect(page.getByRole('button',{name:'Team & audit'})).toBeHidden();
   await page.getByRole('button',{name:'Model evaluations',exact:true}).click();
-  await expect(page.getByRole('button',{name:'Queue offline evaluation'})).toBeHidden();
+  await expect(page.getByRole('button',{name:'Run evaluation',exact:true})).toBeHidden();
   await expect(page.getByRole('button',{name:'Load recorded example'})).toBeHidden();
   await page.getByRole('button',{name:'Usage sources',exact:true}).click();
   await expect(page.getByRole('button',{name:'Create AxonLLM source'})).toBeHidden();
@@ -108,7 +129,7 @@ test('mobile pilot preserves yellow task inspection and fits all pages',async({p
   await page.setViewportSize({width:390,height:844});
   await login(page);
   await recorded(page);
-  for(const title of ['Usage overview','Task explorer','Model evaluations','Routing review','Usage sources','Team & audit']){
+  for(const title of ['Usage overview','Task explorer','Model evaluations','Routing review','Usage sources','Operations','Team & audit']){
     await page.locator('nav').getByRole('button',{name:title,exact:true}).click();
     expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
     if(title==='Task explorer'){

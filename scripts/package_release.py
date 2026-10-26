@@ -8,7 +8,7 @@ ROOT = Path(__file__).resolve().parents[1]
 FILES = ("README.md","LICENSE","SECURITY.md","SUPPORT.md","CONTRIBUTING.md","CODE_OF_CONDUCT.md",
          "AGENTS.md","pyproject.toml","uv.lock","package.json","package-lock.json",
          "playwright.config.js","playwright.pilot.config.js","Dockerfile",".dockerignore",".gitignore",
-         "compose.pilot.yaml","compose.production.yaml","compose.instances.yaml")
+         "compose.pilot.yaml","compose.production.yaml","compose.instances.yaml","compose.hosted-test.yaml")
 DIRECTORIES = ("workbench","scripts","config","web","docs","tests",".github")
 
 

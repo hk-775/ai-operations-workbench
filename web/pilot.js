@@ -3,6 +3,20 @@ const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp
 const amount = value => value === null || value === undefined ? 'Unknown' : `$${value}`;
 const date = value => value ? new Date(value * 1000).toLocaleString() : 'Not received';
 const badge = (text, kind='accent') => `<span class="tag ${kind}">${escape(text)}</span>`;
+const modelName = value => String(value || 'Model unavailable').replace(/-\d{4}-\d{2}-\d{2}$/, '').replace(/^gpt-/,'GPT-');
+const readable = value => String(value || 'Unknown').replace(/[_.]/g,' ');
+const evidenceName = value => ({recorded:'Saved recording',observed:'Captured from application',fixture:'Synthetic test data'}[value] || readable(value));
+const stageName = value => ({triage:'Classify request',draft:'Draft decision and reply'}[value] || readable(value));
+const stageHelp = value => ({triage:'Identify what the customer needs.',draft:'Propose a policy-based decision and a customer reply.'}[value] || 'A model call captured by your application.');
+const coverageName = value => ({single_attempt:'This attempt captured',final_response_only:'Final response only; earlier attempts may be missing',unknown:'Attempt capture is unknown'}[value] || readable(value));
+const usageName = value => ({provider_reported:'Tokens reported by provider',estimated:'Estimated tokens',unknown:'Token usage unknown'}[value] || readable(value));
+const taskAmount = task => task.call_count > 0 && task.unknown_cost_calls === task.call_count ? 'Unknown' : amount(task.api_estimate_usd);
+const exclusionName = value => ({
+  'Contract pass rate below threshold':'Too few tickets passed all checks',
+  'Task p95 exceeds the latency limit':'Recorded response time exceeds your limit',
+  'Critical decision checks failed':'Failed a critical policy or safety check',
+  'Incomplete dataset or unknown request costs':'Missing test cases or unknown call costs',
+}[value] || value);
 let session, page = 'usage', usage, jobRows = [], proposalRows = [], filters = '';
 let generation = 0;
 let taskPage = 0, loginMethods = {local:true,company:false}, usageRequest = 0;
@@ -34,7 +48,7 @@ function showLogin() {
   usage = null; jobRows = []; proposalRows = [];
   for (const id of ['metrics','task-list','sources','jobs','evaluation-result','proposals','users','audit',
                     'recording-select','proposal-job','evidence-counts','cost-note',
-                    'operations-metrics','operations-alerts','operations-retention']) $(id).replaceChildren();
+                    'operations-metrics','operations-alerts','operations-retention','usage-guide']) $(id).replaceChildren();
   $('team-view').hidden = true; $('login-view').hidden = false;
   $('token-value').value = ''; $('token-panel').hidden = true;
   $('setup-note').textContent = 'Sign in with the account your team administrator created.';
@@ -46,6 +60,10 @@ function navigate(next) {
   page = next;
   document.querySelectorAll('[id^="page-"]').forEach(el => { if (el.tagName === 'SECTION') el.hidden = el.id !== `page-${page}`; });
   document.querySelectorAll('[data-page]').forEach(el => el.classList.toggle('active', el.dataset.page === page));
+  document.querySelectorAll('.journey-step').forEach(el => {
+    if (el.dataset.goto === page) el.setAttribute('aria-current','step');
+    else el.removeAttribute('aria-current');
+  });
   $('page-label').textContent = document.querySelector(`[data-page="${page}"]`).textContent;
   document.querySelector('.content').scrollTo({top:0,behavior:'instant'});
   window.scrollTo({top:0,behavior:'instant'});
@@ -71,6 +89,53 @@ async function enter() {
 function metric(label, value, note, flow) {
   return `<article class="metric" data-flow="${flow}"><p class="metric-label">${escape(label)}</p><p class="metric-value small-value">${escape(value)}</p><p class="metric-sub">${escape(note)}</p></article>`;
 }
+function usageGuide() {
+  if (!usage.events) {
+    const filtered = [...new URLSearchParams(filters)].some(([key,value])=>value && !(key==='include_fixtures' && value==='false'));
+    return `<h2>${filtered?'No usage matches these filters.':'Start with an example or connect your application.'}</h2>
+      <p>${filtered?'Change or clear the overview filters to see more task runs.':'The recorded example lets you explore task costs and model quality. Connecting an application lets you collect your own usage.'}</p>
+      <div class="row-actions">${filtered?'<button class="button" data-reset-filters>Clear filters</button>':''}
+      <button class="button" data-goto="evaluations">Explore saved model answers</button><button class="button" data-goto="sources">Connect an application</button></div>
+      ${canEdit()?'':'<p class="fine">Your viewer role can inspect results. Ask an analyst or administrator to load data or connect an application.</p>'}`;
+  }
+  const hasSupport = usage.tasks.some(task=>task.context?.kind==='support_comparison');
+  return `<h2>${hasSupport?'Understand the recorded support example.':'Follow the cost from task to model call.'}</h2>
+    <p>${hasSupport?'A task run is one support ticket handled by one model. Testing the same ticket with another model creates another run. The bundled example has 24 tickets × 3 models = 72 runs, with two calls per run.':'A task run groups related model calls from an application. One run can include several steps, models, or attempts.'}</p>
+    <p class="fine">${hasSupport?'Recorded calls were saved from an earlier run. Opening these pages and replaying checks makes no new model API calls.':'Open Task explorer to inspect the captured steps. Use Model evaluations when you have saved answers to check for quality.'}</p>`;
+}
+function orderedCalls(task) {
+  const calls=[...task.calls];
+  return task.context ? calls.sort((a,b)=>['triage','draft'].indexOf(a.stage)-['triage','draft'].indexOf(b.stage)) :
+    calls.sort((a,b)=>a.occurred_at.localeCompare(b.occurred_at));
+}
+function callDetail(call) {
+  return `<tr><td>${escape(readable(call.stage))}<br>${badge(evidenceName(call.evidence))}</td>
+    <td>${escape(call.provider)}<br>${escape(call.model)}</td>
+    <td>${escape(amount(call.api_estimate_usd))}<br><small>${escape(call.unknown_reason || `Saved price reference ${call.pricebook_id.slice(0,12)}`)}</small></td>
+    <td>${escape(usageName(call.usage_basis))}<br>${escape(coverageName(call.attempt_coverage))}<br><small>${call.usage?`${call.usage.prompt_tokens} input / ${call.usage.completion_tokens} output / ${call.usage.cached_tokens} cached tokens`:'Tokens unknown'}</small></td>
+    <td>${escape(call.latency_ms)} ms</td></tr>`;
+}
+function taskBody(task,index) {
+  const calls=orderedCalls(task);
+  return `${task.context?`<div class="task-request"><p class="eyebrow">CUSTOMER REQUEST · AUTHORED EXAMPLE</p><p>${escape(task.context.request)}</p></div>`:
+    '<p class="data-note">This source provides usage details only. A business description for this task is unavailable.</p>'}
+    <ol class="task-steps" aria-label="Captured model calls">${calls.map(call=>`<li>
+      <div class="section-head"><strong>${escape(task.context?stageName(call.stage):readable(call.stage))}</strong>${badge(call.status==='success'?'Call completed':call.status==='error'?'Call failed':'Call interrupted',call.status==='success'?'good':'danger')}</div>
+      <p>${escape(task.context?stageHelp(call.stage):'A model call captured by your application.')}</p>
+      <p class="call-cost">${escape(amount(call.api_estimate_usd))}<small>estimated API cost</small></p>
+      <p class="fine">${escape(modelName(call.model))} · ${escape(call.latency_ms)} ms · ${escape(evidenceName(call.evidence))}</p>
+      ${call.unknown_reason?`<p class="data-note">${escape(call.unknown_reason)}</p>`:''}
+    </li>`).join('')}</ol>
+    <div class="task-total"><span>${task.unknown_cost_calls?'Known API subtotal':'Total estimated API cost'}<small>${task.call_count} captured model calls${task.unknown_cost_calls?` · ${task.unknown_cost_calls} with unknown cost`:''}${task.uncovered_attempt_calls?` · ${task.uncovered_attempt_calls} with incomplete attempt capture`:''}</small></span><strong>${escape(taskAmount(task))}</strong></div>
+    <p class="fine">“Call completed” means the API returned a response. Model evaluations checks whether the answer was correct.</p>
+    <details class="help-details technical-details"><summary>Tokens, timings, and capture details</summary>
+      <p>Tokens are the input and output units used to price a model call. Cached tokens are reused input. Each cost uses the saved model price; missing usage or unsupported prices remain unknown.</p>
+      <div class="table-wrap"><table><thead><tr><th>Step / evidence</th><th>Provider / model version</th><th>API estimate</th><th>Tokens / attempt capture</th><th>Time taken</th></tr></thead><tbody>${calls.map(callDetail).join('')}</tbody></table></div>
+      <p class="fine">Project: ${escape(task.project)}<br>Task reference: ${escape(task.task_id)}</p>
+    </details>
+    ${task.calls_has_more?`<p class="fine">Showing ${task.calls.length} of ${task.call_count} captured calls. The subtotal covers all captured calls in the current filters.</p><button class="button" data-more-calls="${index}">Load more calls</button>`:''}
+    ${task.context?'<button class="button task-next" data-goto="evaluations">Check saved answer quality</button>':''}`;
+}
 async function loadUsage() {
   const epoch = generation;
   const request = ++usageRequest;
@@ -79,24 +144,23 @@ async function loadUsage() {
   const result = await api(`/api/pilot/usage?${params}`);
   if (epoch !== generation || request !== usageRequest) return;
   usage = result;
-  $('metrics').innerHTML = metric('Captured API subtotal', amount(usage.api_estimate_usd), 'Published-rate estimate · USD','connect') +
-    metric('Captured tasks', usage.task_count, `${usage.events} call events`,'tasks') +
-    metric('Unknown call costs', usage.unknown_cost_calls, 'Missing usage or reviewed pricing','compare') +
-    metric('Calls with coverage gaps', usage.uncovered_attempt_calls, 'Costs or attempt coverage incomplete','proposal');
+  $('metrics').innerHTML = metric('Estimated API spend', usage.events && usage.unknown_cost_calls===usage.events?'Unknown':amount(usage.api_estimate_usd), 'Known captured costs · USD · not an invoice','connect') +
+    metric('Task runs', usage.task_count, `${usage.events} model calls grouped into these runs`,'connect') +
+    metric('Calls without a price', usage.unknown_cost_calls, 'Missing token usage or supported model pricing','connect') +
+    metric('Calls with incomplete capture', usage.uncovered_attempt_calls, 'Cost or attempt information is missing','connect');
+  $('usage-guide').innerHTML = usageGuide();
   $('cost-note').textContent = usage.cost_note;
-  $('evidence-counts').textContent = Object.entries(usage.evidence_counts).map(([k,v])=>`${k}: ${v} calls`).join(' · ') || 'No events yet. Create a source or load the recorded comparison.';
+  $('evidence-counts').textContent = Object.entries(usage.evidence_counts).map(([k,v])=>`${evidenceName(k)}: ${v} calls`).join(' · ') || 'No calls in this view yet.';
   const tasks = usage.tasks;
+  $('task-guide').textContent = tasks.some(task=>task.context) ?
+    'In this support comparison, each ticket/model pair is a separate run. “Classify request” identifies the customer’s need; “Draft decision and reply” proposes a response. Open a card to see the customer request and both costs.' :
+    'For example, handling a support request can involve classifying the request, then drafting a reply. Your application groups related calls into a task run.';
   $('task-list').innerHTML = tasks.map((task,index) => `<details class="panel task-card">
-    <summary><strong>${escape(task.calls[0]?.case_id ? `${task.calls[0].case_id} · ${task.calls[0].model}` : task.task_id)}</strong><span>${escape(amount(task.api_estimate_usd))} · ${task.call_count} calls</span></summary>
-    <p class="data-note">${escape(task.project)} · ${task.unknown_cost_calls} unknown costs · ${task.uncovered_attempt_calls} coverage gaps</p>
-    <div class="table-wrap"><table><thead><tr><th>Stage / evidence</th><th>Provider / model</th><th>API estimate</th><th>Usage &amp; coverage</th><th>Latency</th></tr></thead><tbody>${task.calls.map(c=>`<tr>
-      <td>${escape(c.stage)}<br>${badge(c.evidence)} ${badge(c.status,c.status==='success'?'good':'warn')}</td>
-      <td>${escape(c.provider)}<br>${escape(c.model)}</td><td>${escape(amount(c.api_estimate_usd))}<br><small>${escape(c.unknown_reason || `Rate card ${c.pricebook_id.slice(0,12)}`)}</small></td>
-      <td>${escape(c.usage_basis)}<br>${escape(c.attempt_coverage)}<br><small>${c.usage ? `${c.usage.prompt_tokens} input / ${c.usage.completion_tokens} output / ${c.usage.cached_tokens} cached` : 'Tokens unknown'}</small></td>
-      <td>${escape(c.latency_ms)} ms</td></tr>`).join('')}</tbody></table></div>
-      ${task.calls_has_more?`<button class="button" data-more-calls="${index}">Load more calls</button>`:''}</details>`).join('') ||
-      '<article class="panel"><h2>No tasks in this view yet.</h2><p class="data-note">Connect an AxonLLM source or load the recorded example from Model evaluations.</p></article>';
-  $('tasks-page').textContent = usage.task_count ? `Page ${usage.page+1} · ${usage.task_count} tasks · most expensive first` : 'No tasks';
+    <summary><span class="task-summary-main"><strong>${escape(task.context?.title || `Task run · ${task.task_id.slice(0,24)}`)}</strong><small>${escape([...new Set(task.calls.map(c=>modelName(c.model)))].join(', '))} · ${task.call_count} model calls${task.context?` · Example ${escape(task.context.case_id)}`:''}</small></span>
+      <span class="task-summary-cost"><strong>${escape(taskAmount(task))}</strong><small>${task.unknown_cost_calls?'known costs only':'estimated API cost'}</small><span class="expand-cue">View steps <span aria-hidden="true">⌄</span></span></span></summary>
+    <div class="task-body">${taskBody(task,index)}</div></details>`).join('') ||
+      '<article class="panel"><h2>No task runs in this view yet.</h2><p class="data-note">Load saved answers in Model evaluations, connect an application in Usage sources, or change your overview filters.</p><div class="row-actions"><button class="button" data-goto="evaluations">Explore the recorded example</button><button class="button" data-goto="usage">Check usage filters</button></div></article>';
+  $('tasks-page').textContent = usage.task_count ? `Page ${usage.page+1} · ${usage.task_count} task runs · highest known cost first` : 'No task runs';
   $('tasks-previous').disabled = taskPage === 0;
   $('tasks-next').disabled = !usage.has_more;
 }
@@ -109,8 +173,8 @@ async function moreCalls(button) {
   try {
     const result = await api(`/api/pilot/calls?${params}`);
     task.calls.push(...result.calls);
-    button.closest('details').querySelector('tbody').insertAdjacentHTML('beforeend', result.calls.map(c=>`<tr><td>${escape(c.stage)}<br>${badge(c.evidence)} ${badge(c.status,c.status==='success'?'good':'warn')}</td><td>${escape(c.provider)}<br>${escape(c.model)}</td><td>${escape(amount(c.api_estimate_usd))}<br><small>${escape(c.unknown_reason || `Rate card ${c.pricebook_id.slice(0,12)}`)}</small></td><td>${escape(c.usage_basis)}<br>${escape(c.attempt_coverage)}<br><small>${c.usage?`${c.usage.prompt_tokens} input / ${c.usage.completion_tokens} output / ${c.usage.cached_tokens} cached`:'Tokens unknown'}</small></td><td>${escape(c.latency_ms)} ms</td></tr>`).join(''));
-    button.hidden = !result.has_more;
+    task.calls_has_more=result.has_more;
+    button.closest('.task-body').innerHTML=taskBody(task,Number(button.dataset.moreCalls));
   } finally { button.disabled=false; }
 }
 async function loadSources() {
@@ -118,9 +182,10 @@ async function loadSources() {
   const selected = $('source-filter').value;
   $('source-filter').innerHTML = '<option value="">All sources</option>' + result.sources.map(s=>`<option value="${escape(s.id)}">${escape(s.name)}</option>`).join('');
   $('source-filter').value = selected;
-  $('sources').innerHTML = result.sources.map(s=>`<article class="panel source-row"><div><h2>${escape(s.name)}</h2>
-    <p class="fine">${escape(s.kind)} · ${s.event_count} events · Last received: ${escape(date(s.last_received_at))}</p>
-    <div class="fine">${s.tokens.map(t=>`<p>${escape(t.prefix)}… · ${t.revoked?'revoked':`expires ${escape(date(t.expires_at))}`}
+  $('sources').innerHTML = result.sources.map(s=>`<article class="panel source-row"><div><h2>${escape(s.kind==='recording'?'Recorded support comparison':s.name)}</h2>
+    <p class="fine">${s.kind==='recording'?'Saved example; not a live connection':'Application connection'} · ${s.event_count} captured calls · Last received: ${escape(date(s.last_received_at))}</p>
+    ${s.kind!=='recording' && !s.event_count?'<p class="data-note">Waiting for calls. Configure the application connector with an active token to begin sending usage.</p>':''}
+    <div class="fine">${s.tokens.map(t=>`<p>Connection token ${escape(t.prefix)}… · ${t.revoked?'revoked':`expires ${escape(date(t.expires_at))}`}
       ${isAdmin()&&!t.revoked?`<button class="button small" data-revoke-token="${t.id}" data-source="${s.id}">Revoke token ${escape(t.prefix)}</button>`:''}</p>`).join('')}</div></div>
     ${isAdmin() && s.kind==='axonllm' ? `<div class="row-actions"><button class="button soft" data-token="${s.id}">Issue token</button><button class="button" data-revoke="${s.id}">Revoke all tokens</button></div>` : ''}</article>`).join('') ||
       '<p class="notice">No sources connected yet. An administrator can create the first AxonLLM source.</p>';
@@ -128,29 +193,39 @@ async function loadSources() {
 async function loadRecordings() {
   const result = await api('/api/pilot/recordings');
   const selected = $('recording-select').value;
-  $('recording-select').innerHTML = result.recordings.map(r=>`<option value="${r.id}">${r.id.slice(0,16)} · ${escape(date(r.created_at))}</option>`).join('');
+  $('recording-select').innerHTML = result.recordings.map(r=>`<option value="${r.id}">Support comparison · ${escape(date(r.created_at))} · ${r.id.slice(0,8)}</option>`).join('');
   if (result.recordings.some(r=>r.id===selected)) $('recording-select').value = selected;
+  $('evaluate-form').querySelector('button').disabled=!result.recordings.length;
+  $('evaluation-help').textContent=result.recordings.length ?
+    'Choose saved answers, then run the evaluation. The checks continue even if you leave this page.' :
+    canEdit()?'Load the recorded example or upload a compatible recording to enable Run evaluation.':'Ask an analyst or administrator to load saved answers. Your viewer role can inspect completed results.';
 }
 async function loadJobs() {
   const epoch = generation;
   const result = await api('/api/pilot/evaluations');
   if (epoch !== generation) return;
   jobRows = result.evaluations;
-  $('worker-status').textContent = result.worker_healthy ? 'Worker connected' : 'Worker unavailable';
+  $('worker-status').textContent = result.worker_healthy ? 'Evaluation service ready' : 'Evaluation service unavailable';
   $('worker-status').className = `tag ${result.worker_healthy?'good':'warn'}`;
-  $('jobs').innerHTML = jobRows.map(j=>`<article class="panel job-row"><div><strong>${escape(j.id.slice(0,8))}</strong> ${badge(j.status,j.status==='complete'?'good':j.status==='failed'?'danger':'accent')}
-    <p class="fine">Recording ${j.recording_id.slice(0,12)} · attempts ${j.attempts} · ${escape(date(j.created_at))}</p>${j.error?`<p class="data-note">${escape(j.error)}</p>`:''}</div><div class="row-actions">
+  $('jobs').innerHTML = jobRows.map(j=>`<article class="panel job-row"><div><strong>Support policy evaluation</strong> ${badge({complete:'Checks complete',queued:'Waiting to run',running:'Checking answers',failed:'Evaluation failed',cancelled:'Cancelled'}[j.status] || readable(j.status),j.status==='complete'?'good':j.status==='failed'?'danger':'accent')}
+    <p class="fine">Started ${escape(date(j.created_at))} · Run ${escape(j.id.slice(0,8))}</p>${j.error?`<p class="data-note">${escape(j.error)}</p>`:''}</div><div class="row-actions">
     ${j.status==='complete'?`<button class="button soft" data-result="${j.id}">Inspect results</button>`:''}
-    ${canEdit() && ['queued','running'].includes(j.status)?`<button class="button" data-cancel="${j.id}">Cancel</button>`:''}</div></article>`).join('') || '<p class="notice">No evaluations queued yet.</p>';
+    ${canEdit() && ['queued','running'].includes(j.status)?`<button class="button" data-cancel="${j.id}">Cancel</button>`:''}</div></article>`).join('') || '<p class="notice">No evaluations yet. Choose saved answers above and run the checks to compare model quality.</p>';
   const selected = $('proposal-job').value;
-  $('proposal-job').innerHTML = jobRows.filter(j=>j.status==='complete').map(j=>`<option value="${j.id}">${j.id.slice(0,8)} · recording ${j.recording_id.slice(0,12)}</option>`).join('');
+  $('proposal-job').innerHTML = jobRows.filter(j=>j.status==='complete').map(j=>`<option value="${j.id}">Support evaluation · ${escape(date(j.created_at))} · ${j.id.slice(0,8)}</option>`).join('');
   if (jobRows.some(j=>j.id===selected && j.status==='complete')) $('proposal-job').value = selected;
+  const complete=jobRows.some(j=>j.status==='complete');
+  $('proposal-form').querySelector('button').disabled=!complete;
+  $('review-help').textContent=complete?'A completed evaluation is available. Set your requirements below to save a review.':
+    'Complete an evaluation in Model evaluations first. This enables the review form below.';
 }
 async function showResult(id) {
   const job = await api(`/api/pilot/evaluations/${id}`);
   const result = job.analysis;
-  $('evaluation-result').innerHTML = `<article class="panel"><div class="section-head"><div><h2>Evaluation ${id.slice(0,8)}</h2><p>${result.total_calls} saved calls · ${escape(amount(result.total_cost_usd))} · ${escape(result.mode)} evidence</p></div><button class="button soft" id="export-result">Export results</button></div>
-    <div class="table-wrap"><table><thead><tr><th>Model</th><th>Passed</th><th>Critical failures</th><th>p95</th><th>Cost per passing task</th></tr></thead><tbody>${result.models.map(m=>`<tr><td>${escape(m.model)}</td><td>${m.passed}/${m.evaluated}</td><td>${m.critical_failures}</td><td>${escape(m.p95_ms)} ms</td><td>${escape(amount(m.cost_per_pass_usd))}</td></tr>`).join('')}</tbody></table></div><p class="data-note">Saved-output replay, not a new model measurement. Review the individual checks in the exported result.</p><button class="button primary" data-goto="proposals">Review routing criteria</button></article>`;
+  $('evaluation-result').innerHTML = `<article class="panel"><div class="section-head"><div><h2>How the models performed</h2><p>${result.total_calls} saved calls · ${escape(amount(result.total_cost_usd))} estimated API cost · ${result.mode==='fixture'?'Synthetic test data':'Recorded model answers'}</p></div><button class="button soft" id="export-result">Export results</button></div>
+    <div class="table-wrap"><table><thead><tr><th>Model</th><th>Tickets passed</th><th>Critical failures</th><th>Response time, p95</th><th>Cost per passing ticket</th></tr></thead><tbody>${result.models.map(m=>`<tr><td>${escape(modelName(m.model))}</td><td>${m.passed}/${m.evaluated}</td><td>${m.critical_failures}</td><td>${m.p95_ms===null?'Unknown':`${escape(m.p95_ms)} ms`}</td><td>${escape(amount(m.cost_per_pass_usd))}</td></tr>`).join('')}</tbody></table></div>
+    <dl class="result-guide"><div><dt>Tickets passed</dt><dd>A ticket passes only when all its decision and action-boundary checks pass.</dd></div><div><dt>Critical failures</dt><dd>Failures on critical cases, such as identity or policy restrictions. Any critical failure excludes a model from a recommendation.</dd></div><div><dt>Response time, p95</dt><dd>95% of the recorded task runs finished within this time.</dd></div><div><dt>Cost per passing ticket</dt><dd>Total model cost divided by tickets passed, including money spent on failed tickets.</dd></div></dl>
+    <p class="data-note">These checks replay saved answers. They do not measure current model speed or quality on other tasks. Export results to inspect individual tickets and checks.</p><button class="button primary" data-goto="proposals">Review routing criteria</button></article>`;
   $('export-result').onclick = () => download(`evaluation-${id}.json`, job);
   $('evaluation-result').scrollIntoView({block:'start'});
 }
@@ -158,24 +233,29 @@ async function loadProposals() {
   const result = await api('/api/pilot/proposals');
   proposalRows = result.proposals;
   $('proposals').innerHTML = proposalRows.map(p=>`<article class="panel"><div class="section-head"><div><p class="eyebrow">SAVED ROUTING REVIEW</p><h2>${p.recommended_model?escape(p.recommended_model):p.status==='fixture_only'?'Fixture evidence only':'No model qualifies'}</h2></div>${badge('Not applied','warn')}</div>
-    <p class="data-note">${escape(p.scope)}</p><p class="proposal-copy">Minimum pass rate: ${p.min_pass_rate*100}% · Zero critical failures · p95 ≤ ${p.max_p95_ms} ms · ${p.monthly_tasks} monthly tasks assumed</p>
-    <div class="table-wrap"><table><thead><tr><th>Candidate</th><th>Decision</th><th>Reasons</th></tr></thead><tbody>${p.candidates.map(c=>`<tr><td>${escape(c.model)}</td><td>${badge(c.eligible?'Eligible':'Excluded',c.eligible?'good':'warn')}</td><td>${escape(c.exclusions.join('; ') || 'Meets the selected checks')}</td></tr>`).join('')}</tbody></table></div>
-    <p class="proposal-copy">Projected monthly API savings: ${escape(amount(p.projected_monthly_api_savings_usd))}</p><ul class="limitations">${p.limitations.map(l=>`<li>${escape(l)}</li>`).join('')}</ul>
-    <p class="fine">Recording ${p.recording_id.slice(0,16)} · evaluator ${p.evaluation_revision.slice(0,16)}</p><button class="button soft" data-export-proposal="${p.id}">Export routing review</button></article>`).join('') || '<p class="notice">Complete an evaluation, then save a review using the criteria above.</p>';
+    <p class="data-note">${p.recommended_model?'This candidate meets the saved requirements. Review the supporting cases before changing your application.':'Every candidate failed at least one requirement. Inspect the reasons below and address the failing cases before changing your model.'}</p><p class="proposal-copy">Required: ${p.min_pass_rate*100}% tickets passed · Zero critical failures · p95 within ${p.max_p95_ms} ms · ${p.monthly_tasks} task runs per month assumed</p>
+    <div class="table-wrap"><table><thead><tr><th>Model</th><th>Decision</th><th>Why</th></tr></thead><tbody>${p.candidates.map(c=>`<tr><td>${escape(modelName(c.model))}</td><td>${badge(c.eligible?'Meets requirements':'Excluded',c.eligible?'good':'warn')}</td><td>${escape(c.exclusions.map(exclusionName).join('; ') || 'Meets the selected checks')}</td></tr>`).join('')}</tbody></table></div>
+    <p class="proposal-copy">Projected monthly API savings: <strong>${p.projected_monthly_api_savings_usd===null?'Unavailable':escape(amount(p.projected_monthly_api_savings_usd))}</strong>${p.projected_monthly_api_savings_usd===null?'<br><span class="fine">A qualifying model and complete comparison costs are required to calculate savings.</span>':''}</p>
+    <details class="help-details"><summary>Scope, assumptions, and saved evidence</summary><p>${escape(p.scope)}</p><ul class="limitations">${p.limitations.map(l=>`<li>${escape(l)}</li>`).join('')}</ul><p class="fine">Recording ${p.recording_id.slice(0,16)} · evaluator ${p.evaluation_revision.slice(0,16)}</p></details>
+    <button class="button soft" data-export-proposal="${p.id}">Export routing review</button></article>`).join('') || '<p class="notice">No saved reviews yet. Choose a completed evaluation and your requirements above, then save the recommendation.</p>';
 }
 async function loadTeam() {
   const [members, audit] = await Promise.all([api('/api/pilot/users'), api('/api/pilot/audit')]);
   $('users').innerHTML = members.users.map(u=>`<article class="panel user-row"><div><strong>${escape(u.username)}</strong> ${badge(u.role)} ${!u.active?badge('Disabled','warn'):''}</div>${u.active?`<button class="button" data-disable="${u.id}">Disable account</button>`:''}</article>`).join('');
-  $('audit').innerHTML = `<table><thead><tr><th>When</th><th>Actor</th><th>Action</th></tr></thead><tbody>${audit.events.map(e=>`<tr><td>${escape(date(e.created_at))}</td><td>${escape(e.actor)}</td><td>${escape(e.action)}</td></tr>`).join('')}</tbody></table>`;
+  const actions={'session.created':'Signed in','session.sso_created':'Signed in with SSO','session.revoked':'Signed out',
+    'source.token_issued':'Connection token created','source.token_revoked':'Connection token revoked','source.tokens_revoked':'All source tokens revoked',
+    'proposal.created':'Routing review saved','recording.imported':'Saved answers imported','usage.ingested':'Usage received',
+    'demo.seeded':'Recorded demo loaded','user.sso_provisioned':'SSO member added'};
+  $('audit').innerHTML = `<table><thead><tr><th>When</th><th>Person or service</th><th>Activity</th></tr></thead><tbody>${audit.events.map(e=>`<tr><td>${escape(date(e.created_at))}</td><td>${escape(e.actor)}</td><td>${escape(actions[e.action] || readable(e.action))}</td></tr>`).join('')}</tbody></table>`;
 }
 async function loadOperations() {
   const state = await api('/api/pilot/operations');
   $('operations-status').textContent = state.status === 'healthy' ? 'Services healthy' : 'Needs attention';
   $('operations-status').className = `tag ${state.status === 'healthy'?'good':'warn'}`;
-  $('operations-metrics').innerHTML = metric('Evaluation worker',state.worker_healthy?'Connected':'Unavailable','Checked against persisted heartbeat','connect') +
-    metric('Waiting evaluations',state.jobs.queued || 0,`Oldest wait: ${state.oldest_queued_seconds} seconds`,'tasks') +
+  $('operations-metrics').innerHTML = metric('Evaluation service',state.worker_healthy?'Ready':'Unavailable','Runs your queued checks in the background','connect') +
+    metric('Evaluations waiting',state.jobs.queued || 0,`Oldest wait: ${state.oldest_queued_seconds} seconds`,'tasks') +
     metric('Failed evaluations',state.failed_jobs_24h,'Last 24 hours','compare') +
-    metric('Unknown call costs',state.unknown_cost_calls_24h,`${state.observed_calls_24h} observed calls in 24 hours`,'proposal');
+    metric('Calls without a price',state.unknown_cost_calls_24h,`Out of ${state.observed_calls_24h} new application calls in 24 hours`,'proposal');
   $('operations-alerts').innerHTML = state.alerts.length ? state.alerts.map(a=>`<p class="data-note">${badge(a.severity,a.severity==='critical'?'warn':'accent')} ${escape(a.message)}</p>`).join('') : '<p class="data-note">No active operational alerts.</p>';
   $('operations-retention').textContent = `${state.retention_days ? `Usage metadata: ${state.retention_days} days. Evidence and saved reviews: ${state.evidence_retention_days || 'unlimited'} days. Audit history: ${state.audit_retention_days || 'unlimited'} days.` : 'Scheduled data retention is not enabled in this local environment.'} ${state.maintenance_age_seconds===null?'Maintenance has not run yet.':`Last maintenance completed ${Math.floor(state.maintenance_age_seconds/60)} minutes ago.`}`;
 }
@@ -224,7 +304,7 @@ submit('user-form', async data=>{await api('/api/pilot/users',Object.fromEntries
 submit('identity-form', async data=>{await api('/api/pilot/identities',Object.fromEntries(data)); $('identity-form').reset(); await loadTeam(); notice('Company member added.');});
 $('load-example').onclick = ()=>action(async()=>{
   await api('/api/pilot/recordings/example',{}); await Promise.all([loadUsage(),loadRecordings(),loadSources()]);
-  notice('Loaded the saved comparison. These are recorded model calls on authored tickets, not new traffic.');
+  notice('Loaded the saved comparison. Explore its tasks or select Run evaluation to check the saved answers. No new model calls were made.');
 });
 $('recording-upload').onchange = ()=>action(async()=>{
   const file = $('recording-upload').files[0]; if (!file) return;
@@ -236,6 +316,7 @@ $('dismiss-token').onclick = ()=>{ $('token-value').value=''; $('token-panel').h
 document.addEventListener('click', event=>{
   const button=event.target.closest('button'); if (!button) return;
   const d=button.dataset;
+  if (d.resetFilters !== undefined) action(async()=>{$('filters').reset();filters='';taskPage=0;await loadUsage();});
   if (d.page || d.goto) navigate(d.page || d.goto);
   if (d.moreCalls !== undefined) action(()=>moreCalls(button));
   if (d.result) action(()=>showResult(d.result));
@@ -253,15 +334,22 @@ setInterval(()=>{ if (session?.user && page==='operations' && !document.hidden) 
   try {
     session=await api('/api/auth/session');
     loginMethods=session.login_methods;
+    if (session.deployment === 'hosted_test') {
+      $('company-login').textContent = 'Sign in to hosted test';
+    }
     $('login-form').hidden=!loginMethods.local;
     $('company-login').hidden=!loginMethods.company;
     if (new URLSearchParams(location.search).get('signin')==='failed') {
-      $('login-error').textContent='Company sign-in failed. Check your MFA method and account access with your administrator.';
+      $('login-error').textContent = session.deployment === 'hosted_test' ?
+        'Test sign-in failed. Check your test account access.' :
+        'Company sign-in failed. Check your MFA method and account access with your administrator.';
       $('login-error').hidden=false;
       history.replaceState(null,'','/');
     }
     if (session.user) await enter();
-    else $('setup-note').textContent = session.initialized ? 'Use the account your team administrator created.' :
+    else $('setup-note').textContent = session.deployment === 'hosted_test' ?
+      'Hosted test with SSO. Use your test account; MFA is not required.' :
+      session.initialized ? 'Use the account your team administrator created.' :
       'An operator must initialize this team first. Follow the pilot setup instructions in docs/PILOT.md.';
   } catch(error) { $('setup-note').textContent='Workbench could not reach the team database. Check the pilot services.'; }
 })();

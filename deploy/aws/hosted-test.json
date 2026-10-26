@@ -1,0 +1,1195 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Isolated Workbench hosted acceptance test with two workspaces, password-only test SSO, private CloudFront origin, off-host backups, and alarm receipts.",
+  "Metadata": {
+    "AWSToolsMetrics": {
+      "AWSAgentToolkit": "aws-cloudformation@3"
+    }
+  },
+  "Parameters": {
+    "VpcId": {
+      "Type": "AWS::EC2::VPC::Id"
+    },
+    "SubnetId": {
+      "Type": "AWS::EC2::Subnet::Id"
+    },
+    "ImageId": {
+      "Type": "AWS::EC2::Image::Id"
+    },
+    "CloudFrontPrefixListId": {
+      "Type": "String",
+      "AllowedPattern": "pl-[a-f0-9]+"
+    },
+    "InstanceType": {
+      "Type": "String",
+      "Default": "t3a.large",
+      "AllowedValues": [
+        "t3a.large",
+        "t3a.xlarge"
+      ]
+    }
+  },
+  "Resources": {
+    "Storage": {
+      "Type": "AWS::S3::Bucket",
+      "Metadata": {
+        "com.aws.cloudformation.Context": {
+          "why": "Off-host recovery and private bootstrap; no public artifacts.",
+          "must": [
+            "Block public access, encrypt, and retain independently of server replacement.",
+            "Never put bootstrap objects or backup contents in logs."
+          ]
+        }
+      },
+      "Properties": {
+        "PublicAccessBlockConfiguration": {
+          "BlockPublicAcls": true,
+          "IgnorePublicAcls": true,
+          "BlockPublicPolicy": true,
+          "RestrictPublicBuckets": true
+        },
+        "BucketEncryption": {
+          "ServerSideEncryptionConfiguration": [
+            {
+              "ServerSideEncryptionByDefault": {
+                "SSEAlgorithm": "AES256"
+              }
+            }
+          ]
+        },
+        "OwnershipControls": {
+          "Rules": [
+            {
+              "ObjectOwnership": "BucketOwnerEnforced"
+            }
+          ]
+        },
+        "VersioningConfiguration": {
+          "Status": "Enabled"
+        },
+        "LifecycleConfiguration": {
+          "Rules": [
+            {
+              "Id": "backups",
+              "Status": "Enabled",
+              "Prefix": "backups/",
+              "ExpirationInDays": 30,
+              "NoncurrentVersionExpiration": {
+                "NoncurrentDays": 30
+              }
+            },
+            {
+              "Id": "private-bootstrap",
+              "Status": "Enabled",
+              "Prefix": "bootstrap/",
+              "ExpirationInDays": 1,
+              "NoncurrentVersionExpiration": {
+                "NoncurrentDays": 1
+              }
+            }
+          ]
+        }
+      },
+      "DeletionPolicy": "Retain",
+      "UpdateReplacePolicy": "Retain"
+    },
+    "StoragePolicy": {
+      "Type": "AWS::S3::BucketPolicy",
+      "Metadata": {
+        "com.aws.cloudformation.Context": {
+          "why": "Require TLS for artifact and backup transfers.",
+          "must": []
+        }
+      },
+      "Properties": {
+        "Bucket": {
+          "Ref": "Storage"
+        },
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Deny",
+              "Principal": "*",
+              "Action": "s3:*",
+              "Resource": [
+                {
+                  "Fn::GetAtt": [
+                    "Storage",
+                    "Arn"
+                  ]
+                },
+                {
+                  "Fn::Sub": "${Storage.Arn}/*"
+                }
+              ],
+              "Condition": {
+                "Bool": {
+                  "aws:SecureTransport": "false"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "ServerRole": {
+      "Type": "AWS::IAM::Role",
+      "Metadata": {
+        "com.aws.cloudformation.Context": {
+          "why": "SSM management, this deployment's artifacts, and one metrics namespace.",
+          "must": [
+            "No SSH or embedded AWS keys; application containers cannot access instance metadata."
+          ]
+        }
+      },
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "ec2.amazonaws.com"
+              },
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        },
+        "ManagedPolicyArns": [
+          {
+            "Fn::Sub": "arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore"
+          }
+        ],
+        "Policies": [
+          {
+            "PolicyName": "workbench-storage-metrics",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "s3:GetObject",
+                    "s3:PutObject"
+                  ],
+                  "Resource": {
+                    "Fn::Sub": "${Storage.Arn}/*"
+                  }
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": "s3:ListBucket",
+                  "Resource": {
+                    "Fn::GetAtt": [
+                      "Storage",
+                      "Arn"
+                    ]
+                  }
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": "cloudwatch:PutMetricData",
+                  "Resource": "*",
+                  "Condition": {
+                    "StringEquals": {
+                      "cloudwatch:namespace": "Workbench/HostedTest"
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "ServerProfile": {
+      "Type": "AWS::IAM::InstanceProfile",
+      "Metadata": {
+        "com.aws.cloudformation.Context": {
+          "why": "Give host automation temporary AWS credentials.",
+          "must": []
+        }
+      },
+      "Properties": {
+        "Roles": [
+          {
+            "Ref": "ServerRole"
+          }
+        ]
+      }
+    },
+    "OriginSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Metadata": {
+        "com.aws.cloudformation.Context": {
+          "why": "Only the CloudFront origin network can reach the HTTP listener.",
+          "must": [
+            "No public CIDR ingress and no inbound SSH."
+          ]
+        }
+      },
+      "Properties": {
+        "GroupDescription": "Workbench origin; only CloudFront can enter",
+        "VpcId": {
+          "Ref": "VpcId"
+        },
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": 80,
+            "ToPort": 80,
+            "SourcePrefixListId": {
+              "Ref": "CloudFrontPrefixListId"
+            }
+          }
+        ]
+      }
+    },
+    "Server": {
+      "Type": "AWS::EC2::Instance",
+      "Metadata": {
+        "com.aws.cloudformation.Context": {
+          "why": "Dedicated Docker host for two isolated test stacks; encrypted retained disk.",
+          "must": [
+            "Fictional data only; preserve disk and off-host backups during replacement.",
+            "Metadata hop limit 1 deliberately denies credentials to application containers."
+          ]
+        }
+      },
+      "Properties": {
+        "ImageId": {
+          "Ref": "ImageId"
+        },
+        "InstanceType": {
+          "Ref": "InstanceType"
+        },
+        "SubnetId": {
+          "Ref": "SubnetId"
+        },
+        "SecurityGroupIds": [
+          {
+            "Ref": "OriginSecurityGroup"
+          }
+        ],
+        "IamInstanceProfile": {
+          "Ref": "ServerProfile"
+        },
+        "MetadataOptions": {
+          "HttpTokens": "required",
+          "HttpPutResponseHopLimit": 1
+        },
+        "BlockDeviceMappings": [
+          {
+            "DeviceName": "/dev/xvda",
+            "Ebs": {
+              "VolumeSize": 60,
+              "VolumeType": "gp3",
+              "Encrypted": true,
+              "DeleteOnTermination": false
+            }
+          }
+        ],
+        "UserData": {
+          "Fn::Base64": "#!/bin/bash\nset -euo pipefail\ndnf install -y docker python3\nsystemctl enable --now docker\nuseradd --create-home --groups docker workbench\ninstall -d -m 700 -o workbench -g workbench /opt/workbench\ninstall -d -m 755 /usr/local/lib/docker/cli-plugins\ncurl --fail --location --retry 3 https://github.com/docker/compose/releases/download/v2.40.3/docker-compose-linux-x86_64 -o /usr/local/lib/docker/cli-plugins/docker-compose\ncd /usr/local/lib/docker/cli-plugins\nprintf 'dba9d98e1ba5bfe11d88c99b9bd32fc4a0624a30fafe68eea34d61a3e42fd372  docker-compose\\n' | sha256sum --check --status\ncurl --fail --location --retry 3 https://github.com/docker/buildx/releases/download/v0.38.1/buildx-v0.38.1.linux-amd64 -o docker-buildx\nprintf 'e25d5cd675092bb5d1d03632fdc46cdf3fede7b514dc5f023a105e00d3ce5ad4  docker-buildx\\n' | sha256sum --check --status\nchmod 755 docker-compose docker-buildx\ntouch /opt/workbench/bootstrap-ready\nchown workbench:workbench /opt/workbench/bootstrap-ready\n"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": {
+              "Fn::Sub": "${AWS::StackName}-host"
+            }
+          },
+          {
+            "Key": "Workload",
+            "Value": "workbench-hosted-test"
+          }
+        ]
+      },
+      "DeletionPolicy": "Retain",
+      "UpdateReplacePolicy": "Retain"
+    },
+    "PrivateOrigin": {
+      "Type": "AWS::CloudFront::VpcOrigin",
+      "Metadata": {
+        "com.aws.cloudformation.Context": {
+          "why": "CloudFront reaches the host over its private VPC network, avoiding a public HTTP origin.",
+          "must": [
+            "Public viewers use HTTPS; internal VPC and Docker hops use HTTP."
+          ]
+        }
+      },
+      "Properties": {
+        "VpcOriginEndpointConfig": {
+          "Arn": {
+            "Fn::Sub": "arn:${AWS::Partition}:ec2:${AWS::Region}:${AWS::AccountId}:instance/${Server}"
+          },
+          "Name": {
+            "Fn::Sub": "${AWS::StackName}-origin"
+          },
+          "HTTPPort": 80,
+          "HTTPSPort": 443,
+          "OriginProtocolPolicy": "http-only",
+          "OriginSSLProtocols": [
+            "TLSv1.2"
+          ]
+        }
+      }
+    },
+    "WebAcl": {
+      "Type": "AWS::WAFv2::WebACL",
+      "Metadata": {
+        "com.aws.cloudformation.Context": {
+          "why": "Bound anonymous request volume without storing OIDC callback query strings.",
+          "must": []
+        }
+      },
+      "Properties": {
+        "Scope": "CLOUDFRONT",
+        "DefaultAction": {
+          "Allow": {}
+        },
+        "VisibilityConfig": {
+          "SampledRequestsEnabled": false,
+          "CloudWatchMetricsEnabled": true,
+          "MetricName": {
+            "Fn::Sub": "${AWS::StackName}-web"
+          }
+        },
+        "Rules": [
+          {
+            "Name": "request-rate",
+            "Priority": 1,
+            "Action": {
+              "Block": {}
+            },
+            "Statement": {
+              "RateBasedStatement": {
+                "Limit": 1000,
+                "AggregateKeyType": "IP"
+              }
+            },
+            "VisibilityConfig": {
+              "SampledRequestsEnabled": false,
+              "CloudWatchMetricsEnabled": true,
+              "MetricName": "request-rate"
+            }
+          }
+        ]
+      }
+    },
+    "DemoDistribution": {
+      "Type": "AWS::CloudFront::Distribution",
+      "Metadata": {
+        "com.aws.cloudformation.Context": {
+          "why": "Separate HTTPS hostname and cookies for the demo workspace.",
+          "must": [
+            "Never cache authenticated responses or strip OIDC cookies and query parameters."
+          ]
+        }
+      },
+      "Properties": {
+        "DistributionConfig": {
+          "Enabled": true,
+          "Comment": {
+            "Fn::Sub": "${AWS::StackName}-demo"
+          },
+          "PriceClass": "PriceClass_100",
+          "HttpVersion": "http2",
+          "IPV6Enabled": true,
+          "ViewerCertificate": {
+            "CloudFrontDefaultCertificate": true
+          },
+          "WebACLId": {
+            "Fn::GetAtt": [
+              "WebAcl",
+              "Arn"
+            ]
+          },
+          "Origins": [
+            {
+              "Id": "workbench",
+              "DomainName": {
+                "Fn::GetAtt": [
+                  "Server",
+                  "PrivateDnsName"
+                ]
+              },
+              "VpcOriginConfig": {
+                "VpcOriginId": {
+                  "Ref": "PrivateOrigin"
+                }
+              }
+            }
+          ],
+          "DefaultCacheBehavior": {
+            "TargetOriginId": "workbench",
+            "ViewerProtocolPolicy": "redirect-to-https",
+            "AllowedMethods": [
+              "GET",
+              "HEAD",
+              "OPTIONS",
+              "PUT",
+              "POST",
+              "PATCH",
+              "DELETE"
+            ],
+            "CachedMethods": [
+              "GET",
+              "HEAD"
+            ],
+            "Compress": true,
+            "CachePolicyId": "4135ea2d-6df8-44a3-9df3-4b5a84be39ad",
+            "OriginRequestPolicyId": "216adef6-5c7f-47e4-b989-5492eafa07d3"
+          },
+          "CustomErrorResponses": [
+            {
+              "ErrorCode": 400,
+              "ErrorCachingMinTTL": 0
+            },
+            {
+              "ErrorCode": 403,
+              "ErrorCachingMinTTL": 0
+            },
+            {
+              "ErrorCode": 404,
+              "ErrorCachingMinTTL": 0
+            },
+            {
+              "ErrorCode": 405,
+              "ErrorCachingMinTTL": 0
+            },
+            {
+              "ErrorCode": 414,
+              "ErrorCachingMinTTL": 0
+            },
+            {
+              "ErrorCode": 416,
+              "ErrorCachingMinTTL": 0
+            },
+            {
+              "ErrorCode": 500,
+              "ErrorCachingMinTTL": 0
+            },
+            {
+              "ErrorCode": 501,
+              "ErrorCachingMinTTL": 0
+            },
+            {
+              "ErrorCode": 502,
+              "ErrorCachingMinTTL": 0
+            },
+            {
+              "ErrorCode": 503,
+              "ErrorCachingMinTTL": 0
+            },
+            {
+              "ErrorCode": 504,
+              "ErrorCachingMinTTL": 0
+            }
+          ]
+        }
+      }
+    },
+    "CleanDistribution": {
+      "Type": "AWS::CloudFront::Distribution",
+      "Metadata": {
+        "com.aws.cloudformation.Context": {
+          "why": "Separate HTTPS hostname and cookies for the clean workspace.",
+          "must": [
+            "Never cache authenticated responses or strip OIDC cookies and query parameters."
+          ]
+        }
+      },
+      "Properties": {
+        "DistributionConfig": {
+          "Enabled": true,
+          "Comment": {
+            "Fn::Sub": "${AWS::StackName}-clean"
+          },
+          "PriceClass": "PriceClass_100",
+          "HttpVersion": "http2",
+          "IPV6Enabled": true,
+          "ViewerCertificate": {
+            "CloudFrontDefaultCertificate": true
+          },
+          "WebACLId": {
+            "Fn::GetAtt": [
+              "WebAcl",
+              "Arn"
+            ]
+          },
+          "Origins": [
+            {
+              "Id": "workbench",
+              "DomainName": {
+                "Fn::GetAtt": [
+                  "Server",
+                  "PrivateDnsName"
+                ]
+              },
+              "VpcOriginConfig": {
+                "VpcOriginId": {
+                  "Ref": "PrivateOrigin"
+                }
+              }
+            }
+          ],
+          "DefaultCacheBehavior": {
+            "TargetOriginId": "workbench",
+            "ViewerProtocolPolicy": "redirect-to-https",
+            "AllowedMethods": [
+              "GET",
+              "HEAD",
+              "OPTIONS",
+              "PUT",
+              "POST",
+              "PATCH",
+              "DELETE"
+            ],
+            "CachedMethods": [
+              "GET",
+              "HEAD"
+            ],
+            "Compress": true,
+            "CachePolicyId": "4135ea2d-6df8-44a3-9df3-4b5a84be39ad",
+            "OriginRequestPolicyId": "216adef6-5c7f-47e4-b989-5492eafa07d3"
+          },
+          "CustomErrorResponses": [
+            {
+              "ErrorCode": 400,
+              "ErrorCachingMinTTL": 0
+            },
+            {
+              "ErrorCode": 403,
+              "ErrorCachingMinTTL": 0
+            },
+            {
+              "ErrorCode": 404,
+              "ErrorCachingMinTTL": 0
+            },
+            {
+              "ErrorCode": 405,
+              "ErrorCachingMinTTL": 0
+            },
+            {
+              "ErrorCode": 414,
+              "ErrorCachingMinTTL": 0
+            },
+            {
+              "ErrorCode": 416,
+              "ErrorCachingMinTTL": 0
+            },
+            {
+              "ErrorCode": 500,
+              "ErrorCachingMinTTL": 0
+            },
+            {
+              "ErrorCode": 501,
+              "ErrorCachingMinTTL": 0
+            },
+            {
+              "ErrorCode": 502,
+              "ErrorCachingMinTTL": 0
+            },
+            {
+              "ErrorCode": 503,
+              "ErrorCachingMinTTL": 0
+            },
+            {
+              "ErrorCode": 504,
+              "ErrorCachingMinTTL": 0
+            }
+          ]
+        }
+      }
+    },
+    "TestUsers": {
+      "Type": "AWS::Cognito::UserPool",
+      "Metadata": {
+        "com.aws.cloudformation.Context": {
+          "why": "Dedicated real OIDC provider. The user explicitly requested no MFA for this test.",
+          "must": [
+            "Never present this password-only test as verified production MFA acceptance."
+          ]
+        }
+      },
+      "Properties": {
+        "AdminCreateUserConfig": {
+          "AllowAdminCreateUserOnly": true
+        },
+        "MfaConfiguration": "OFF",
+        "Policies": {
+          "PasswordPolicy": {
+            "MinimumLength": 16,
+            "RequireUppercase": true,
+            "RequireLowercase": true,
+            "RequireNumbers": true,
+            "RequireSymbols": true,
+            "TemporaryPasswordValidityDays": 1
+          }
+        },
+        "UserPoolTags": {
+          "Workload": "workbench-hosted-test"
+        }
+      },
+      "DeletionPolicy": "Retain",
+      "UpdateReplacePolicy": "Retain"
+    },
+    "LoginDomain": {
+      "Type": "AWS::Cognito::UserPoolDomain",
+      "Metadata": {
+        "com.aws.cloudformation.Context": {
+          "why": "AWS-provided test sign-in address; no custom company domain needed.",
+          "must": []
+        }
+      },
+      "Properties": {
+        "Domain": {
+          "Fn::Sub": "${AWS::StackName}-${AWS::AccountId}"
+        },
+        "UserPoolId": {
+          "Ref": "TestUsers"
+        }
+      }
+    },
+    "DemoClient": {
+      "Type": "AWS::Cognito::UserPoolClient",
+      "Metadata": {
+        "com.aws.cloudformation.Context": {
+          "why": "Independent confidential authorization-code client for demo.",
+          "must": [
+            "Exact callbacks, PKCE in Workbench, no implicit grant or public signup."
+          ]
+        }
+      },
+      "Properties": {
+        "UserPoolId": {
+          "Ref": "TestUsers"
+        },
+        "GenerateSecret": true,
+        "ClientName": "demo",
+        "SupportedIdentityProviders": [
+          "COGNITO"
+        ],
+        "AllowedOAuthFlowsUserPoolClient": true,
+        "AllowedOAuthFlows": [
+          "code"
+        ],
+        "AllowedOAuthScopes": [
+          "openid",
+          "profile"
+        ],
+        "CallbackURLs": [
+          {
+            "Fn::Sub": "https://${DemoDistribution.DomainName}/api/auth/oidc/callback"
+          }
+        ],
+        "LogoutURLs": [
+          {
+            "Fn::Sub": "https://${DemoDistribution.DomainName}/"
+          }
+        ],
+        "ExplicitAuthFlows": [
+          "ALLOW_REFRESH_TOKEN_AUTH"
+        ],
+        "PreventUserExistenceErrors": "ENABLED",
+        "EnableTokenRevocation": true,
+        "AccessTokenValidity": 15,
+        "IdTokenValidity": 15,
+        "RefreshTokenValidity": 1,
+        "TokenValidityUnits": {
+          "AccessToken": "minutes",
+          "IdToken": "minutes",
+          "RefreshToken": "days"
+        }
+      }
+    },
+    "CleanClient": {
+      "Type": "AWS::Cognito::UserPoolClient",
+      "Metadata": {
+        "com.aws.cloudformation.Context": {
+          "why": "Independent confidential authorization-code client for clean.",
+          "must": [
+            "Exact callbacks, PKCE in Workbench, no implicit grant or public signup."
+          ]
+        }
+      },
+      "Properties": {
+        "UserPoolId": {
+          "Ref": "TestUsers"
+        },
+        "GenerateSecret": true,
+        "ClientName": "clean",
+        "SupportedIdentityProviders": [
+          "COGNITO"
+        ],
+        "AllowedOAuthFlowsUserPoolClient": true,
+        "AllowedOAuthFlows": [
+          "code"
+        ],
+        "AllowedOAuthScopes": [
+          "openid",
+          "profile"
+        ],
+        "CallbackURLs": [
+          {
+            "Fn::Sub": "https://${CleanDistribution.DomainName}/api/auth/oidc/callback"
+          }
+        ],
+        "LogoutURLs": [
+          {
+            "Fn::Sub": "https://${CleanDistribution.DomainName}/"
+          }
+        ],
+        "ExplicitAuthFlows": [
+          "ALLOW_REFRESH_TOKEN_AUTH"
+        ],
+        "PreventUserExistenceErrors": "ENABLED",
+        "EnableTokenRevocation": true,
+        "AccessTokenValidity": 15,
+        "IdTokenValidity": 15,
+        "RefreshTokenValidity": 1,
+        "TokenValidityUnits": {
+          "AccessToken": "minutes",
+          "IdToken": "minutes",
+          "RefreshToken": "days"
+        }
+      }
+    },
+    "AlarmKey": {
+      "Type": "AWS::KMS::Key",
+      "Metadata": {
+        "com.aws.cloudformation.Context": {
+          "why": "Encrypt alarm notifications while allowing CloudWatch to publish.",
+          "must": [
+            "Keep CloudWatch grant scoped to this account."
+          ]
+        }
+      },
+      "Properties": {
+        "EnableKeyRotation": true,
+        "KeyPolicy": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "AWS": {
+                  "Fn::Sub": "arn:${AWS::Partition}:iam::${AWS::AccountId}:root"
+                }
+              },
+              "Action": "kms:*",
+              "Resource": "*"
+            },
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "cloudwatch.amazonaws.com"
+              },
+              "Action": [
+                "kms:Decrypt",
+                "kms:GenerateDataKey*"
+              ],
+              "Resource": "*",
+              "Condition": {
+                "StringEquals": {
+                  "aws:SourceAccount": {
+                    "Ref": "AWS::AccountId"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "DeletionPolicy": "Retain",
+      "UpdateReplacePolicy": "Retain"
+    },
+    "Alerts": {
+      "Type": "AWS::SNS::Topic",
+      "Metadata": {
+        "com.aws.cloudformation.Context": {
+          "why": "Send test alarms to an owned machine receipt queue; no human recipients.",
+          "must": []
+        }
+      },
+      "Properties": {
+        "KmsMasterKeyId": {
+          "Fn::GetAtt": [
+            "AlarmKey",
+            "Arn"
+          ]
+        }
+      }
+    },
+    "AlertPolicy": {
+      "Type": "AWS::SNS::TopicPolicy",
+      "Metadata": {
+        "com.aws.cloudformation.Context": {
+          "why": "Only this stack's alarms can publish service notifications.",
+          "must": []
+        }
+      },
+      "Properties": {
+        "Topics": [
+          {
+            "Ref": "Alerts"
+          }
+        ],
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "cloudwatch.amazonaws.com"
+              },
+              "Action": "sns:Publish",
+              "Resource": {
+                "Ref": "Alerts"
+              },
+              "Condition": {
+                "StringEquals": {
+                  "aws:SourceAccount": {
+                    "Ref": "AWS::AccountId"
+                  }
+                },
+                "ArnLike": {
+                  "aws:SourceArn": {
+                    "Fn::Sub": "arn:${AWS::Partition}:cloudwatch:${AWS::Region}:${AWS::AccountId}:alarm:${AWS::StackName}-*"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "Receipts": {
+      "Type": "AWS::SQS::Queue",
+      "Metadata": {
+        "com.aws.cloudformation.Context": {
+          "why": "Durable evidence that alarms were delivered; contains no credentials.",
+          "must": []
+        }
+      },
+      "Properties": {
+        "SqsManagedSseEnabled": true,
+        "MessageRetentionPeriod": 1209600,
+        "VisibilityTimeout": 60
+      }
+    },
+    "ReceiptPolicy": {
+      "Type": "AWS::SQS::QueuePolicy",
+      "Metadata": {
+        "com.aws.cloudformation.Context": {
+          "why": "Only this deployment's encrypted SNS topic may deliver receipts.",
+          "must": []
+        }
+      },
+      "Properties": {
+        "Queues": [
+          {
+            "Ref": "Receipts"
+          }
+        ],
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "sns.amazonaws.com"
+              },
+              "Action": "sqs:SendMessage",
+              "Resource": {
+                "Fn::GetAtt": [
+                  "Receipts",
+                  "Arn"
+                ]
+              },
+              "Condition": {
+                "ArnEquals": {
+                  "aws:SourceArn": {
+                    "Ref": "Alerts"
+                  }
+                },
+                "StringEquals": {
+                  "aws:SourceAccount": {
+                    "Ref": "AWS::AccountId"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "ReceiptSubscription": {
+      "Type": "AWS::SNS::Subscription",
+      "Metadata": {
+        "com.aws.cloudformation.Context": {
+          "why": "Exercise actual notification delivery without messaging colleagues.",
+          "must": []
+        }
+      },
+      "Properties": {
+        "Protocol": "sqs",
+        "TopicArn": {
+          "Ref": "Alerts"
+        },
+        "Endpoint": {
+          "Fn::GetAtt": [
+            "Receipts",
+            "Arn"
+          ]
+        },
+        "RawMessageDelivery": true
+      },
+      "DependsOn": "ReceiptPolicy"
+    },
+    "DemoReadyAlarm": {
+      "Type": "AWS::CloudWatch::Alarm",
+      "Metadata": {
+        "com.aws.cloudformation.Context": {
+          "why": "Alert on service/worker failure or missing off-host backup; missing host samples also alarm.",
+          "must": []
+        }
+      },
+      "Properties": {
+        "AlarmName": {
+          "Fn::Sub": "${AWS::StackName}-demo-Ready"
+        },
+        "Namespace": "Workbench/HostedTest",
+        "MetricName": "Ready",
+        "Dimensions": [
+          {
+            "Name": "Deployment",
+            "Value": {
+              "Ref": "AWS::StackName"
+            }
+          },
+          {
+            "Name": "Instance",
+            "Value": "demo"
+          }
+        ],
+        "Statistic": "Minimum",
+        "Period": 60,
+        "EvaluationPeriods": 2,
+        "DatapointsToAlarm": 2,
+        "Threshold": 1,
+        "ComparisonOperator": "LessThanThreshold",
+        "TreatMissingData": "breaching",
+        "AlarmActions": [
+          {
+            "Ref": "Alerts"
+          }
+        ],
+        "OKActions": [
+          {
+            "Ref": "Alerts"
+          }
+        ]
+      }
+    },
+    "DemoBackupAgeSecondsAlarm": {
+      "Type": "AWS::CloudWatch::Alarm",
+      "Metadata": {
+        "com.aws.cloudformation.Context": {
+          "why": "Alert on service/worker failure or missing off-host backup; missing host samples also alarm.",
+          "must": []
+        }
+      },
+      "Properties": {
+        "AlarmName": {
+          "Fn::Sub": "${AWS::StackName}-demo-BackupAgeSeconds"
+        },
+        "Namespace": "Workbench/HostedTest",
+        "MetricName": "BackupAgeSeconds",
+        "Dimensions": [
+          {
+            "Name": "Deployment",
+            "Value": {
+              "Ref": "AWS::StackName"
+            }
+          },
+          {
+            "Name": "Instance",
+            "Value": "demo"
+          }
+        ],
+        "Statistic": "Maximum",
+        "Period": 60,
+        "EvaluationPeriods": 2,
+        "DatapointsToAlarm": 2,
+        "Threshold": 90000,
+        "ComparisonOperator": "GreaterThanThreshold",
+        "TreatMissingData": "breaching",
+        "AlarmActions": [
+          {
+            "Ref": "Alerts"
+          }
+        ],
+        "OKActions": [
+          {
+            "Ref": "Alerts"
+          }
+        ]
+      }
+    },
+    "CleanReadyAlarm": {
+      "Type": "AWS::CloudWatch::Alarm",
+      "Metadata": {
+        "com.aws.cloudformation.Context": {
+          "why": "Alert on service/worker failure or missing off-host backup; missing host samples also alarm.",
+          "must": []
+        }
+      },
+      "Properties": {
+        "AlarmName": {
+          "Fn::Sub": "${AWS::StackName}-clean-Ready"
+        },
+        "Namespace": "Workbench/HostedTest",
+        "MetricName": "Ready",
+        "Dimensions": [
+          {
+            "Name": "Deployment",
+            "Value": {
+              "Ref": "AWS::StackName"
+            }
+          },
+          {
+            "Name": "Instance",
+            "Value": "clean"
+          }
+        ],
+        "Statistic": "Minimum",
+        "Period": 60,
+        "EvaluationPeriods": 2,
+        "DatapointsToAlarm": 2,
+        "Threshold": 1,
+        "ComparisonOperator": "LessThanThreshold",
+        "TreatMissingData": "breaching",
+        "AlarmActions": [
+          {
+            "Ref": "Alerts"
+          }
+        ],
+        "OKActions": [
+          {
+            "Ref": "Alerts"
+          }
+        ]
+      }
+    },
+    "CleanBackupAgeSecondsAlarm": {
+      "Type": "AWS::CloudWatch::Alarm",
+      "Metadata": {
+        "com.aws.cloudformation.Context": {
+          "why": "Alert on service/worker failure or missing off-host backup; missing host samples also alarm.",
+          "must": []
+        }
+      },
+      "Properties": {
+        "AlarmName": {
+          "Fn::Sub": "${AWS::StackName}-clean-BackupAgeSeconds"
+        },
+        "Namespace": "Workbench/HostedTest",
+        "MetricName": "BackupAgeSeconds",
+        "Dimensions": [
+          {
+            "Name": "Deployment",
+            "Value": {
+              "Ref": "AWS::StackName"
+            }
+          },
+          {
+            "Name": "Instance",
+            "Value": "clean"
+          }
+        ],
+        "Statistic": "Maximum",
+        "Period": 60,
+        "EvaluationPeriods": 2,
+        "DatapointsToAlarm": 2,
+        "Threshold": 90000,
+        "ComparisonOperator": "GreaterThanThreshold",
+        "TreatMissingData": "breaching",
+        "AlarmActions": [
+          {
+            "Ref": "Alerts"
+          }
+        ],
+        "OKActions": [
+          {
+            "Ref": "Alerts"
+          }
+        ]
+      }
+    }
+  },
+  "Outputs": {
+    "InstanceId": {
+      "Value": {
+        "Ref": "Server"
+      },
+      "Description": "InstanceId"
+    },
+    "StorageBucket": {
+      "Value": {
+        "Ref": "Storage"
+      },
+      "Description": "StorageBucket"
+    },
+    "DemoDomain": {
+      "Value": {
+        "Fn::GetAtt": [
+          "DemoDistribution",
+          "DomainName"
+        ]
+      },
+      "Description": "DemoDomain"
+    },
+    "CleanDomain": {
+      "Value": {
+        "Fn::GetAtt": [
+          "CleanDistribution",
+          "DomainName"
+        ]
+      },
+      "Description": "CleanDomain"
+    },
+    "UserPoolId": {
+      "Value": {
+        "Ref": "TestUsers"
+      },
+      "Description": "UserPoolId"
+    },
+    "DemoClientId": {
+      "Value": {
+        "Ref": "DemoClient"
+      },
+      "Description": "DemoClientId"
+    },
+    "CleanClientId": {
+      "Value": {
+        "Ref": "CleanClient"
+      },
+      "Description": "CleanClientId"
+    },
+    "AlertQueueUrl": {
+      "Value": {
+        "Ref": "Receipts"
+      },
+      "Description": "AlertQueueUrl"
+    },
+    "Issuer": {
+      "Value": {
+        "Fn::Sub": "https://cognito-idp.${AWS::Region}.amazonaws.com/${TestUsers}"
+      },
+      "Description": "Issuer"
+    }
+  }
+}

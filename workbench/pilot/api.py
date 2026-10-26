@@ -222,6 +222,7 @@ def create_pilot_app(settings: Settings | None = None) -> FastAPI:
         actor = auth.principal(database, token, settings)
         return {"initialized": database.initialized(), "user": actor,
                 "csrf": auth.csrf_token(token) if actor else None,
+                "deployment": "hosted_test" if settings.hosted_test else "production" if settings.production else "pilot",
                 "login_methods": {"local": settings.local_login, "company": company is not None}}
 
     def signed_in(token):

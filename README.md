@@ -24,6 +24,14 @@ You can explore and regrade that recording without an API key or new model charg
 · [Production installation and two test deployments](docs/PRODUCTION.md)
 · [Team pilot setup](docs/PILOT.md) · [Roadmap](docs/ROADMAP.md)
 
+**Main branch additions after v0.2.0:** optional AWS hosted acceptance with separate
+seeded and clean workspaces, password-only test SSO, encrypted off-host backups,
+verified alert delivery, and clearer guidance across the team UI.
+The published v0.2.0 archive is unchanged. Clone `main` for these additions; see
+the [AWS hosted test guide](docs/HOSTED-TEST.md) and
+[dated acceptance results](docs/VERIFICATION-HOSTED-2026-10-26.md).
+Deployment addresses and credentials belong to each installer and are not published.
+
 ## Test the complete product
 
 Run two isolated Docker deployments: one seeded with the saved comparison and
@@ -113,7 +121,7 @@ evaluation currently requires a matching saved support-v1 recording.
 | Governance | Actual Ostiari Guard in the evaluation subprocess; draft permission and three blocked action controls |
 | Model selection | Complete evidence, minimum pass rate, zero critical failures, p95 limit, then lowest cost per passing task |
 | Review | Adjustable criteria and portable evidence export; no deployment |
-| Interface | Ostiari control-plane palette: white navigation and cards, stone backgrounds, violet buttons, and matching sky/yellow/violet/teal workflow accents; desktop and mobile; small moving circles with pause and reduced-motion support |
+| Interface | Guided team screens with named recorded tasks, per-call costs, and expandable technical details. White navigation, stone backgrounds, violet buttons, sky overview cards matching the selected menu, and yellow/violet/teal workflow accents; desktop and mobile; small moving circles with pause and reduced-motion support |
 
 **Not yet implemented:** native Codex, Cursor, Claude Code, or Bedrock billing
 connectors; subscription invoice reconciliation; a coding workload; multi-company
@@ -136,6 +144,13 @@ The screenshots show actual saved model evidence on fictional support cases.
 · [PNG diagram](docs/architecture/workbench.png)
 · [Self-hosted production architecture](docs/ARCHITECTURE.md#self-hosted-production-profile)
 · [Publication scope and AWS architecture decision](docs/PUBLICATION.md)
+
+[![Implemented AWS hosted acceptance topology](docs/architecture/aws-hosted-test.png)](docs/HOSTED-TEST.md)
+
+[Editable AWS draw.io source](docs/architecture/aws-hosted-test.drawio).
+This is the implemented optional test topology, with two workspaces on one host.
+It has no high-availability claim. Password-only SSO is an explicit test exception;
+the standard company production profile retains its MFA requirement.
 
 ## Recorded result
 

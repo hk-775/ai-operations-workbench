@@ -18,6 +18,8 @@ AxonLLM, Ostiari, or Ledger repositories to make this app work.
   `components/Layout.tsx`, and `pages/Dashboard.tsx`; do not invent another theme.
   Use its rounded cards, colored borders and icon tiles, subtle colored shadows,
   and violet/white/indigo header tint. Keep all metric cards light.
+  Usage overview cards use the same sky fill as its selected sidebar item;
+  the other screens keep their workflow colors.
   Workflow stages keep matching sky, yellow, violet, and teal borders and tinted
   fills. The yellow task stage is the user's Workbench-specific preference;
   avoid orange/brown button fills and white text on yellow.
@@ -38,6 +40,9 @@ AxonLLM, Ostiari, or Ledger repositories to make this app work.
   SSO-issued sessions, monitoring credentials, and explicit retention periods.
   Keep the seeded and clean test deployments isolated, including browser cookies.
   Demo seeding must be explicit, idempotent, and preserve unrelated company data.
+- The explicitly selected AWS hosted test uses password-only Cognito SSO at the
+  user's request. `WORKBENCH_HOSTED_TEST=true` allows this exception while preserving
+  the other production checks. Do not claim this verifies production MFA.
 - Keep `.pilot/`, outboxes, token/password files, and private recordings out of Git
   and Docker build contexts. Schema changes require explicit migration behavior.
 - Run the meaningful accounting, recommendation, integration, and browser tests.
