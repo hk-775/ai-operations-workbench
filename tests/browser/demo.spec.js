@@ -68,9 +68,15 @@ test('demo opens as local files and under a static-site prefix',async({page})=>{
       url:new URL('/static/'+relative,route.request().url()).href,
     })});
   });
-  await page.goto('/nested/workbench/demo.html');
-  await page.locator('#chapters button').nth(8).click();
-  await expect.poll(()=>page.locator('video').evaluate(el=>el.currentTime)).toBeGreaterThan(158);
-  await page.locator('video').evaluate(el=>el.pause());
-  expect(unexpected).toEqual([]);
+  try {
+    await page.goto('/nested/workbench/demo.html');
+    await page.locator('#chapters button').nth(8).click();
+    await expect.poll(()=>page.locator('video').evaluate(el=>el.currentTime)).toBeGreaterThan(158);
+    await page.locator('video').evaluate(el=>el.pause());
+    expect(unexpected).toEqual([]);
+  } finally {
+    // A paused video can still buffer a range. Finish its proxy callback before
+    // Playwright disposes this test's request context; preserve actual errors.
+    await page.unrouteAll({behavior:'wait'});
+  }
 });
