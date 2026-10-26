@@ -12,24 +12,27 @@ evaluation plugins, and automatic routing changes are separate product features.
 
 ## Try the seeded and clean deployments
 
-Requirements: Docker with Compose v2, Python 3.12+, Git, and sufficient capacity
+Requirements: Docker with Compose v2, uv, Git, and sufficient capacity
 for two PostgreSQL/app/worker stacks. On the development machine, budget at least
-6 GB for Docker. These deployments bind to loopback and use local accounts.
+6 GB for Docker. uv installs the tested Python 3.13 runtime. These deployments
+bind to loopback and use local accounts.
 The first build downloads public Python and Go dependencies. If the standard Go
 proxy is unavailable on the host network, set `WORKBENCH_GOPROXY` to an approved
 Go module mirror; checksum-database verification remains enabled.
 
-One command builds, starts, initializes, and seeds the right instance:
+From the cloned repository or extracted release directory, install the locked
+environment, then build, start, initialize, and seed the right instance:
 
 ```bash
-python3 scripts/deploy_instances.py
+uv sync --locked --python 3.13
+uv run --locked python scripts/deploy_instances.py
 ```
 
 It preserves existing accounts and data when run again. The equivalent individual
 steps are:
 
 ```bash
-python3 scripts/setup_instances.py
+uv run --locked python scripts/setup_instances.py
 docker compose --env-file .pilot/instances/demo/compose.env -f compose.instances.yaml up --build --wait
 docker compose --env-file .pilot/instances/demo/compose.env -f compose.instances.yaml exec -T app \
   python -m workbench.pilot init --team "Workbench recorded demo" --username admin \
@@ -87,7 +90,7 @@ Do not configure a claim that the provider does not return or treat a password-o
 assurance level as MFA. The provider must support client-secret basic authentication.
 
 ```bash
-python3 scripts/setup_production.py \
+uv run --locked python scripts/setup_production.py \
   --domain workbench.company.example \
   --issuer https://identity.company.example \
   --client-id company-issued-client-id \
@@ -200,7 +203,7 @@ The container verification command creates separate temporary databases, checks 
 real offline evaluation, restores a dump, and verifies exact totals and saved reviews:
 
 ```bash
-python3 scripts/check_pilot_stack.py \
+uv run --locked python scripts/check_pilot_stack.py \
   --env-file .pilot/production.env --compose-file compose.production.yaml
 ```
 

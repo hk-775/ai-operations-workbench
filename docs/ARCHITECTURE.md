@@ -3,9 +3,10 @@
 Workbench owns the interface, usage ledger, evidence validation, comparison,
 and proposal. Existing projects provide the model routing and governance engines.
 
-The sections and existing draw.io diagram below describe the original demo.
-The authenticated pilot adds the architecture in the final section and is
-explicitly selected with `WORKBENCH_MODE=pilot`.
+The first sections and existing draw.io diagram below describe the original demo.
+The [authenticated pilot](#authenticated-team-pilot) and
+[self-hosted production profile](#self-hosted-production-profile) are documented
+separately. Team mode is explicitly selected with `WORKBENCH_MODE=pilot`.
 
 ![Implemented local replay architecture](architecture/workbench.svg)
 
@@ -13,7 +14,7 @@ explicitly selected with `WORKBENCH_MODE=pilot`.
 
 The diagram describes the current workstation application. No AWS infrastructure
 or remote hosting is deployed by this repository; see the
-[publication architecture decision](PUBLICATION.md#aws-services-reference-architecture-not-applicable-to-v010).
+[publication architecture decision](PUBLICATION.md#aws-services-reference-architecture-not-applicable-to-this-release).
 
 ```mermaid
 flowchart LR

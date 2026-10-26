@@ -27,3 +27,30 @@ This release does not add native Codex/Cursor/Claude Code billing ingestion,
 invoice reconciliation, arbitrary workload evaluation, multi-company SaaS accounts,
 or automatic routing deployment. Customer-specific SSO/TLS, alert delivery, storage
 encryption, and restore acceptance remain installation checks.
+
+## Download and verify
+
+Download `ai-operations-workbench-0.2.0.tar.gz` and `SHA256SUMS` from the
+[v0.2.0 GitHub Release](https://github.com/hk-775/ai-operations-workbench/releases/tag/v0.2.0)
+into the same directory. Verify and extract:
+
+```bash
+# macOS
+shasum -a 256 -c SHA256SUMS
+# Linux alternative: sha256sum -c SHA256SUMS
+tar -xzf ai-operations-workbench-0.2.0.tar.gz
+cd ai-operations-workbench-0.2.0
+uv sync --locked --python 3.13
+uv run --locked python scripts/deploy_instances.py
+```
+
+The checksum covers the attached source archive, not GitHub's automatically
+generated source ZIP/tarball. It verifies file integrity; no publisher signature
+is supplied. The archive contains the application, locked dependencies'
+manifests, fictional case corpus and saved model recording, deployment recipes,
+tests, documentation, and editable architecture sources. Dependencies download
+during installation; this is not an offline bundle.
+
+The demonstration and clean workspace use separate private credentials generated
+at installation. The release includes no company configuration, runtime database,
+API keys, or shared administrator password.

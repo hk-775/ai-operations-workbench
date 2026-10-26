@@ -1,11 +1,16 @@
-# v0.1.0 publication inventory
+# v0.2.0 publication inventory
 
 ## Destination and distribution
 
 - Repository: `hk-775/ai-operations-workbench`.
 - Canonical public entry point: the repository README.
-- Distribution: GitHub source release `v0.1.0`.
-- Intended runtime: the user's local workstation, bound to loopback.
+- Distribution: GitHub source release `v0.2.0`, containing
+  `ai-operations-workbench-0.2.0.tar.gz` and `SHA256SUMS`.
+- Intended runtime: a local recorded demonstration or an independent,
+  single-organization Docker Compose installation.
+- The seeded and clean test deployments bind to loopback. A company's production
+  installation supplies its own HTTPS domain, OIDC/MFA, secrets, monitoring, and
+  encrypted host/backup storage.
 - No package registry, container registry, public app backend, or AWS resources
   are part of this release.
 
@@ -21,9 +26,12 @@ static imitation is published.
 | `data/cases.json` | 24 authored, fictional Streamline support cases |
 | `data/model-comparison.json` | Actual saved model responses to those fictional cases; normalized by AxonLLM |
 | `docs/images/*.png` | Screenshots generated from the project's actual frontend and bundled recording |
-| `docs/architecture/workbench.drawio` | Editable diagram of the implemented local workflow |
+| `docs/architecture/workbench.drawio` | Editable diagram of the original local demonstration workflow |
 | `docs/architecture/workbench.svg` and `.png` | Original vector diagram and static rendered companion; no third-party artwork |
+| `docs/ARCHITECTURE.md` | Editable Mermaid diagrams for the authenticated pilot and self-hosted production profile |
+| `compose*.yaml` and `deploy/` | Company-neutral deployment recipes; installation-specific files are generated privately |
 | AxonLLM and Ostiari | Public MIT-0 dependencies, pinned to immutable Git revisions |
+| Container build recipes | Pinned upstream Python, PostgreSQL, Go, uv, and Caddy images/modules; no prebuilt container images are distributed by this release |
 
 The recording includes provider response IDs for event deduplication; these
 are not credentials or proof of provider-authenticated provenance. Local paths,
@@ -39,28 +47,38 @@ does not represent live collection or measured execution timing.
 GitHub README images and release screenshots are static platform companions.
 They do not replace the animated workflow in the runnable app.
 
-## AWS services reference architecture: not applicable to v0.1.0
+## AWS services reference architecture: not applicable to this release
 
-This release is a workstation application with an explicit loopback boundary,
-local SQLite, and local replay workers. The source contains no AWS SDK
-integration, AWS IaC, remote ingestion service, or selected AWS deployment
-target. Its model collection path uses an external model API through AxonLLM.
+The supported installation contract is platform-neutral Docker Compose with
+PostgreSQL, an HTTPS proxy, offline workers, and an external OIDC provider.
+Companies choose their host and operating services. This release contains no AWS
+IaC, AWS deployment automation, or selected AWS hosting target. Native Bedrock
+usage ingestion remains a roadmap item.
 
-The roadmap describes product capabilities, but does not select a hosting
-platform or define a credible AWS deployment contract. Adding AWS services
-would imply deployment choices this release has not made. The separate
-application diagram documents what is implemented. Revisit the AWS reference
-architecture when a remote deployment design is selected.
+An AWS host is possible, but choosing services such as ECS, RDS, Cognito, or a
+managed backup service would introduce a deployment contract this release does
+not implement or validate. The application and production-profile diagrams show
+the actual supported boundaries. Add a separate AWS service diagram and its
+editable source when an AWS installation target becomes part of the product;
+the decision here is based on the platform-neutral scope, not on local-only status.
 
 ## Release checks
 
 CI clean-installs locked Python dependencies on Python 3.12 and 3.13, runs the
 accounting, recommendation, API, and integration tests, and exercises the
-browser workflow on Node 22 with Chromium. It also scans all fetched Git
-history and the checked-out tree with a checksum-verified Gitleaks binary.
+demo and authenticated browser workflows on Node 22 with Chromium. Container
+checks initialize both seeded and clean deployments, replay evidence, and verify
+database backup/restore. Dependency and high/critical runtime-image audits run
+alongside scans of fetched Git history and the checked-out tree using Gitleaks.
 Actions are pinned to full commit SHAs and use read-only repository permissions.
 
 Before publication, review the screenshots and bundled fictional content,
 scan history and release archive contents, and install/test the actual source
 archive from a clean environment. Verify the downloaded release archive
 against its attached SHA-256 checksum after publication.
+
+The source archive excludes `.pilot/`, `.state/`, credentials, outboxes,
+environments, and dependency caches. Its SHA-256 checksum verifies file integrity;
+this release does not provide a cryptographic publisher signature. Company
+SSO/TLS, alert delivery, encrypted storage, and restore acceptance remain
+installation checks described in [PRODUCTION.md](PRODUCTION.md).
