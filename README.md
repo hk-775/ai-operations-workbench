@@ -19,7 +19,7 @@ You can explore and regrade that recording without an API key or new model charg
 
 ![Workbench overview: recorded API cost, model counts, and a yellow task investigation panel](docs/images/overview.png)
 
-**[Download a release](https://github.com/hk-775/ai-operations-workbench/releases)**
+**[Download v0.2.0](https://github.com/hk-775/ai-operations-workbench/releases/tag/v0.2.0)**
 · [Methodology](docs/METHODOLOGY.md) · [Architecture](docs/ARCHITECTURE.md)
 · [Production installation and two test deployments](docs/PRODUCTION.md)
 · [Team pilot setup](docs/PILOT.md) · [Roadmap](docs/ROADMAP.md)
@@ -27,10 +27,13 @@ You can explore and regrade that recording without an API key or new model charg
 ## Test the complete product
 
 Run two isolated Docker deployments: one seeded with the saved comparison and
-one clean instance for onboarding. Neither makes paid model calls.
+one clean instance for onboarding. Install Git, uv, and Docker with Compose v2;
+run the following from the cloned repository or extracted release directory.
+Neither deployment makes paid model calls.
 
 ```bash
-python3 scripts/deploy_instances.py
+uv sync --locked --python 3.13
+uv run --locked python scripts/deploy_instances.py
 ```
 
 Open the demo at `http://127.0.0.1:8770/` and the clean workspace at
@@ -53,8 +56,10 @@ uv sync --locked --python 3.13
 uv run --locked uvicorn workbench.app:app --host 127.0.0.1 --port 8767
 ```
 
-If you downloaded a release archive, extract it and start with `uv sync` from
-the extracted directory. No provider credentials are needed for replay.
+If you downloaded a release archive, extract it and start with
+`uv sync --locked --python 3.13` from the extracted directory. No provider
+credentials are needed for replay. The release includes `SHA256SUMS` to verify
+the archive; see [release verification](docs/RELEASE-0.2.0.md#download-and-verify).
 
 Open **http://127.0.0.1:8767/**.
 
@@ -125,10 +130,11 @@ The screenshots show actual saved model evidence on fictional support cases.
 
 ## How the pieces connect
 
-[![Implemented local Workbench architecture](docs/architecture/workbench.svg)](docs/ARCHITECTURE.md)
+[![Original local demonstration architecture](docs/architecture/workbench.svg)](docs/ARCHITECTURE.md)
 
 [Editable draw.io source](docs/architecture/workbench.drawio)
 · [PNG diagram](docs/architecture/workbench.png)
+· [Self-hosted production architecture](docs/ARCHITECTURE.md#self-hosted-production-profile)
 · [Publication scope and AWS architecture decision](docs/PUBLICATION.md)
 
 ## Recorded result
@@ -229,7 +235,8 @@ evaluation results, and saved reviews in PostgreSQL.
 - [Authenticated team pilot and operations guide](docs/PILOT.md)
 - [MIT-0 license](LICENSE)
 - [Contributing](CONTRIBUTING.md), [support](SUPPORT.md), and [security reporting](SECURITY.md)
-- [v0.1.0 release notes](docs/RELEASE-0.1.0.md)
+- [v0.2.0 release notes and download verification](docs/RELEASE-0.2.0.md)
+- [Local validation results](docs/VERIFICATION-0.2.0.md)
 
 AxonLLM and Ostiari are pinned to immutable Git revisions in `pyproject.toml` and
 `uv.lock`. They remain separate projects; this app does not patch their source.
