@@ -1,0 +1,14 @@
+**
+!pyproject.toml
+!uv.lock
+!workbench/
+!workbench/**/*.py
+!config/
+!config/**
+!data/
+!data/cases.json
+!data/model-comparison.json
+!web/
+!web/**
+!scripts/
+!scripts/healthcheck.py

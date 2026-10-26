@@ -1,1 +1,1 @@
-"""AI Operations Workbench: a local evidence-driven product demonstration."""
+"""AI Operations Workbench: self-hosted usage, evaluation, and routing review."""

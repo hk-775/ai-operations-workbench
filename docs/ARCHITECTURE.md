@@ -1,7 +1,11 @@
 # Component boundaries
 
-Workbench owns the local interface, usage ledger, evidence validation, comparison,
+Workbench owns the interface, usage ledger, evidence validation, comparison,
 and proposal. Existing projects provide the model routing and governance engines.
+
+The sections and existing draw.io diagram below describe the original demo.
+The authenticated pilot adds the architecture in the final section and is
+explicitly selected with `WORKBENCH_MODE=pilot`.
 
 ![Implemented local replay architecture](architecture/workbench.svg)
 
@@ -108,7 +112,76 @@ Workers are terminated when the server shuts down. Status polling enforces a
 directory specified by `WORKBENCH_STATE_DIR`; worker reports are in its `jobs/`
 subdirectory. Analysis is cached in memory for the running server.
 
-There is no authentication, tenant isolation, remote ingestion service, RBAC,
+The original demo has no authentication, tenant isolation, remote ingestion service, RBAC,
 encrypted database, or distributed job queue. Treat this as a local demonstration.
 A deployment for real customer data requires a separate design for those
 capabilities.
+
+## Authenticated team pilot
+
+```mermaid
+flowchart LR
+    App["Application + AxonLLM"] --> Outbox["Durable metadata outbox"]
+    Outbox -->|"Source bearer token"| Ingest["Scoped ingestion API"]
+    User["Signed-in team member"] --> UI["Pilot dashboard"]
+    UI -->|"Session + role + CSRF"| API["Team API"]
+    Ingest --> DB[("PostgreSQL events + pricebooks")]
+    API --> DB
+    API --> Queue[("PostgreSQL jobs + recordings")]
+    Queue -->|"Leased claim"| Worker["Supervised offline worker"]
+    Worker --> Guard["Existing contract checks + Ostiari Guard"]
+    Guard --> Results[("Persisted results + provenance")]
+    Results --> API
+    API --> Review[("Saved read-only routing review")]
+    Review --> UI
+```
+
+Each connector source owns its application event IDs. Repeated provider response
+IDs are allowed. Duplicate events are acknowledged; conflicting payloads roll
+back the entire batch. The connector verifies its source identity before delivery
+and keeps unacknowledged events for retries. The API recomputes Decimal estimates
+from an immutable pricebook and preserves unknown usage/attempt coverage.
+
+The worker process outlives browser/API sessions, claims jobs with PostgreSQL row
+locks, and supervises a subprocess with a fixed timeout. Expired leases can be
+recovered; ownership fencing rejects stale results. The original recording,
+evaluator revision, result, and review criteria remain stored after restarts.
+Changing the evaluator revision requires a new replay for a new review.
+
+The pilot API has no demo routes, live model collection endpoint, or routing
+activation endpoint. Usage metadata is separate from the support-v1 recordings
+required for quality evaluation. The app uses a nonsuperuser database role.
+This stack deploys no AWS infrastructure. See the [pilot guide](PILOT.md) for
+roles, credentials, event semantics, data limits, and deployment/restore steps.
+
+## Self-hosted production profile
+
+```mermaid
+flowchart LR
+    Employee["Company employee"] --> TLS["Company HTTPS endpoint"]
+    Identity["Company OIDC + MFA"] --> TLS
+    TLS --> API["Workbench API + dashboard"]
+    Connector["AxonLLM outbox"] --> TLS
+    API --> Database[("Private PostgreSQL")]
+    Database --> Worker["Leased offline evaluator"]
+    Worker --> Database
+    Maintenance["Scheduled retention"] --> Database
+    API --> Metrics["Authenticated metrics"]
+    Metrics --> Monitor["Company monitoring + on-call"]
+    Database --> Backup["Company encrypted backups"]
+```
+
+Each company owns an independent stack. Login maps verified issuer/subject pairs
+to explicit Workbench roles. Production accepts only sessions issued through the
+verified OIDC/MFA path. The source release contains no company domain or credentials.
+The API and maintenance scheduler share durable state; SQL aggregates preserve
+historical pricing while returning bounded task and call pages.
+
+The runtime image contains the application, locked dependencies, and evaluator
+provenance files. Git, uv, and Python package installers stay outside the runtime
+image. An explicit schema migration precedes production startup.
+
+The local test profile creates separate demo and clean volumes, users, database
+secrets, and browser cookie names. Demo seeding imports the same bundled saved
+evidence and runs the real offline evaluator. The clean profile imports nothing.
+See [production deployment](PRODUCTION.md) for the installer and operational checks.

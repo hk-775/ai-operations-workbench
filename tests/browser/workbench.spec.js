@@ -71,6 +71,26 @@ test('reconnecting the same source does not add duplicate charges',async({page})
   await expect(page.getByText('$0.0881',{exact:true})).toBeVisible();
 });
 
+test('desktop workspace scrolls independently and task navigation starts at the top',async({page})=>{
+  await page.setViewportSize({width:1280,height:650});
+  await page.goto('/');
+  await expect(page.locator('.metric').first()).toBeVisible();
+  const workspace=page.getByRole('region',{name:'Workspace content'});
+  const sidebarTop=(await page.locator('.sidebar').boundingBox()).y;
+  expect(await workspace.evaluate(el=>el.offsetWidth-el.clientWidth)).toBeGreaterThan(0);
+  await page.mouse.move(1000,450);
+  await page.mouse.wheel(0,450);
+  await expect.poll(()=>workspace.evaluate(el=>el.scrollTop)).toBeGreaterThan(0);
+  expect(await page.evaluate(()=>window.scrollY)).toBe(0);
+  expect((await page.locator('.sidebar').boundingBox()).y).toBe(sidebarTop);
+  await workspace.focus();
+  await page.keyboard.press('End');
+  await expect(page.locator('.page-footer')).toBeInViewport();
+  await page.getByRole('button',{name:'Inspect this task'}).click();
+  await expect(page.getByRole('heading',{name:'Inside an expensive task'})).toBeVisible();
+  await expect.poll(()=>workspace.evaluate(el=>el.scrollTop)).toBe(0);
+});
+
 test('small solid workflow markers move, pause, and respect reduced motion',async({page,browser,baseURL})=>{
   await page.goto('/');
   const marker=page.locator('.connector > span').first();

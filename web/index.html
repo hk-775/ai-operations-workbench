@@ -3,11 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#fafaf9">
+  <meta name="theme-color" content="#ffffff">
   <meta name="color-scheme" content="light">
   <title>AI Operations Workbench</title>
-  <link rel="stylesheet" href="/static/styles.css">
-  <script defer src="/static/app.js"></script>
+  <link rel="stylesheet" href="/static/styles.css?v=5d412360ea41">
+  <script defer src="/static/app.js?v=5037772bbace"></script>
 </head>
 <body>
   <svg class="icon-library" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
@@ -42,7 +42,7 @@
         <div class="sidebar-note">A local demonstration.<br>Every recommendation has evidence.</div>
       </div>
     </aside>
-    <div class="content">
+    <div class="content" role="region" aria-label="Workspace content" tabindex="0">
       <header class="topbar">
         <span class="breadcrumb">Workspace <span>/</span> <strong id="current-view" data-flow="connect">Overview</strong></span>
         <div class="top-actions"><span class="mode-badge"><span></span> Local demonstration</span><button class="button subtle" id="sources-button" data-flow="connect">Connect usage <span aria-hidden="true">＋</span></button></div>

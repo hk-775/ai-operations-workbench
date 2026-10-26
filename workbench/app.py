@@ -224,4 +224,14 @@ def create_app(state_dir: Path | None = None, recording: Path | None = None) -> 
     return app
 
 
-app = create_app()
+def configured_app():
+    mode = os.environ.get("WORKBENCH_MODE", "demo")
+    if mode == "demo":
+        return create_app()
+    if mode == "pilot":
+        from .pilot.api import create_pilot_app
+        return create_pilot_app()
+    raise ValueError("WORKBENCH_MODE must be demo or pilot")
+
+
+app = configured_app()

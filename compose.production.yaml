@@ -1,0 +1,73 @@
+name: ai-operations-workbench-production
+
+services:
+  db:
+    extends: {file: compose.pilot.yaml, service: db}
+  app:
+    extends: {file: compose.pilot.yaml, service: app}
+    image: ai-operations-workbench:production
+    environment:
+      WORKBENCH_PRODUCTION: "true"
+      WORKBENCH_LOCAL_LOGIN: "false"
+      WORKBENCH_PUBLIC_ORIGIN: "https://${WORKBENCH_DOMAIN:?Set WORKBENCH_DOMAIN}"
+      WORKBENCH_OIDC_ISSUER: "${WORKBENCH_OIDC_ISSUER:?Set the company issuer}"
+      WORKBENCH_OIDC_CLIENT_ID: "${WORKBENCH_OIDC_CLIENT_ID:?Set the OIDC client ID}"
+      WORKBENCH_OIDC_CLIENT_SECRET_FILE: /run/secrets/oidc_client_secret
+      WORKBENCH_OIDC_REQUIRED_AMR: "${WORKBENCH_OIDC_REQUIRED_AMR:-}"
+      WORKBENCH_OIDC_REQUIRED_ACR: "${WORKBENCH_OIDC_REQUIRED_ACR:-}"
+      WORKBENCH_METRICS_TOKEN_FILE: /run/secrets/metrics_token
+      WORKBENCH_RETENTION_DAYS: "${WORKBENCH_RETENTION_DAYS:?Set the retention period}"
+      WORKBENCH_EVIDENCE_RETENTION_DAYS: "${WORKBENCH_EVIDENCE_RETENTION_DAYS:?Set evidence retention}"
+      WORKBENCH_AUDIT_RETENTION_DAYS: "${WORKBENCH_AUDIT_RETENTION_DAYS:?Set audit retention}"
+    secrets: [database_url, oidc_client_secret, metrics_token]
+  worker:
+    extends: {file: compose.pilot.yaml, service: worker}
+    image: ai-operations-workbench:production
+    environment:
+      WORKBENCH_PRODUCTION: "true"
+      WORKBENCH_PUBLIC_ORIGIN: "https://${WORKBENCH_DOMAIN}"
+  maintenance:
+    extends: {file: compose.pilot.yaml, service: worker}
+    image: ai-operations-workbench:production
+    command: ["python", "-m", "workbench.pilot", "maintenance", "--watch"]
+    environment:
+      WORKBENCH_PRODUCTION: "true"
+      WORKBENCH_PUBLIC_ORIGIN: "https://${WORKBENCH_DOMAIN}"
+      WORKBENCH_RETENTION_DAYS: "${WORKBENCH_RETENTION_DAYS}"
+      WORKBENCH_EVIDENCE_RETENTION_DAYS: "${WORKBENCH_EVIDENCE_RETENTION_DAYS}"
+      WORKBENCH_AUDIT_RETENTION_DAYS: "${WORKBENCH_AUDIT_RETENTION_DAYS}"
+    healthcheck:
+      test: ["CMD", "python", "scripts/healthcheck.py", "--maintenance"]
+      interval: 60s
+      timeout: 8s
+      retries: 3
+      start_period: 60s
+  proxy:
+    image: ai-operations-workbench-proxy:0.2.0
+    build:
+      context: ./deploy/images
+      dockerfile: Dockerfile.proxy
+      args: {GOPROXY: "${WORKBENCH_GOPROXY:-https://proxy.golang.org,direct}"}
+    restart: unless-stopped
+    ports: ["80:80", "443:443"]
+    environment:
+      WORKBENCH_DOMAIN: "${WORKBENCH_DOMAIN}"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - proxy_data:/data
+      - proxy_config:/config
+    depends_on:
+      app: {condition: service_healthy}
+    mem_limit: 256m
+    cpus: 0.5
+    security_opt: [no-new-privileges:true]
+
+secrets:
+  database_url: {file: .pilot/database_url}
+  postgres_admin_password: {file: .pilot/postgres_admin_password}
+  oidc_client_secret: {file: .pilot/oidc_client_secret}
+  metrics_token: {file: .pilot/metrics_token}
+volumes:
+  pilot_data:
+  proxy_data:
+  proxy_config:

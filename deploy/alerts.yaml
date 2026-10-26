@@ -1,0 +1,37 @@
+groups:
+  - name: workbench
+    rules:
+      - alert: WorkbenchUnavailable
+        expr: up{job="workbench"} == 0
+        for: 2m
+        labels: {severity: critical}
+        annotations:
+          summary: Workbench cannot be scraped
+          description: Check TLS, monitoring credentials, the proxy, and the API service.
+      - alert: WorkbenchWorkerUnavailable
+        expr: workbench_worker_healthy == 0
+        for: 1m
+        labels: {severity: critical}
+        annotations:
+          summary: Evaluation worker is unavailable
+          description: Inspect worker and database health before restarting; leased jobs recover automatically.
+      - alert: WorkbenchQueueStalled
+        expr: workbench_oldest_queued_seconds > 300
+        for: 2m
+        labels: {severity: warning}
+        annotations: {summary: Evaluations have waited over five minutes}
+      - alert: WorkbenchMaintenanceLate
+        expr: workbench_maintenance_age_seconds > 7200 or workbench_maintenance_age_seconds < 0
+        for: 5m
+        labels: {severity: critical}
+        annotations: {summary: Data maintenance has not completed in two hours}
+      - alert: WorkbenchUnknownCosts
+        expr: workbench_unknown_cost_calls_24h / clamp_min(workbench_observed_calls_24h, 1) > 0.05
+        for: 15m
+        labels: {severity: warning}
+        annotations: {summary: More than five percent of observed calls have unknown costs}
+      - alert: WorkbenchServerErrors
+        expr: sum(rate(workbench_http_requests_total{status=~"5.."}[5m])) / clamp_min(sum(rate(workbench_http_requests_total[5m])), 0.001) > 0.01
+        for: 5m
+        labels: {severity: critical}
+        annotations: {summary: More than one percent of requests are failing}

@@ -2,8 +2,9 @@
 
 ## Supported release
 
-Security fixes are considered for the latest `0.1.x` release and `main`.
-This is an experimental local demonstration, with no support SLA.
+Security fixes are considered for the latest `0.2.x` release and `main`.
+The project includes a local demonstration and an opt-in, self-hosted team pilot.
+There is no support SLA or claim of enterprise security certification.
 
 ## Report privately
 
@@ -15,7 +16,7 @@ channel through the maintainer's GitHub profile without disclosing the details.
 
 ## Deployment boundary
 
-Run on `127.0.0.1`. The app has no login, tenant isolation, encrypted ledger,
+In default **demo mode**, run on `127.0.0.1`. The demo has no login, tenant isolation, encrypted ledger,
 or remote ingestion service. Do not expose it publicly or load sensitive
 customer records into it. The bundled tickets are fictional.
 
@@ -29,5 +30,33 @@ Credential-like environment variables are removed from the worker environment;
 this is not a general process or network sandbox. Live collection uses the
 separate CLI and an explicit estimated budget, not a provider billing cap.
 
-Do not attach `.state/`, `.env`, worker logs, or private recordings to an issue.
+In **pilot mode**, team endpoints require revocable, hashed sessions and role
+checks. State-changing browser requests require CSRF tokens. Ingestion tokens
+are hashed, expire after 30 days, bind to one team/source, and cannot read browser
+data. Disabling a user revokes sessions. Passwords use Argon2; login throttling is
+database-backed. Pilot mode does not mount the demo's unauthenticated API.
+
+The supplied pilot Compose stack binds only to loopback and runs app/worker
+containers without root, with read-only filesystems and no provider credentials.
+Remote access requires a managed HTTPS proxy and an explicit public origin;
+cookies become Secure under HTTPS. The production profile requires company OIDC,
+a verified MFA claim, and disabled local sign-in. Subjects are explicitly
+provisioned; email matching does not grant access. Authorization-code/PKCE state
+is browser-bound, expires after ten minutes, and is consumed once.
+Usage, evidence, and audit retention are configurable and scheduled in production.
+Workbench does not provide application encryption at rest or a general evaluator sandbox. The
+pilot's account/team scoping is tested but is not a multi-tenant SaaS guarantee.
+
+PostgreSQL records, outboxes, and backups can contain sensitive metadata and
+uploaded model content. Keep them on protected volumes. Default usage capture
+excludes prompts/responses. Source authentication does not prove provider usage
+provenance or complete retry coverage. Unknown costs remain explicit.
+
+Do not attach `.state/`, `.pilot/`, `.env`, outboxes, worker logs, or private recordings to an issue.
 See [the architecture](docs/ARCHITECTURE.md) for the implemented boundaries.
+See [pilot operations](docs/PILOT.md) for bootstrap, token rotation, backup,
+restore, and upgrade procedures.
+See [production operations](docs/PRODUCTION.md) for company identity, encrypted
+host/backup requirements, metrics credentials, retention boundaries, and
+customer-specific acceptance checks. Automated dependency scans do not certify
+the security of a company's host, IdP, or application instrumentation.

@@ -1,0 +1,72 @@
+name: workbench-${WORKBENCH_INSTANCE:?Select demo or clean}
+x-runtime: &runtime
+  image: ai-operations-workbench:test-release
+  build: .
+  restart: unless-stopped
+  init: true
+  read_only: true
+  user: "${WORKBENCH_RUN_UID:-10001}:${WORKBENCH_RUN_GID:-10001}"
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  tmpfs: ["/tmp:rw,noexec,nosuid,size=256m,mode=1777"]
+  environment:
+    WORKBENCH_MODE: pilot
+    WORKBENCH_DATABASE_URL_FILE: /run/secrets/database_url
+    WORKBENCH_PUBLIC_ORIGIN: "http://127.0.0.1:${WORKBENCH_INSTANCE_PORT}"
+    WORKBENCH_COOKIE_NAMESPACE: "${WORKBENCH_INSTANCE}"
+  secrets: [database_url]
+  depends_on:
+    db: {condition: service_healthy}
+  mem_limit: 768m
+  cpus: 1.5
+
+services:
+  db:
+    image: ai-operations-workbench-postgres:0.2.0
+    build:
+      context: ./deploy/images
+      dockerfile: Dockerfile.postgres
+      args: {GOPROXY: "${WORKBENCH_GOPROXY:-https://proxy.golang.org,direct}"}
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    secrets: [postgres_password, application_password]
+    volumes:
+      - instance_data:/var/lib/postgresql/data
+      - "./.pilot/instances/${WORKBENCH_INSTANCE}/init.sql:/docker-entrypoint-initdb.d/workbench.sql:ro"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U workbench -d workbench"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    mem_limit: 512m
+    cpus: 1
+  app:
+    <<: *runtime
+    ports: ["127.0.0.1:${WORKBENCH_INSTANCE_PORT}:8768"]
+    secrets: [database_url, admin_password]
+    healthcheck:
+      test: ["CMD", "python", "scripts/healthcheck.py"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+  worker:
+    <<: *runtime
+    command: ["python", "-m", "workbench.pilot", "worker"]
+    healthcheck:
+      test: ["CMD", "python", "scripts/healthcheck.py", "--worker"]
+      interval: 15s
+      timeout: 8s
+      retries: 3
+      start_period: 30s
+
+secrets:
+  database_url: {file: ".pilot/instances/${WORKBENCH_INSTANCE}/database-url"}
+  postgres_password: {file: ".pilot/instances/${WORKBENCH_INSTANCE}/postgres-password"}
+  application_password: {file: ".pilot/instances/${WORKBENCH_INSTANCE}/application-password"}
+  admin_password: {file: ".pilot/instances/${WORKBENCH_INSTANCE}/admin-password"}
+volumes:
+  instance_data:

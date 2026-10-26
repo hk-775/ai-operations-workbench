@@ -1,0 +1,300 @@
+"""AxonLLM metadata capture with a durable, replayable local outbox.
+
+No prompts, responses, provider credentials, or client-supplied prices are sent.
+Call IDs belong to the application; provider response IDs are correlation only.
+"""
+from __future__ import annotations
+
+import argparse
+import asyncio
+import json
+import os
+import sqlite3
+import time
+import uuid
+from datetime import datetime, timezone
+from contextlib import contextmanager
+from pathlib import Path
+from urllib.parse import urlsplit
+
+import httpx
+
+from .domain import digest, strict_json
+from .evidence import verify_recording
+from .pilot.events import Usage, UsageEvent, recording_events
+
+
+class DeliveryError(RuntimeError):
+    """A bounded delivery failure; no transport or secret details are exposed."""
+
+
+def now():
+    return datetime.now(timezone.utc).isoformat()
+
+
+class Outbox:
+    """One outbox per logical ingestion source, retained across token rotation."""
+    def __init__(self, path: Path):
+        self.path = Path(path)
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        # Create privately before sqlite opens it; WAL files inherit database permissions.
+        fd = os.open(self.path, os.O_CREAT | os.O_RDWR, 0o600)
+        os.close(fd)
+        self.path.chmod(0o600)
+        with self.connect() as db:
+            db.execute("PRAGMA journal_mode=WAL")
+            db.execute("""CREATE TABLE IF NOT EXISTS outbox (
+                id TEXT PRIMARY KEY, fingerprint TEXT NOT NULL, payload TEXT NOT NULL,
+                delivered INTEGER NOT NULL DEFAULT 0, attempts INTEGER NOT NULL DEFAULT 0,
+                retry_after REAL NOT NULL DEFAULT 0)""")
+            db.execute("CREATE TABLE IF NOT EXISTS destination (singleton INTEGER PRIMARY KEY, url TEXT NOT NULL)")
+            db.execute("CREATE TABLE IF NOT EXISTS source_binding (singleton INTEGER PRIMARY KEY, source_id TEXT NOT NULL)")
+
+    @contextmanager
+    def connect(self):
+        db = sqlite3.connect(self.path, timeout=10)
+        db.row_factory = sqlite3.Row
+        db.execute("PRAGMA synchronous=FULL")
+        try:
+            with db:
+                yield db
+        finally:
+            db.close()
+
+    def bind(self, endpoint):
+        with self.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            row = db.execute("SELECT url FROM destination WHERE singleton=1").fetchone()
+            if row and row["url"] != endpoint:
+                raise ValueError("Use a separate outbox for a different Workbench destination")
+            if not row:
+                db.execute("INSERT INTO destination VALUES (1, ?)", (endpoint,))
+
+    def put(self, event: UsageEvent):
+        document = event.model_dump()
+        fingerprint = digest(document)
+        with self.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            row = db.execute("SELECT fingerprint FROM outbox WHERE id=?", (event.event_id,)).fetchone()
+            if row and row["fingerprint"] != fingerprint:
+                raise ValueError("An application event ID was reused with different data")
+            if not row:
+                db.execute("INSERT INTO outbox (id, fingerprint, payload) VALUES (?, ?, ?)",
+                           (event.event_id, fingerprint, json.dumps(document)))
+
+    def pending(self):
+        with self.connect() as db:
+            return db.execute("SELECT COUNT(*) FROM outbox WHERE delivered=0").fetchone()[0]
+
+    def bind_source(self, source_id):
+        with self.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            existing = db.execute("SELECT source_id FROM source_binding WHERE singleton=1").fetchone()
+            if existing and existing["source_id"] != source_id:
+                raise DeliveryError("Token belongs to a different source; use that source's own outbox")
+            if not existing:
+                db.execute("INSERT INTO source_binding VALUES (1, ?)", (source_id,))
+
+    def batch(self):
+        with self.connect() as db:
+            return [dict(row) for row in db.execute(
+                "SELECT * FROM outbox WHERE delivered=0 AND retry_after<=? ORDER BY rowid LIMIT 100",
+                (time.time(),))]
+
+    def acknowledge(self, rows):
+        with self.connect() as db:
+            db.executemany("UPDATE outbox SET delivered=1 WHERE id=? AND fingerprint=?",
+                           [(row["id"], row["fingerprint"]) for row in rows])
+
+    def defer(self, rows):
+        with self.connect() as db:
+            for row in rows:
+                delay = min(300, 2 ** min(row["attempts"] + 1, 9))
+                db.execute("UPDATE outbox SET attempts=attempts+1, retry_after=? WHERE id=? AND delivered=0",
+                           (time.time() + delay, row["id"]))
+
+    def recover_interrupted(self):
+        """Operator backfill is explicit: all unacknowledged events become retryable."""
+        with self.connect() as db:
+            db.execute("UPDATE outbox SET retry_after=0 WHERE delivered=0")
+
+
+class Connector:
+    def __init__(self, endpoint: str, token: str, outbox: Outbox, *, client=None):
+        parsed = urlsplit(endpoint)
+        if (parsed.scheme not in {"http", "https"} or not parsed.hostname or parsed.username
+                or parsed.password or parsed.query or parsed.fragment or
+                parsed.path.rstrip("/") != "/api/pilot/ingest"):
+            raise ValueError("Use the Workbench /api/pilot/ingest endpoint")
+        if parsed.scheme != "https" and parsed.hostname not in {"127.0.0.1", "localhost", "::1"}:
+            raise ValueError("Non-loopback connector delivery requires HTTPS")
+        if not token.startswith("wb_ing_") or len(token) > 100:
+            raise ValueError("An ingestion token is required")
+        self.endpoint, self.token, self.outbox = endpoint, token, outbox
+        self.outbox.bind(endpoint)
+        self.client = client
+
+    def flush(self, max_batches=10):
+        """Bounded delivery; acknowledgments may be retried safely after a crash."""
+        sent = 0
+        with httpx.Client(timeout=15, follow_redirects=False, trust_env=False) if self.client is None else _borrow(self.client) as client:
+            try:
+                identity = client.get(self.endpoint, headers={"Authorization": f"Bearer {self.token}"})
+                if identity.status_code != 200:
+                    raise DeliveryError("Cannot verify ingestion source; check token and Workbench availability")
+                source_id = identity.json()["source_id"]
+                if not isinstance(source_id, str) or len(source_id) != 36:
+                    raise ValueError("Invalid source identity")
+                self.outbox.bind_source(source_id)
+            except (httpx.HTTPError, ValueError, KeyError, TypeError):
+                raise DeliveryError("Cannot verify ingestion source; events remain in the outbox") from None
+            for _ in range(max_batches):
+                rows = self.outbox.batch()
+                if not rows:
+                    break
+                try:
+                    response = client.post(self.endpoint, headers={"Authorization": f"Bearer {self.token}"},
+                        json={"events": [json.loads(row["payload"]) for row in rows]})
+                    if response.status_code != 200:
+                        self.outbox.defer(rows)
+                        if response.status_code in {401, 403}:
+                            raise DeliveryError("Ingestion denied; check or rotate the source token")
+                        if response.status_code in {409, 413, 422}:
+                            raise DeliveryError("Batch rejected; inspect event IDs and schema before retrying")
+                        raise DeliveryError("Workbench unavailable; events remain in the outbox")
+                    receipt = response.json()
+                    if receipt["added_events"] + receipt["duplicate_events"] != len(rows):
+                        raise ValueError("Incomplete acknowledgment")
+                except (httpx.HTTPError, ValueError, KeyError, TypeError):
+                    self.outbox.defer(rows)
+                    raise DeliveryError("No valid acknowledgment; events remain in the outbox") from None
+                self.outbox.acknowledge(rows)
+                sent += len(rows)
+        return {"acknowledged": sent, "pending": self.outbox.pending()}
+
+
+class _borrow:
+    def __init__(self, client):
+        self.client = client
+
+    def __enter__(self):
+        return self.client
+
+    def __exit__(self, *_):
+        return False
+
+
+def response_event(response, *, event_id, task_id, project, stage, latency_ms,
+                   occurred_at=None, usage_basis="unknown", attempt_coverage="final_response_only"):
+    """Adapt AxonLLM's public ChatCompletionResponse without copying its content.
+
+    Mark usage provider_reported only after verifying the provider adapter. Some
+    adapters estimate missing usage. Default coverage never claims retries are captured.
+    """
+    usage = response.usage
+    return UsageEvent(event_id=event_id, task_id=task_id, project=project, stage=stage,
+        provider=response.provider, model=response.provider_model or response.model,
+        occurred_at=occurred_at or now(), status="success", usage_basis=usage_basis,
+        attempt_coverage=attempt_coverage,
+        usage=Usage(**{key: getattr(usage, key, 0) for key in Usage.model_fields}),
+        latency_ms=float(latency_ms), provider_response_id=response.id)
+
+
+async def capture_completion(router, outbox: Outbox, *, task_id: str, project: str,
+                             stage: str, usage_basis="unknown", attempt_coverage="final_response_only",
+                             **request):
+    """Wrap a nonstreaming call; network delivery is a separate supervised process.
+
+    Durably enqueue a pending event before calling the model. A crash can leave
+    that pending call unknown; it cannot masquerade as a free or missing call.
+    This function raises if local persistence fails instead of silently losing usage.
+    """
+    if request.get("stream"):
+        raise ValueError("This pilot connector supports nonstreaming completions")
+    identity, started, timestamp = uuid.uuid4().hex, time.monotonic(), now()
+    pending = UsageEvent(event_id=identity, task_id=task_id, project=project, stage=stage,
+        model=request["model"], provider="unknown", occurred_at=timestamp,
+        status="interrupted", latency_ms=0.0)
+    # A mutable local reservation is not eligible for delivery until finalized.
+    reservation = Path(str(outbox.path) + ".inflight")
+    reservation.mkdir(mode=0o700, exist_ok=True)
+    call_file = reservation / (identity + ".json")
+    descriptor = os.open(call_file, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with os.fdopen(descriptor, "w") as handle:
+        json.dump(pending.model_dump(), handle)
+        handle.flush()
+        os.fsync(handle.fileno())
+    try:
+        response = await router.chat.completions.create(**request)
+    except BaseException as exc:
+        event = pending.model_copy(update={"status": "interrupted" if isinstance(
+            exc, asyncio.CancelledError) else "error", "latency_ms": (time.monotonic() - started) * 1000})
+        outbox.put(event)
+        call_file.unlink()
+        raise
+    event = response_event(response, event_id=identity, task_id=task_id, project=project,
+        stage=stage, latency_ms=(time.monotonic() - started) * 1000, occurred_at=timestamp,
+        usage_basis=usage_basis, attempt_coverage=attempt_coverage)
+    outbox.put(event)
+    call_file.unlink()
+    return response
+
+
+def recover_inflight(outbox):
+    """Run only after stopping capture processes; an interrupted call has unknown cost."""
+    directory = Path(str(outbox.path) + ".inflight")
+    if not directory.exists():
+        return 0
+    recovered = 0
+    for path in directory.glob("*.json"):
+        event = UsageEvent.model_validate(strict_json(path.read_text()))
+        with outbox.connect() as db:
+            exists = db.execute("SELECT id FROM outbox WHERE id=?", (event.event_id,)).fetchone()
+        if not exists:
+            outbox.put(event)
+            recovered += 1
+        path.unlink()
+    return recovered
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--outbox", type=Path, required=True)
+    command = parser.add_subparsers(dest="command", required=True)
+    backfill = command.add_parser("backfill")
+    backfill.add_argument("recording", type=Path)
+    command.add_parser("recover-inflight")
+    delivery = command.add_parser("deliver")
+    delivery.add_argument("--watch", action="store_true")
+    args = parser.parse_args()
+    outbox = Outbox(args.outbox)
+    if args.command == "backfill":
+        recording = strict_json(args.recording.read_text())
+        verify_recording(recording)
+        for event in recording_events(recording):
+            outbox.put(event)
+        print(f"{outbox.pending()} recorded events ready for delivery. No model calls made.")
+    elif args.command == "recover-inflight":
+        print(f"{recover_inflight(outbox)} interrupted calls recovered with unknown costs.")
+    else:
+        token_file = os.environ.get("WORKBENCH_INGEST_TOKEN_FILE")
+        token = Path(token_file).read_text().strip() if token_file else os.environ.get("WORKBENCH_INGEST_TOKEN", "")
+        connector = Connector(os.environ.get("WORKBENCH_INGEST_URL", ""), token, outbox)
+        while True:
+            try:
+                result = connector.flush()
+                if not args.watch:
+                    print(json.dumps(result))
+                    if result["pending"]:
+                        parser.exit(1, "Events remain pending; retry after backoff or use --watch.\n")
+            except DeliveryError as exc:
+                if not args.watch:
+                    parser.exit(1, f"{exc}\n")
+                print(str(exc), flush=True)
+            if not args.watch:
+                break
+            time.sleep(5)
+
+
+if __name__ == "__main__":
+    main()
