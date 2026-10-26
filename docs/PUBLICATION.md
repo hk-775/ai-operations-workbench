@@ -51,6 +51,10 @@ static imitation is published.
 | `docs/architecture/workbench.svg` and `.png` | Original vector diagram and static rendered companion; no third-party artwork |
 | `docs/ARCHITECTURE.md` | Editable Mermaid diagrams for the authenticated pilot and self-hosted production profile |
 | `web/architecture.html`, `.css`, and `.js` | Offline-capable interactive product/AWS architecture; served at `/static/architecture.html` and linked from both dashboard footers |
+| `web/architecture-narration.js`, `web/media/narration/*.mp3` | Project-authored narration rendered with Amazon Polly's stock Joanna neural voice; bundled playback makes no cloud requests |
+| `web/demo.html`, `.css`, `.js`, and `demo-manifest.js` | Static video/audio player with chapters, transcript, downloads, and an architecture link |
+| `web/media/workbench-demo.*` and `workbench-demo-poster.png` | Actual isolated local team UI capture with fictional saved support evidence, authored title cards, synthetic narration, and captions; no hosted login or company data |
+| `docs/demo/` and `scripts/*demo*` | Authored storyboard, audio provenance/hashes, capture manifest, transcript, and repeatable media authoring scripts; raw captures and runtime credentials stay in ignored paths |
 | `compose*.yaml` and `deploy/` | Company-neutral deployment recipes; installation-specific files are generated privately |
 | AxonLLM and Ostiari | Public MIT-0 dependencies, pinned to immutable Git revisions |
 | Container build recipes | Pinned upstream Python, PostgreSQL, Go, uv, and Caddy images/modules; no prebuilt container images are distributed by this release |
@@ -66,11 +70,15 @@ The canonical local UI includes moving solid circles, pause/resume, and
 reduced-motion support, exercised by browser tests. Motion is illustrative and
 does not represent live collection or measured execution timing.
 
-The architecture explorer adds clickable components and manual step-by-step
+The architecture explorer adds clickable components and narrated step-by-step
 walkthroughs for capture, evaluation, review, sign-in, backup, and alerts. It
 uses the Workbench palette and needs no API, cloud connection, or third-party
-assets. Browser tests cover both views, keyboard selection, mobile scrolling,
-motion controls, direct file access, and asset loading under a path prefix.
+runtime services. Browser tests cover both views, keyboard selection, mobile
+scrolling, motion controls, real bundled audio playback, pause/resume, stale
+completion handling, fallback reading mode, direct file access, and asset
+loading under a path prefix. The separate demo player offers an MP4, standalone
+MP3, captions, and chapter navigation. Audio rendering used a bounded, explicit
+authoring operation; playing the delivered files does not synthesize speech.
 
 GitHub README images and release screenshots are static platform companions.
 They do not replace the animated workflow in the runnable app.

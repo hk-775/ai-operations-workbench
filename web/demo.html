@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="description" content="Watch AI Operations Workbench connect task costs, saved answer evaluations, and an evidence-backed model review.">
+  <title>Narrated demo · AI Operations Workbench</title>
+  <link rel="stylesheet" href="demo.css">
+  <script src="demo-manifest.js" defer></script>
+  <script src="demo.js" defer></script>
+</head>
+<body>
+  <a class="skip" href="#watch">Skip to video</a>
+  <header>
+    <a class="brand" href="demo.html"><span class="brandmark" aria-hidden="true">W</span><span>Workbench<small>AI OPERATIONS</small></span></a>
+    <a class="button" href="architecture.html">Explore the architecture <span aria-hidden="true">↗</span></a>
+  </header>
+  <main>
+    <section class="intro" aria-labelledby="title">
+      <div>
+        <p class="eyebrow">THE NARRATED WALKTHROUGH</p>
+        <h1 id="title">Follow the cost.<br>Prove the model choice.</h1>
+        <p class="lede">Follow a subscription-support task from captured API usage to evaluated answers and a routing review you can explain.</p>
+      </div>
+      <aside class="scope">
+        <p class="eyebrow">WHAT YOU’LL SEE</p>
+        <p>The actual Workbench interface, a saved support comparison, and the animated architecture.</p>
+        <div class="tags"><span>≈ 4 minutes</span><span>Audio + video</span><span>Captions included</span></div>
+      </aside>
+    </section>
+    <section class="watch" id="watch" aria-label="Watch the demo">
+      <div class="player-card">
+        <video id="demo-video" controls playsinline preload="metadata" poster="media/workbench-demo-poster.png" aria-label="AI Operations Workbench narrated demonstration">
+          <source src="media/workbench-demo.mp4" type="video/mp4">
+          <track kind="captions" src="media/workbench-demo.vtt" srclang="en" label="English">
+          Your browser does not support this video. Download the MP4 below.
+        </video>
+        <div class="player-meta"><span>1080p · Spoken narration · Captions visible in the video</span><a href="media/workbench-demo.mp4" download>Download video <span aria-hidden="true">↓</span></a></div>
+        <p id="player-status" role="status"></p>
+      </div>
+      <aside class="chapter-card" aria-label="Video chapters">
+        <div class="chapter-heading"><p class="eyebrow">CHOOSE A CHAPTER</p><h2>One complete decision path.</h2><p class="chapter-hint">12 chapters · Scroll to explore</p></div>
+        <ol id="chapters"></ol>
+      </aside>
+    </section>
+    <p class="disclosure">Fictional support cases · Saved model responses · API estimates, not invoices · Illustrative architecture motion · Stock synthetic narration</p>
+    <section class="listen" aria-labelledby="listen-title">
+      <div><p class="eyebrow">PREFER TO LISTEN?</p><h2 id="listen-title">The same story, audio only.</h2><p>Listen here or take the narration with you.</p></div>
+      <div class="audio-controls"><audio id="demo-audio" controls preload="metadata" aria-label="Audio-only Workbench demonstration"><source src="media/workbench-demo.mp3" type="audio/mpeg"></audio>
+        <div class="downloads"><a href="media/workbench-demo.mp3" download>Download MP3</a><a href="media/workbench-demo.srt" download>Captions (SRT)</a><a href="media/workbench-demo-transcript.txt" download>Transcript</a></div>
+      </div>
+    </section>
+    <section class="next" aria-label="Explore further">
+      <div><h2>Inspect the pieces behind the decision.</h2><p>Play a narrated architecture flow, select a component, or step through at your own pace.</p></div>
+      <a class="button primary" href="architecture.html">Open interactive architecture <span aria-hidden="true">→</span></a>
+    </section>
+    <details class="transcript"><summary>Read the full transcript</summary><div id="transcript"></div></details>
+    <noscript><p>Use the video and audio controls above. Chapter navigation needs JavaScript; the downloadable transcript is available below the audio player.</p></noscript>
+    <footer><span>AI Operations Workbench · MIT-0</span><span>The review explains a model choice. It does not activate a production route.</span></footer>
+  </main>
+</body>
+</html>

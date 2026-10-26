@@ -1,5 +1,5 @@
 'use strict';
-// Authored architecture only. No requests, credentials, or live traffic.
+// Authored architecture and bundled media. No API/cloud requests, credentials, or live traffic.
 const colors = {
   sky:['#f0f9ff','#bae6fd','#0284c7'], yellow:['#fefce8','#fef08a','#a16207'],
   violet:['#f5f3ff','#ddd6fe','#7c3aed'], teal:['#f0fdfa','#99f6e4','#0f766e'],
@@ -161,6 +161,66 @@ function svg(tag,attributes={},text) {
 let view=product,flowIndex=0,stepIndex=0,selected='',paths=[],markers=[],frame=0,elapsed=0,last=null;
 let paused=false;
 const preference=matchMedia('(prefers-reduced-motion: reduce)');
+let tourState='idle',narrationEnabled=true,clip=null,clipKey='',tourToken=0,silentTimer=null;
+try { narrationEnabled=localStorage.getItem('workbench-architecture-narration')!=='off'; } catch {}
+function clipInfo() {
+  const key=(view===aws?'aws-':'product-')+selected;
+  return {key,...(window.WorkbenchNarration?.[key]||{})};
+}
+function updateTour() {
+  $('play-flow').textContent={idle:'Play flow',playing:'Pause flow',paused:'Resume flow',complete:'Replay flow'}[tourState];
+  $('narration-toggle').textContent=narrationEnabled?'Narration on':'Narration off';
+  $('narration-toggle').setAttribute('aria-pressed',String(narrationEnabled));
+}
+function cancelClip(discard=true) {
+  tourToken++;
+  clearTimeout(silentTimer);silentTimer=null;
+  if(clip) {
+    clip.onended=null;clip.onerror=null;clip.pause();
+    if(discard) { clip.removeAttribute('src');clip.load();clip=null;clipKey=''; }
+  }
+}
+function stopTour() {
+  cancelClip();tourState='idle';updateTour();$('tour-status').textContent='Ready to play';
+}
+function playStep(resume=false) {
+  cancelClip(!resume);
+  const token=tourToken;
+  const info=clipInfo();
+  const finish=()=>{
+    if(token!==tourToken||tourState!=='playing') return;
+    if(stepIndex>=view.flows[flowIndex].steps.length-1) {
+      cancelClip();tourState='complete';updateTour();$('tour-status').textContent='Flow complete';
+    } else {
+      stepIndex++;walkthrough();playStep();
+    }
+  };
+  if(!narrationEnabled||!info.src) {
+    $('tour-status').textContent=narrationEnabled?'Audio unavailable · reading mode':'Playing without narration';
+    silentTimer=setTimeout(finish,5000);return;
+  }
+  if(!clip||clipKey!==info.key) {
+    clip=new Audio(new URL(info.src,document.baseURI).href);
+    clipKey=info.key;
+  }
+  const fallback=()=>{
+    if(token!==tourToken||tourState!=='playing') return;
+    clearTimeout(silentTimer);
+    $('tour-status').textContent='Audio unavailable · continuing with text';
+    silentTimer=setTimeout(finish,5000);
+  };
+  clip.onended=finish;clip.onerror=fallback;
+  $('tour-status').textContent='Narrating · '+view.nodes.find(n=>n.id===selected).title;
+  clip.play().catch(fallback);
+}
+function toggleTour() {
+  if(tourState==='playing') {
+    cancelClip(false);tourState='paused';updateTour();$('tour-status').textContent='Paused';return;
+  }
+  const resume=tourState==='paused';
+  if(tourState==='complete'||stepIndex<0) { stepIndex=0;walkthrough(); }
+  tourState='playing';updateTour();playStep(resume);
+}
 function select(id) {
   selected=id;
   const item=view.nodes.find(n=>n.id===id);
@@ -168,6 +228,7 @@ function select(id) {
   document.querySelector('.details').dataset.color=item.color;
   for(const [field,value] of Object.entries({owner:item.owner,title:item.title,copy:item.copy,data:item.data,proof:item.proof,boundary:item.boundary}))
     $('detail-'+field).textContent=value;
+  $('narration-copy').textContent=clipInfo().text||item.copy;
 }
 function walkthrough() {
   const steps=view.flows[flowIndex].steps;
@@ -177,6 +238,7 @@ function walkthrough() {
   $('next').disabled=stepIndex===steps.length-1;
 }
 function inspect(id) {
+  stopTour();
   const index=view.flows[flowIndex].steps.indexOf(id);
   stepIndex=index;
   if(index>=0) walkthrough();
@@ -253,19 +315,33 @@ function render() {
   $('flows').replaceChildren(...view.flows.map((item,index)=>{
     const button=document.createElement('button');
     button.textContent=item.name;button.setAttribute('aria-pressed',String(index===flowIndex));
-    button.onclick=()=>{flowIndex=index;stepIndex=0;render();};
+    button.onclick=()=>{stopTour();flowIndex=index;stepIndex=0;render();};
     return button;
   }));
   walkthrough();motion();
 }
 for(const button of document.querySelectorAll('[data-view]')) button.onclick=()=>{
+  stopTour();
   view=button.dataset.view==='aws'?aws:product;flowIndex=0;stepIndex=0;
   for(const other of document.querySelectorAll('[data-view]')) other.setAttribute('aria-pressed',String(other===button));
   render();
 };
-$('previous').onclick=()=>{stepIndex--;walkthrough();};
-$('next').onclick=()=>{stepIndex++;walkthrough();};
+$('previous').onclick=()=>{stopTour();stepIndex--;walkthrough();};
+$('next').onclick=()=>{stopTour();stepIndex++;walkthrough();};
+$('play-flow').onclick=toggleTour;
+$('restart-flow').onclick=()=>{stopTour();stepIndex=0;walkthrough();};
+$('narration-toggle').onclick=()=>{
+  narrationEnabled=!narrationEnabled;
+  try { localStorage.setItem('workbench-architecture-narration',narrationEnabled?'on':'off'); } catch {}
+  updateTour();
+  if(tourState==='playing') playStep();
+  else cancelClip();
+};
 $('motion').onclick=()=>{paused=!paused;motion();};
 preference.addEventListener('change',motion);
-document.addEventListener('visibilitychange',motion);
-render();
+document.addEventListener('visibilitychange',()=>{
+  motion();
+  if(document.hidden&&tourState==='playing') toggleTour();
+});
+window.addEventListener('pagehide',stopTour);
+render();updateTour();

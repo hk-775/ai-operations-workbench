@@ -1,0 +1,276 @@
+{
+  "intro": [
+    {
+      "time": 0,
+      "type": "sentence",
+      "value": "AI operations starts with two questions."
+    },
+    {
+      "time": 3213,
+      "type": "sentence",
+      "value": "What did a task cost?"
+    },
+    {
+      "time": 5113,
+      "type": "sentence",
+      "value": "And did it do the job well enough?"
+    },
+    {
+      "time": 7260,
+      "type": "sentence",
+      "value": "Workbench brings those answers together before you change models."
+    },
+    {
+      "time": 11227,
+      "type": "sentence",
+      "value": "Let's follow a subscription-support task from captured usage to a justified routing review."
+    }
+  ],
+  "clean": [
+    {
+      "time": 0,
+      "type": "sentence",
+      "value": "A clean workspace starts without application data."
+    },
+    {
+      "time": 3374,
+      "type": "sentence",
+      "value": "The screen explains how to begin."
+    },
+    {
+      "time": 5790,
+      "type": "sentence",
+      "value": "For this walkthrough, we explicitly load the recorded support example."
+    },
+    {
+      "time": 10352,
+      "type": "sentence",
+      "value": "The cases are fictional, and the model responses were saved earlier."
+    },
+    {
+      "time": 14788,
+      "type": "sentence",
+      "value": "No new model calls are made during this demonstration."
+    }
+  ],
+  "usage": [
+    {
+      "time": 0,
+      "type": "sentence",
+      "value": "The overview shows twenty-four tickets compared across three models: seventy-two task runs and one hundred forty-four captured calls."
+    },
+    {
+      "time": 8204,
+      "type": "sentence",
+      "value": "Their recorded API estimate is about nine cents."
+    },
+    {
+      "time": 11842,
+      "type": "sentence",
+      "value": "This is a saved comparison, not a company invoice."
+    },
+    {
+      "time": 15620,
+      "type": "sentence",
+      "value": "Missing prices stay unknown, and hardware and electricity remain unmeasured."
+    }
+  ],
+  "task": [
+    {
+      "time": 0,
+      "type": "sentence",
+      "value": "Open the refund-inside-the-window task."
+    },
+    {
+      "time": 2881,
+      "type": "sentence",
+      "value": "Workbench shows the customer request and the calls behind it: classify the request, then draft the decision and reply."
+    },
+    {
+      "time": 10572,
+      "type": "sentence",
+      "value": "Each step has its captured cost."
+    },
+    {
+      "time": 13087,
+      "type": "sentence",
+      "value": "Call completed means the API returned successfully."
+    },
+    {
+      "time": 16777,
+      "type": "sentence",
+      "value": "Answer quality still needs evaluation."
+    }
+  ],
+  "sources": [
+    {
+      "time": 0,
+      "type": "sentence",
+      "value": "For your own application, create an AxonLLM source and configure its scoped connector."
+    },
+    {
+      "time": 5963,
+      "type": "sentence",
+      "value": "A durable outbox retries unacknowledged usage."
+    },
+    {
+      "time": 9641,
+      "type": "sentence",
+      "value": "The feed contains metadata, while saved answers are imported separately for quality checks."
+    },
+    {
+      "time": 15507,
+      "type": "sentence",
+      "value": "The recorded example is clearly labeled as a saved source, not a live connection."
+    }
+  ],
+  "evaluate": [
+    {
+      "time": 0,
+      "type": "sentence",
+      "value": "Now run the evaluation."
+    },
+    {
+      "time": 2121,
+      "type": "sentence",
+      "value": "Workbench replays saved answers against the subscription-support contract and real Ostiari Guard checks."
+    },
+    {
+      "time": 9195,
+      "type": "sentence",
+      "value": "It checks policy decisions and action boundaries."
+    },
+    {
+      "time": 12570,
+      "type": "sentence",
+      "value": "The worker continues in the background, and the result remains available after you leave the page."
+    }
+  ],
+  "results": [
+    {
+      "time": 0,
+      "type": "sentence",
+      "value": "The result compares tickets passed, critical failures, recorded response time, and cost per passing ticket."
+    },
+    {
+      "time": 6807,
+      "type": "sentence",
+      "value": "Money spent on failed tickets is included in that cost."
+    },
+    {
+      "time": 10472,
+      "type": "sentence",
+      "value": "These checks grade the saved responses."
+    },
+    {
+      "time": 13201,
+      "type": "sentence",
+      "value": "They do not establish today's model quality or performance on unrelated workloads."
+    }
+  ],
+  "review": [
+    {
+      "time": 0,
+      "type": "sentence",
+      "value": "Set the requirements before looking for savings."
+    },
+    {
+      "time": 3071,
+      "type": "sentence",
+      "value": "With the saved strict criteria, no model qualifies."
+    },
+    {
+      "time": 7229,
+      "type": "sentence",
+      "value": "Workbench explains each exclusion instead of inventing a winning model."
+    },
+    {
+      "time": 11657,
+      "type": "sentence",
+      "value": "The next decision is to investigate the failing cases."
+    },
+    {
+      "time": 15085,
+      "type": "sentence",
+      "value": "Export the review with its evidence; no production route has been changed."
+    }
+  ],
+  "architecture": [
+    {
+      "time": 0,
+      "type": "sentence",
+      "value": "The interactive architecture connects the pieces."
+    },
+    {
+      "time": 3150,
+      "type": "sentence",
+      "value": "AxonLLM supplies captured calls."
+    },
+    {
+      "time": 6393,
+      "type": "sentence",
+      "value": "Workbench owns the ledger and review."
+    },
+    {
+      "time": 9108,
+      "type": "sentence",
+      "value": "The worker and Ostiari Guard evaluate saved evidence."
+    },
+    {
+      "time": 13486,
+      "type": "sentence",
+      "value": "Select a component or play a narrated flow."
+    },
+    {
+      "time": 16502,
+      "type": "sentence",
+      "value": "Small solid circles show the direction, with pause and reduced-motion controls."
+    }
+  ],
+  "operations": [
+    {
+      "time": 0,
+      "type": "sentence",
+      "value": "Administrators can inspect evaluation-service health, queued work, failed evaluations, and calls without a price."
+    },
+    {
+      "time": 7309,
+      "type": "sentence",
+      "value": "The recorded demo is not new application traffic, so these recent-traffic counts can be zero."
+    },
+    {
+      "time": 13253,
+      "type": "sentence",
+      "value": "Company operators configure retention, backups, monitoring, and their response process."
+    }
+  ],
+  "aws": [
+    {
+      "time": 0,
+      "type": "sentence",
+      "value": "The optional AWS hosted test uses separate seeded and clean stacks, real Cognito sign-in, private CloudFront origins, encrypted off-host backups, and alarm receipts."
+    },
+    {
+      "time": 11581,
+      "type": "sentence",
+      "value": "Its architecture is interactive too."
+    },
+    {
+      "time": 14231,
+      "type": "sentence",
+      "value": "This is a single-host test, with an explicit no-MFA exception, not a high-availability production guarantee."
+    }
+  ],
+  "close": [
+    {
+      "time": 0,
+      "type": "sentence",
+      "value": "Workbench makes one complete decision path visible: connect usage, inspect a task, evaluate saved answers, and review the model choice with evidence."
+    },
+    {
+      "time": 9873,
+      "type": "sentence",
+      "value": "Explore the source, run the recorded demo, and connect your own application when you are ready."
+    }
+  ]
+}

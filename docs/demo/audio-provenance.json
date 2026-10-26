@@ -1,0 +1,195 @@
+{
+  "service": "Amazon Polly",
+  "voice": "Joanna",
+  "engine": "neural",
+  "source": "docs/demo/storyboard.json",
+  "synthetic_voice": true,
+  "clips": [
+    {
+      "id": "product-app",
+      "input_sha256": "a97ab6def0244820afc9e481bf4eca0847721367b6f5045a21c24eb04684bdae",
+      "audio_sha256": "ebabd0fc9b09bfdd77dab2204225cb05faa7f4e38f8fcb67be906e37c2de3b7e",
+      "duration_seconds": 18.264
+    },
+    {
+      "id": "product-ingest",
+      "input_sha256": "cf65695665149e11e57725c27f02c7df78cd3ee6b08567cce65b6ab0b4da2488",
+      "audio_sha256": "584a32e2384cb247bbd8878712321d5ebbe6806243e3d8b8d996c8d01dc7b622",
+      "duration_seconds": 16.608
+    },
+    {
+      "id": "product-ledger",
+      "input_sha256": "30d4acdd0ddb74463d785d3ed64fb4148a945b4a3dc41c319711cb62d25fa1b3",
+      "audio_sha256": "07722919e7ade1bcd1c8e11201000ca830355d9e620a23495ac37a5eb3b3db68",
+      "duration_seconds": 18.792
+    },
+    {
+      "id": "product-recording",
+      "input_sha256": "303433e6f03db1c27a8eb28ed661e2e772a61aebe17345688b267eaa6cdb0cab",
+      "audio_sha256": "0f47db83bafefaad172dbfb6da71745d3d71f77b1a09658632088e344d0c3609",
+      "duration_seconds": 17.352
+    },
+    {
+      "id": "product-worker",
+      "input_sha256": "8fc64b00786a798ecd1c0aca75eb2d1066c1b1cd026eb6f8c924e69c5b6cceec",
+      "audio_sha256": "055e863a9eae740884f0d4a2a88122122a6ad8d743c3e5d1a848ab943da0a0eb",
+      "duration_seconds": 17.496
+    },
+    {
+      "id": "product-checks",
+      "input_sha256": "dadd6a08292ad9f03db146691ef3a5f568c8238145ea0fbf656f63f5db296e59",
+      "audio_sha256": "27976838894903442c6f0253e0089ce3861d74e5ea353593feb9b491bdbed0ab",
+      "duration_seconds": 18.072
+    },
+    {
+      "id": "product-results",
+      "input_sha256": "a19e0db5ff274d58eac2605c4a04f4836cd39a1d7e60340171bc26f0d9d81a68",
+      "audio_sha256": "c41f7850a74e202839696aae2bc09ddd18b8a47576549ea4c02082864229b1b4",
+      "duration_seconds": 17.136
+    },
+    {
+      "id": "product-review",
+      "input_sha256": "f9aae082c7fbd86ca85d8dfff710982fcb4c42a755b7556de1ae35720fb8c10c",
+      "audio_sha256": "0b26877002fe3630e8b04e4b43d7a23a844eae517dd167912622f8ecda3c5793",
+      "duration_seconds": 18.648
+    },
+    {
+      "id": "product-dashboard",
+      "input_sha256": "483d0344dcf744f0eceeeaa4dda3cbcba00dbaad4fc9a2c05f264d365f034e1e",
+      "audio_sha256": "a788fe0d3075bfef8ed6d7c8b0618d6383c5c9535b70ea1fce6c46f4a5c532ea",
+      "duration_seconds": 14.952
+    },
+    {
+      "id": "aws-browser",
+      "input_sha256": "0d5bc9008320631d6a18c22fcb9a083adc1fa40c7535a0d4c321e0add9c1099f",
+      "audio_sha256": "b93cbe95580b7013d861ac7ed415c535eebff6e06cfd66b85fa885deabc1957f",
+      "duration_seconds": 16.848
+    },
+    {
+      "id": "aws-edge",
+      "input_sha256": "3fa711629ab38aae02ee8611d178db3ec83c54a3a07ad6ea4dbf60b6de093f87",
+      "audio_sha256": "a793387140719942669375731b0eff56d02c02045251aac66c406c0c3f0bc8e8",
+      "duration_seconds": 18.144
+    },
+    {
+      "id": "aws-identity",
+      "input_sha256": "c66b03cd0ddf13cac476be1ec884cd1b2ff7fb8cc1253086cfd07bbad2f7ef70",
+      "audio_sha256": "1e510e0ec2b0949fd426fea0e1a840d368e244fbe44a0259afb2b16404218b62",
+      "duration_seconds": 17.784
+    },
+    {
+      "id": "aws-proxy",
+      "input_sha256": "ca79cc87dcef0f92659725e9c104794146b8166f6696219da04204f43299b28a",
+      "audio_sha256": "1a0dfa244c24303ee2c2749691dedbd6f21c9a6ddfc05f66b12ed7ef2a51e746",
+      "duration_seconds": 14.76
+    },
+    {
+      "id": "aws-demo",
+      "input_sha256": "71dd3f2a9dc0d8e7aa7f7e7b3787cb6167bd8c2e225c17b8fac4649af22be440",
+      "audio_sha256": "3dacbdd3e78af73d52863b258401c3e4a1eedea54862230b2bd42a83a2bd5a54",
+      "duration_seconds": 16.92
+    },
+    {
+      "id": "aws-clean",
+      "input_sha256": "5de0ea400a054ac073d1255f86156c99ff217c81e2de7002a4b3a29c35ad8498",
+      "audio_sha256": "891325f0652f9d7b3736d1066b7e3d3e0e4e700d983438f36c325e60b2936053",
+      "duration_seconds": 17.472
+    },
+    {
+      "id": "aws-timers",
+      "input_sha256": "fcea7450f9e39a2b93ef976d23099a0779977717f49cb647b1f25f230f2baecc",
+      "audio_sha256": "fc2b58a7665b3723cdb6abcb47f048a5efcbb4fea9d9529de3c239a2b5bf61c1",
+      "duration_seconds": 16.68
+    },
+    {
+      "id": "aws-backup",
+      "input_sha256": "212ba4d6b15efd7e7d84794a12860e42c0be5db3b617e641fafe59d69dd7a81f",
+      "audio_sha256": "6922b9a0a4eeb314578a8020782edd4271ec53fa66d5e8a616e3d3a4f3064b87",
+      "duration_seconds": 18.624
+    },
+    {
+      "id": "aws-monitor",
+      "input_sha256": "e596f9ad55adb6baf28504c4d35232db6b842ef0b90d808e03d3bed1ba2ac38a",
+      "audio_sha256": "e5915a56525fd7638a9771534547e46899044b3bdd3786faa64de07607733b90",
+      "duration_seconds": 16.152
+    },
+    {
+      "id": "aws-alerts",
+      "input_sha256": "f5f69948a99a26ceadaff91f1db9e3ce05391a42bb5722a36b5c8281f309cfbd",
+      "audio_sha256": "6570cd2e070586056895da67d4d0fdc468348dbc63a54ac9b1ab215c255f84b1",
+      "duration_seconds": 16.872
+    },
+    {
+      "id": "scene-intro",
+      "input_sha256": "4c35a862e6dee446266e6d01a63dffdb28b0859fa6ce991083ce0b4e4123313e",
+      "audio_sha256": "cd4c2df1fd10909f2cd11f23535ed8168c7f187e798e037931840665dea21346",
+      "duration_seconds": 16.656
+    },
+    {
+      "id": "scene-clean",
+      "input_sha256": "f2b03376a1638752e7346bda14e11ce715fff3a39921be8caee83fd73b1f0af9",
+      "audio_sha256": "e828611cd73311da093edcac8b1d0b6a5f8ec8ebabf600491b544f365cd30105",
+      "duration_seconds": 18.072
+    },
+    {
+      "id": "scene-usage",
+      "input_sha256": "03bf56cd7dfde3bf4b5a5b4f0d54eadfe3fc3e26dc2da5c290732217330e4ddf",
+      "audio_sha256": "4949bb558ce804b815dd19f5a456e18a67f94e2b15e8c7306e198ebc7dacefa0",
+      "duration_seconds": 20.496
+    },
+    {
+      "id": "scene-task",
+      "input_sha256": "b0bf4a4c702e3baa2d072f4626bbc2ff376a0ea25cd9177c6143007fc8141206",
+      "audio_sha256": "dabd573c8f0a0ed2ce51b034edce77bc4bcb976a327f984064a6482e73407e95",
+      "duration_seconds": 19.368
+    },
+    {
+      "id": "scene-sources",
+      "input_sha256": "a484d574f9587d009f6bf17efd7dee6e9e54934c690effd18729183b91003db5",
+      "audio_sha256": "67c9de71137649046de2448de0ee19609dc5c40de2edad723958b9350477dcad",
+      "duration_seconds": 20.808
+    },
+    {
+      "id": "scene-evaluate",
+      "input_sha256": "bf2453db2b9b4dd9769e21b9e013a633f791a85a5902dadf22ce65a0f702f285",
+      "audio_sha256": "b5e2d28afffda88018ec4df6319a67a14bdcfdf02de4f2d13563fe6d6ef2486f",
+      "duration_seconds": 18.0
+    },
+    {
+      "id": "scene-results",
+      "input_sha256": "ebf3792a50228bcb7ff2ddf3d84256a2946a63acff6a5a593e89978eb1f67eaa",
+      "audio_sha256": "b8d6baeedaebee2782a21d6f23b7d6190801d25c1f0e20d5d5b83995269fa528",
+      "duration_seconds": 18.432
+    },
+    {
+      "id": "scene-review",
+      "input_sha256": "b6adfde1b0d48b763ed275caabb3437237353c8a57fa9b10953fadf01981ba72",
+      "audio_sha256": "7307ed80b0e8c66664e5cb0e21e559eb2e5a79228697bc023b0fc8de9175a4d5",
+      "duration_seconds": 19.488
+    },
+    {
+      "id": "scene-architecture",
+      "input_sha256": "6e44b4f944d2378259af8785228735f399a7cda3c855fb38fb20826528b5eb9e",
+      "audio_sha256": "024202502f340d28db3aa9dd35e245710a3ce2e5959aae407847c1ff699e0227",
+      "duration_seconds": 21.264
+    },
+    {
+      "id": "scene-operations",
+      "input_sha256": "e76fe73b9936e849c5004c218b59134cbe7f21e9bd1f77ee26ba130eb17e1399",
+      "audio_sha256": "86efa1ef6b224b0d32b670d286e1eada47b1f1221ccae90cae3aebb413476423",
+      "duration_seconds": 18.96
+    },
+    {
+      "id": "scene-aws",
+      "input_sha256": "349b12b220337e5c46bda3add490c6f84aef512bf720f13766225fd1ad527715",
+      "audio_sha256": "99b14a7a4b2e21ef8a7616fa00d16840e8120da2f3c4186ee22ce8916cc57eda",
+      "duration_seconds": 21.48
+    },
+    {
+      "id": "scene-close",
+      "input_sha256": "51fb91e3f4e86df46960590d24a24dce4cedd43913b8df525fd2c72c7d49d6ce",
+      "audio_sha256": "25cf2bcc355689de3833d55c62c1249cb4985c297b23be9ef83c453eb2946cea",
+      "duration_seconds": 15.336
+    }
+  ]
+}

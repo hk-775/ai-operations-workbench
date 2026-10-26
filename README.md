@@ -32,11 +32,19 @@ the [AWS hosted test guide](docs/HOSTED-TEST.md) and
 [dated acceptance results](docs/VERIFICATION-HOSTED-2026-10-26.md).
 Deployment addresses and credentials belong to each installer and are not published.
 
+**Watch or listen:** open **Narrated demo** in either dashboard footer, or
+`/static/demo.html` on the running app. The [standalone player](web/demo.html)
+includes a four-minute walkthrough, chapter navigation, audio, captions, and
+downloads. See the [demo guide](docs/DEMO.md) for direct media links and how to
+rebuild it. The video uses the actual team UI and saved fictional support cases;
+it makes no new model calls.
+
 **Explore the architecture:** open **Interactive architecture** in either
 dashboard footer, or `/static/architecture.html` on the running app. The
 [standalone explorer](web/architecture.html) also opens directly from a checkout
-of `main`: clickable components, guided flows, and moving solid circles with
-pause and reduced-motion controls. See the [architecture guide](docs/ARCHITECTURE.md).
+of `main`: clickable components, narrated flows, and moving solid circles with
+pause and reduced-motion controls. Narration is bundled for offline playback.
+See the [architecture guide](docs/ARCHITECTURE.md).
 
 ## Test the complete product
 

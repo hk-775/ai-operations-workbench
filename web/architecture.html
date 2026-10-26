@@ -6,13 +6,14 @@
   <meta name="color-scheme" content="light">
   <title>Interactive architecture · AI Operations Workbench</title>
   <link rel="stylesheet" href="architecture.css">
+  <script src="architecture-narration.js" defer></script>
   <script src="architecture.js" defer></script>
 </head>
 <body>
   <a class="skip" href="#architecture">Skip to architecture</a>
   <header>
     <div class="brand"><span class="brandmark" aria-hidden="true">W</span><span>Workbench<small>AI OPERATIONS</small></span></div>
-    <span class="badge">Architecture explorer</span>
+    <a class="badge" href="demo.html">Watch the narrated demo</a>
   </header>
   <main id="architecture">
     <div class="intro">
@@ -31,6 +32,12 @@
       <article class="canvas">
         <div class="canvas-heading"><div><p class="eyebrow" id="scope"></p><h2 id="diagram-title"></h2></div><span class="motion-note">Illustrative flow · no live traffic</span></div>
         <div id="flows" class="flows" role="group" aria-label="Flow to explore"></div>
+        <div class="tour-controls" role="group" aria-label="Narrated flow playback">
+          <button id="play-flow">Play flow</button>
+          <button id="restart-flow">Restart</button>
+          <button id="narration-toggle" aria-pressed="true">Narration on</button>
+          <span id="tour-status" role="status">Ready to play</span>
+        </div>
         <p class="diagram-help">Select a component for details, or follow the walkthrough. On a small screen, scroll the diagram sideways.</p>
         <div class="diagram-scroll" tabindex="0" aria-label="Architecture diagram, scrollable">
           <svg id="diagram" viewBox="0 0 980 710" role="group" aria-labelledby="svg-title svg-description"></svg>
@@ -46,10 +53,11 @@
         <p id="detail-copy"></p>
         <dl><dt>What passes through</dt><dd id="detail-data"></dd><dt>What this establishes</dt><dd id="detail-proof"></dd></dl>
         <div class="boundary"><p class="eyebrow">BOUNDARY TO KEEP IN MIND</p><p id="detail-boundary"></p></div>
+        <details class="narration-transcript"><summary>Read narration</summary><p id="narration-copy"></p></details>
       </aside>
     </section>
     <section class="scope-note"><h2 id="limit-title"></h2><p id="limit-copy"></p></section>
-    <footer>AI Operations Workbench · AxonLLM + Ostiari Guard · Company-neutral architecture · MIT-0</footer>
+    <footer>AI Operations Workbench · AxonLLM + Ostiari Guard · Company-neutral architecture · MIT-0 · <a href="demo.html">Watch or listen to the demo</a></footer>
     <noscript><p>This explorer needs JavaScript. Static architecture exports are included in docs/architecture.</p></noscript>
   </main>
 </body>

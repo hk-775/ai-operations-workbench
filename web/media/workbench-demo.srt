@@ -1,0 +1,199 @@
+1
+00:00:00,000 --> 00:00:03,213
+AI operations starts with two questions.
+
+2
+00:00:03,213 --> 00:00:05,113
+What did a task cost?
+
+3
+00:00:05,113 --> 00:00:07,260
+And did it do the job well enough?
+
+4
+00:00:07,260 --> 00:00:11,227
+Workbench brings those answers together before you change models.
+
+5
+00:00:11,227 --> 00:00:16,656
+Let's follow a subscription-support task from captured usage to a justified routing review.
+
+6
+00:00:17,533 --> 00:00:20,907
+A clean workspace starts without application data.
+
+7
+00:00:20,907 --> 00:00:23,323
+The screen explains how to begin.
+
+8
+00:00:23,323 --> 00:00:27,885
+For this walkthrough, we explicitly load the recorded support example.
+
+9
+00:00:27,885 --> 00:00:32,321
+The cases are fictional, and the model responses were saved earlier.
+
+10
+00:00:32,321 --> 00:00:35,605
+No new model calls are made during this demonstration.
+
+11
+00:00:36,467 --> 00:00:44,671
+The overview shows twenty-four tickets compared across three models: seventy-two task runs and one hundred forty-four captured calls.
+
+12
+00:00:44,671 --> 00:00:48,309
+Their recorded API estimate is about nine cents.
+
+13
+00:00:48,309 --> 00:00:52,087
+This is a saved comparison, not a company invoice.
+
+14
+00:00:52,087 --> 00:00:56,963
+Missing prices stay unknown, and hardware and electricity remain unmeasured.
+
+15
+00:00:57,833 --> 00:01:00,714
+Open the refund-inside-the-window task.
+
+16
+00:01:00,714 --> 00:01:08,405
+Workbench shows the customer request and the calls behind it: classify the request, then draft the decision and reply.
+
+17
+00:01:08,405 --> 00:01:10,920
+Each step has its captured cost.
+
+18
+00:01:10,920 --> 00:01:14,610
+Call completed means the API returned successfully.
+
+19
+00:01:14,610 --> 00:01:17,201
+Answer quality still needs evaluation.
+
+20
+00:01:18,067 --> 00:01:24,030
+For your own application, create an AxonLLM source and configure its scoped connector.
+
+21
+00:01:24,030 --> 00:01:27,708
+A durable outbox retries unacknowledged usage.
+
+22
+00:01:27,708 --> 00:01:33,574
+The feed contains metadata, while saved answers are imported separately for quality checks.
+
+23
+00:01:33,574 --> 00:01:38,875
+The recorded example is clearly labeled as a saved source, not a live connection.
+
+24
+00:01:39,733 --> 00:01:41,854
+Now run the evaluation.
+
+25
+00:01:41,854 --> 00:01:48,928
+Workbench replays saved answers against the subscription-support contract and real Ostiari Guard checks.
+
+26
+00:01:48,928 --> 00:01:52,303
+It checks policy decisions and action boundaries.
+
+27
+00:01:52,303 --> 00:01:57,733
+The worker continues in the background, and the result remains available after you leave the page.
+
+28
+00:01:58,600 --> 00:02:05,407
+The result compares tickets passed, critical failures, recorded response time, and cost per passing ticket.
+
+29
+00:02:05,407 --> 00:02:09,072
+Money spent on failed tickets is included in that cost.
+
+30
+00:02:09,072 --> 00:02:11,801
+These checks grade the saved responses.
+
+31
+00:02:11,801 --> 00:02:17,032
+They do not establish today's model quality or performance on unrelated workloads.
+
+32
+00:02:17,900 --> 00:02:20,971
+Set the requirements before looking for savings.
+
+33
+00:02:20,971 --> 00:02:25,129
+With the saved strict criteria, no model qualifies.
+
+34
+00:02:25,129 --> 00:02:29,557
+Workbench explains each exclusion instead of inventing a winning model.
+
+35
+00:02:29,557 --> 00:02:32,985
+The next decision is to investigate the failing cases.
+
+36
+00:02:32,985 --> 00:02:37,388
+Export the review with its evidence; no production route has been changed.
+
+37
+00:02:38,267 --> 00:02:41,417
+The interactive architecture connects the pieces.
+
+38
+00:02:41,417 --> 00:02:44,660
+AxonLLM supplies captured calls.
+
+39
+00:02:44,660 --> 00:02:47,375
+Workbench owns the ledger and review.
+
+40
+00:02:47,375 --> 00:02:51,753
+The worker and Ostiari Guard evaluate saved evidence.
+
+41
+00:02:51,753 --> 00:02:54,769
+Select a component or play a narrated flow.
+
+42
+00:02:54,769 --> 00:02:59,531
+Small solid circles show the direction, with pause and reduced-motion controls.
+
+43
+00:03:00,400 --> 00:03:07,709
+Administrators can inspect evaluation-service health, queued work, failed evaluations, and calls without a price.
+
+44
+00:03:07,709 --> 00:03:13,653
+The recorded demo is not new application traffic, so these recent-traffic counts can be zero.
+
+45
+00:03:13,653 --> 00:03:19,360
+Company operators configure retention, backups, monitoring, and their response process.
+
+46
+00:03:20,233 --> 00:03:31,814
+The optional AWS hosted test uses separate seeded and clean stacks, real Cognito sign-in, private CloudFront origins, encrypted off-host backups, and alarm receipts.
+
+47
+00:03:31,814 --> 00:03:34,464
+Its architecture is interactive too.
+
+48
+00:03:34,464 --> 00:03:41,713
+This is a single-host test, with an explicit no-MFA exception, not a high-availability production guarantee.
+
+49
+00:03:42,567 --> 00:03:52,440
+Workbench makes one complete decision path visible: connect usage, inspect a task, evaluate saved answers, and review the model choice with evidence.
+
+50
+00:03:52,440 --> 00:03:57,903
+Explore the source, run the recorded demo, and connect your own application when you are ready.
