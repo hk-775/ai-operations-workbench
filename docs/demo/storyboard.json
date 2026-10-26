@@ -1,0 +1,113 @@
+{
+  "title": "From AI task cost to an evidence-backed model choice",
+  "voice": "Joanna",
+  "engine": "neural",
+  "region": "us-east-1",
+  "narration": {
+    "product-app": "The journey starts in your application. AxonLLM calls the model, and the Workbench connector captures usage in a durable outbox. Related calls share a task identifier. Captured usage tells us what happened, but a successful API call does not prove the answer was correct.",
+    "product-ingest": "A scoped source token sends usage to Workbench. The server derives the team and source from that token, validates each batch, and acknowledges repeated events. A conflicting payload rolls back the batch. Prompt and answer text are separate from this metadata feed.",
+    "product-ledger": "PostgreSQL preserves the usage ledger, historical price facts, saved evidence, jobs, results, and reviews. Known API estimates remain precise decimal amounts. Missing usage or unsupported prices stay unknown. These estimates are not reconciled provider invoices.",
+    "product-recording": "Quality evaluation starts with saved support answers. The bundled comparison contains twenty-four fictional subscription-support tickets and three models. Workbench validates the recording contract before replay. Application usage alone cannot establish answer quality.",
+    "product-worker": "An offline evaluation worker claims a persisted job and replays its recording. Work continues after the browser closes. Leases and ownership checks prevent stale workers from overwriting results. Replay grades saved responses; it makes no new model API calls.",
+    "product-checks": "Deterministic checks grade the support decision. The real Ostiari Guard package checks the configured action boundaries. Together they produce ticket passes, critical-case failures, and explanations. Workbench embeds Guard, not Ostiari's entire gateway or control plane.",
+    "product-results": "Saved evaluation results stay linked to the original recording and evaluator revision. You can inspect pass counts, critical failures, recorded timing, and cost per passing ticket. These results describe this support workload, not a general ranking of model intelligence.",
+    "product-review": "The routing review applies explicit requirements before comparing costs: a minimum pass rate, zero critical failures, and a response-time limit. It returns a justified candidate, or says no model qualifies. Projected savings require complete evidence and are not guaranteed savings.",
+    "product-dashboard": "The team dashboard connects task costs, evaluation results, and saved routing reviews. People see the views allowed by their role and can export supporting evidence. Workbench explains a model choice; it does not activate a production route.",
+    "aws-browser": "The hosted test has separate HTTPS origins and browser cookie namespaces for the seeded and clean workspaces. A sign-in to the demo does not create an authenticated clean-workspace session. This diagram illustrates the deployment and sends no live requests.",
+    "aws-edge": "CloudFront provides HTTPS and forwards requests to a private origin in the VPC. Caching is disabled, and AWS WAF applies an IP request-rate limit. HTTPS ends at CloudFront. The private origin and container hops use HTTP.",
+    "aws-identity": "Amazon Cognito provides real sign-in with a separate application client for each workspace. Exact provider identities map to Workbench roles. Password-only sign-in is an explicit hosted-test exception. Standard production configuration retains its MFA requirement.",
+    "aws-proxy": "Inside the host, Caddy routes each hostname to the appropriate application listener. The two workspaces keep separate application state and cookies. They still share one EC2 host, so this test does not demonstrate high availability.",
+    "aws-demo": "The seeded workspace has its own API, evaluation worker, maintenance process, and PostgreSQL database. Explicit seeding loads the saved support comparison, its evaluation, and a review. The tickets are fictional, and replay makes no new model calls.",
+    "aws-clean": "The clean workspace starts without example evidence. It has separate credentials, database, identity-provider client, origin, and browser cookies. Companies then connect their own usage and upload compatible evidence. The shared host remains a common failure boundary.",
+    "aws-timers": "Host timers run daily database backups and minutely monitoring. Protected jobs use temporary AWS credentials from the host role. Acceptance exercised the actual scheduled jobs. Stopping the host suspends the applications and their backup jobs.",
+    "aws-backup": "Private, encrypted, versioned backups are stored in Amazon S3. Acceptance downloaded both scheduled backups, verified their checksums, and restored them into temporary databases. Backups expire after thirty days. This did not establish recovery on a newly built host.",
+    "aws-monitor": "CloudWatch monitors readiness and backup age for each workspace. Missing metric samples also alarm. A controlled demo-worker outage produced an alarm, followed by a recovery notification. Those signals still need an operational response process.",
+    "aws-alerts": "CloudWatch notifications pass through an encrypted Amazon SNS topic to a private SQS queue. The test verified delivery of outage and recovery receipts. No person receives these test notifications. Human on-call delivery remains an operator choice."
+  },
+  "scenes": [
+    {
+      "id": "intro",
+      "title": "Follow the cost. Prove the model choice.",
+      "chapter": "AI Operations Workbench",
+      "color": "violet",
+      "text": "AI operations starts with two questions. What did a task cost? And did it do the job well enough? Workbench brings those answers together before you change models. Let's follow a subscription-support task from captured usage to a justified routing review."
+    },
+    {
+      "id": "clean",
+      "title": "Start clean, or explore saved evidence",
+      "chapter": "01 / Begin with evidence",
+      "color": "sky",
+      "text": "A clean workspace starts without application data. The screen explains how to begin. For this walkthrough, we explicitly load the recorded support example. The cases are fictional, and the model responses were saved earlier. No new model calls are made during this demonstration."
+    },
+    {
+      "id": "usage",
+      "title": "A task is more than one API call",
+      "chapter": "02 / Understand the captured cost",
+      "color": "sky",
+      "text": "The overview shows twenty-four tickets compared across three models: seventy-two task runs and one hundred forty-four captured calls. Their recorded API estimate is about nine cents. This is a saved comparison, not a company invoice. Missing prices stay unknown, and hardware and electricity remain unmeasured."
+    },
+    {
+      "id": "task",
+      "title": "Follow a refund request, step by step",
+      "chapter": "03 / Inspect the work",
+      "color": "yellow",
+      "text": "Open the refund-inside-the-window task. Workbench shows the customer request and the calls behind it: classify the request, then draft the decision and reply. Each step has its captured cost. Call completed means the API returned successfully. Answer quality still needs evaluation."
+    },
+    {
+      "id": "sources",
+      "title": "Connect application usage deliberately",
+      "chapter": "04 / Know where the data came from",
+      "color": "sky",
+      "text": "For your own application, create an AxonLLM source and configure its scoped connector. A durable outbox retries unacknowledged usage. The feed contains metadata, while saved answers are imported separately for quality checks. The recorded example is clearly labeled as a saved source, not a live connection."
+    },
+    {
+      "id": "evaluate",
+      "title": "A cheaper answer still has to pass",
+      "chapter": "05 / Evaluate saved answers",
+      "color": "violet",
+      "text": "Now run the evaluation. Workbench replays saved answers against the subscription-support contract and real Ostiari Guard checks. It checks policy decisions and action boundaries. The worker continues in the background, and the result remains available after you leave the page."
+    },
+    {
+      "id": "results",
+      "title": "Compare quality alongside cost",
+      "chapter": "06 / Read the evidence",
+      "color": "violet",
+      "text": "The result compares tickets passed, critical failures, recorded response time, and cost per passing ticket. Money spent on failed tickets is included in that cost. These checks grade the saved responses. They do not establish today's model quality or performance on unrelated workloads."
+    },
+    {
+      "id": "review",
+      "title": "“No model qualifies” is a useful result",
+      "chapter": "07 / Make the justified decision",
+      "color": "teal",
+      "text": "Set the requirements before looking for savings. With the saved strict criteria, no model qualifies. Workbench explains each exclusion instead of inventing a winning model. The next decision is to investigate the failing cases. Export the review with its evidence; no production route has been changed."
+    },
+    {
+      "id": "architecture",
+      "title": "See how the evidence moves",
+      "chapter": "08 / Explore the architecture",
+      "color": "violet",
+      "text": "The interactive architecture connects the pieces. AxonLLM supplies captured calls. Workbench owns the ledger and review. The worker and Ostiari Guard evaluate saved evidence. Select a component or play a narrated flow. Small solid circles show the direction, with pause and reduced-motion controls."
+    },
+    {
+      "id": "operations",
+      "title": "Keep the workspace operating",
+      "chapter": "09 / Inspect operational signals",
+      "color": "teal",
+      "text": "Administrators can inspect evaluation-service health, queued work, failed evaluations, and calls without a price. The recorded demo is not new application traffic, so these recent-traffic counts can be zero. Company operators configure retention, backups, monitoring, and their response process."
+    },
+    {
+      "id": "aws",
+      "title": "Seeded and clean hosted test stacks",
+      "chapter": "10 / Understand the deployment",
+      "color": "teal",
+      "text": "The optional AWS hosted test uses separate seeded and clean stacks, real Cognito sign-in, private CloudFront origins, encrypted off-host backups, and alarm receipts. Its architecture is interactive too. This is a single-host test, with an explicit no-MFA exception, not a high-availability production guarantee."
+    },
+    {
+      "id": "close",
+      "title": "Know the cost. Keep the proof.",
+      "chapter": "AI Operations Workbench",
+      "color": "violet",
+      "text": "Workbench makes one complete decision path visible: connect usage, inspect a task, evaluate saved answers, and review the model choice with evidence. Explore the source, run the recorded demo, and connect your own application when you are ready."
+    }
+  ]
+}

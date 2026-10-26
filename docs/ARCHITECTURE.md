@@ -7,9 +7,21 @@ Open **Interactive architecture** from either dashboard's footer, or open
 `/static/architecture.html` on the running application. The
 [standalone page](../web/architecture.html) also works directly from the downloaded
 source with its adjacent CSS and JavaScript files. It offers product and AWS
-views, component explanations, step-by-step flows, moving solid circles,
-pause/resume, and reduced-motion support. It makes no API or cloud requests;
+views, component explanations, narrated step-by-step flows, moving solid circles,
+pause/resume, and reduced-motion support. **Play flow** starts bundled narration
+and advances when each clip ends. Pause/resume, restart, narration on/off, and
+manual steps remain separate from motion controls. Opening the page never
+autoplays audio; switching views or components stops the current clip, and
+switching away from the browser tab pauses the tour. The selected component's
+transcript is available under **Read narration**. Muted or unavailable audio
+uses a five-second reading step; pause the tour to read at your own pace.
+Keep `architecture-narration.js` and `media/narration/` beside the page for
+offline narration. It makes no API or cloud requests;
 motion illustrates architecture rather than live traffic.
+
+The [narrated video and audio player](../web/demo.html) demonstrates the actual
+team interface, then introduces both architecture views. See [DEMO.md](DEMO.md)
+for the transcript, media files, evidence boundaries, and authoring commands.
 
 The first sections and existing draw.io diagram below describe the original demo.
 The [authenticated pilot](#authenticated-team-pilot) and
