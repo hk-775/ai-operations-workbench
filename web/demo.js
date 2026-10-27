@@ -17,7 +17,10 @@ for(const chapter of chapters) {
   button.onclick=()=>{
     const seek=()=>{
       video.currentTime=chapter.start;
-      video.play().catch(()=>{status.textContent='Press Play on the video to continue from this chapter.';});
+      video.play().catch(error=>{
+        if(error.name!=='AbortError' && audio.paused)
+          status.textContent='Press Play on the video to continue from this chapter.';
+      });
     };
     if(video.readyState>=1) seek();
     else video.addEventListener('loadedmetadata',seek,{once:true});
@@ -36,7 +39,7 @@ function currentChapter() {
 }
 video.addEventListener('timeupdate',currentChapter);
 video.addEventListener('play',()=>{audio.pause();status.textContent='';});
-audio.addEventListener('play',()=>video.pause());
+audio.addEventListener('play',()=>{video.pause();status.textContent='';});
 for(const medium of [video,audio]) {
   medium.addEventListener('error',()=>{
     status.textContent='The media file could not be loaded. Keep the media folder beside this page, or use the download links.';

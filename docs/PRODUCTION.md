@@ -1,6 +1,6 @@
 # Self-host Workbench
 
-Workbench 0.2 is a private, single-organization product. Each company runs its own
+Workbench 0.3 is a self-hosted, single-organization product. Each company runs its own
 stack and supplies its own DNS name, OIDC identity provider, secrets, monitoring,
 and backup storage. None of those company values belongs in the release archive.
 There is no vendor-hosted service or license activation call.

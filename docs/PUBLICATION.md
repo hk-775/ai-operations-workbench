@@ -1,6 +1,23 @@
 # Publication inventory
 
-## Main branch additions after v0.2.0
+## v0.3.0 destination and distribution
+
+- Repository: `hk-775/ai-operations-workbench`, public and MIT-0.
+- Canonical public walkthrough: `https://hk-775.github.io/ai-operations-workbench/`.
+- Narrated architecture: the same site's `architecture.html`, with static/editable downloads.
+- GitHub Release `v0.3.0`: `ai-operations-workbench-0.3.0.tar.gz` and `SHA256SUMS`.
+- The static site is built from the canonical demo player and architecture.
+  Only explicitly selected public assets are uploaded. It includes fictional
+  support cases shown in the video and saved results, with no user session,
+  application API, model call, WebSocket, or private endpoint.
+- The browser's public-build policy blocks all connection requests. No login
+  bypass or synthetic-user mode is added to the authenticated application.
+- The normal company-owned application remains a separate installation.
+  Existing seeded/clean AWS test installations can receive this application
+  release without changing their identity policy or database schema.
+- No package or container registry is used. The prior v0.2.0 release is preserved.
+
+## Additions packaged after v0.2.0
 
 The main branch now includes `compose.hosted-test.yaml`, AWS CloudFormation and
 host configuration under `deploy/aws/`, and the hosted acceptance guide/report.
@@ -18,8 +35,7 @@ steps, evaluation results, review requirements, connections, operations, and rol
 Overview cards match the selected sidebar fill. The hosted test uses password-only
 Cognito SSO by explicit opt-in; standard production authentication remains unchanged.
 
-These are additions to the repository, not a replacement of the published
-v0.2.0 archive. Publishing another release is a separate operation.
+These additions are packaged in v0.3.0; the published v0.2.0 archive is unchanged.
 
 ## Published v0.2.0 destination and distribution
 

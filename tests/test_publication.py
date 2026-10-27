@@ -2,6 +2,7 @@
 import re
 import importlib.util
 import tarfile
+import shutil
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
 from xml.etree import ElementTree
@@ -68,3 +69,33 @@ def test_downloaded_source_includes_hosted_deployment_and_excludes_private_state
         assert {"web/architecture.html", "web/architecture.css", "web/architecture.js"} <= paths
         assert not any({".pilot", ".state", "__pycache__"} & set(Path(path).parts)
                        or path == ".env" for path in paths)
+
+
+def test_public_build_excludes_application_and_private_files_and_verifies_media(tmp_path):
+    spec = importlib.util.spec_from_file_location("build_pages", ROOT / "scripts/build_pages.py")
+    pages = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(pages)
+    for directory in ("web", "docs/demo", "docs/architecture"):
+        shutil.copytree(ROOT/directory, tmp_path/directory)
+    for name in ("LICENSE", "pyproject.toml"):
+        shutil.copyfile(ROOT/name, tmp_path/name)
+    for name in ("web/media/private.json", "web/.env", "web/.pilot/logins.json",
+                 "web/media/narration/private.mp3"):
+        target = tmp_path/name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text("PRIVATE_TEST_SENTINEL")
+    pages.ROOT = tmp_path
+    pages.main()
+    output = tmp_path/"artifacts/pages/ai-operations-workbench"
+    paths = {p.relative_to(output).as_posix() for p in output.rglob("*") if p.is_file()}
+    assert {"index.html", "demo.html", "architecture.html", "media/workbench-demo.mp4",
+            "architecture/aws-hosted-test.drawio", "architecture/aws-hosted-test.png"} <= paths
+    assert not {"pilot.html", "pilot.js", "app.js", "media/private.json", ".env",
+                ".pilot/logins.json", "media/narration/private.mp3"} & paths
+    assert not any(b"PRIVATE_TEST_SENTINEL" in p.read_bytes() for p in output.rglob("*") if p.is_file())
+    assert "connect-src &#x27;none&#x27;" in (output/"index.html").read_text()
+    assert (tmp_path/"web/demo.html").read_bytes() == (ROOT/"web/demo.html").read_bytes()
+    # A damaged or replaced media file must not silently become the public demo.
+    (tmp_path/"web/media/workbench-demo.mp3").write_bytes(b"damaged media")
+    with pytest.raises(ValueError, match="checksum mismatch"):
+        pages.main()

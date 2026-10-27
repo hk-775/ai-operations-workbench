@@ -7,6 +7,11 @@ interactive product and AWS architectures.
 
 ## Watch or listen
 
+The [public player](https://hk-775.github.io/ai-operations-workbench/) and
+[narrated architecture](https://hk-775.github.io/ai-operations-workbench/architecture.html)
+require no installation or sign-in. They serve these same canonical frontend files
+and bundled media; they have no API connection or interactive evaluation backend.
+
 Open **Narrated demo** from either dashboard footer, or visit
 `/static/demo.html` on your running Workbench application. You can also open
 [`web/demo.html`](../web/demo.html) directly from the downloaded repository;
@@ -114,3 +119,22 @@ Review the generated screenshots and video before sharing. Source packaging
 includes the final media and authoring inputs; private intermediate files stay
 out of releases. Creating this media does not update an existing GitHub release
 or redeploy a hosted installation.
+
+## Publish the static player
+
+`uv run --locked python scripts/build_pages.py` copies only the canonical player,
+architecture, verified media, editable diagrams, and license into
+`artifacts/pages/ai-operations-workbench`. It excludes the application, login UI,
+configuration, recordings, and runtime state. The public HTML enforces
+`connect-src 'none'`; media playback uses only adjacent static assets.
+
+The Pages workflow clean-installs dependencies, builds this directory, runs its
+browser suite, and publishes it from `main`. To verify the live deployment:
+
+```sh
+WORKBENCH_PAGES_URL=https://hk-775.github.io/ai-operations-workbench/ \
+  npx playwright test --config=playwright.pages.config.js
+```
+
+The normal Workbench API and company sign-in retain their existing boundaries.
+No synthetic user, login bypass, or browser-side evaluation mock is added.

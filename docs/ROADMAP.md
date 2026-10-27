@@ -32,6 +32,10 @@ deployments. See [production installation](PRODUCTION.md).
 The product scope remains one organization; the feature expansions below are
 not implied by the presence of a production deployment profile.
 
+The 0.3 release packages the optional AWS hosted acceptance, improved team UI,
+and public narrated demo/architecture. The public site is a static walkthrough;
+the authenticated application remains a customer-owned deployment.
+
 ## 3. Coding-task demonstration
 
 Add a reproducible **bug fix plus tests** workflow to address the Codex, Cursor,
