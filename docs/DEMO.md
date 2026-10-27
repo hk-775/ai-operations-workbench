@@ -136,5 +136,9 @@ WORKBENCH_PAGES_URL=https://hk-775.github.io/ai-operations-workbench/ \
   npx playwright test --config=playwright.pages.config.js
 ```
 
+Use the current checkout for live-site verification. GitHub Pages consumes the
+`.nojekyll` build marker without serving it over HTTP; the live check excludes
+that marker while checking every page, media file, diagram, and metadata asset.
+
 The normal Workbench API and company sign-in retain their existing boundaries.
 No synthetic user, login bypass, or browser-side evaluation mock is added.
