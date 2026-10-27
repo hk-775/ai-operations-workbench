@@ -19,25 +19,32 @@ You can explore and regrade that recording without an API key or new model charg
 
 ![Workbench overview: recorded API cost, model counts, and a yellow task investigation panel](docs/images/overview.png)
 
-**[Download v0.2.0](https://github.com/hk-775/ai-operations-workbench/releases/tag/v0.2.0)**
+**[Watch the public demo](https://hk-775.github.io/ai-operations-workbench/)**
+· [Explore the narrated architecture](https://hk-775.github.io/ai-operations-workbench/architecture.html)
+· **[Download v0.3.0](https://github.com/hk-775/ai-operations-workbench/releases/tag/v0.3.0)**
 · [Methodology](docs/METHODOLOGY.md) · [Architecture](docs/ARCHITECTURE.md)
 · [Production installation and two test deployments](docs/PRODUCTION.md)
 · [Team pilot setup](docs/PILOT.md) · [Roadmap](docs/ROADMAP.md)
 
-**Main branch additions after v0.2.0:** optional AWS hosted acceptance with separate
+**New in v0.3.0:** a public video/audio walkthrough, narrated interactive architecture,
+and optional AWS hosted acceptance with separate
 seeded and clean workspaces, password-only test SSO, encrypted off-host backups,
 verified alert delivery, and clearer guidance across the team UI.
-The published v0.2.0 archive is unchanged. Clone `main` for these additions; see
+The published v0.2.0 archive is unchanged. These additions are included in v0.3.0; see
 the [AWS hosted test guide](docs/HOSTED-TEST.md) and
 [dated acceptance results](docs/VERIFICATION-HOSTED-2026-10-26.md).
 Deployment addresses and credentials belong to each installer and are not published.
 
-**Watch or listen:** open **Narrated demo** in either dashboard footer, or
+**Watch or listen:** visit the [public player](https://hk-775.github.io/ai-operations-workbench/),
+open **Narrated demo** in either dashboard footer, or
 `/static/demo.html` on the running app. The [standalone player](web/demo.html)
 includes a four-minute walkthrough, chapter navigation, audio, captions, and
 downloads. See the [demo guide](docs/DEMO.md) for direct media links and how to
 rebuild it. The video uses the actual team UI and saved fictional support cases;
 it makes no new model calls.
+The public site serves only the bundled media and architecture assets. It requires
+no login and does not connect to a Workbench API, identity provider, or model service.
+Download the application to connect usage and run evaluations.
 
 **Explore the architecture:** open **Interactive architecture** in either
 dashboard footer, or `/static/architecture.html` on the running app. The
@@ -81,7 +88,7 @@ uv run --locked uvicorn workbench.app:app --host 127.0.0.1 --port 8767
 If you downloaded a release archive, extract it and start with
 `uv sync --locked --python 3.13` from the extracted directory. No provider
 credentials are needed for replay. The release includes `SHA256SUMS` to verify
-the archive; see [release verification](docs/RELEASE-0.2.0.md#download-and-verify).
+the archive; see [release verification](docs/RELEASE-0.3.0.md#download-and-verify).
 
 Open **http://127.0.0.1:8767/**.
 
@@ -234,6 +241,8 @@ npm ci
 npx playwright install chromium
 npm test
 npx playwright test --config=playwright.pilot.config.js
+uv run --locked python scripts/build_pages.py
+npx playwright test --config=playwright.pages.config.js
 ```
 
 Browser tests use a separate temporary ledger and port 18769. Set
@@ -264,8 +273,8 @@ evaluation results, and saved reviews in PostgreSQL.
 - [Authenticated team pilot and operations guide](docs/PILOT.md)
 - [MIT-0 license](LICENSE)
 - [Contributing](CONTRIBUTING.md), [support](SUPPORT.md), and [security reporting](SECURITY.md)
-- [v0.2.0 release notes and download verification](docs/RELEASE-0.2.0.md)
-- [Local validation results](docs/VERIFICATION-0.2.0.md)
+- [v0.3.0 release notes and download verification](docs/RELEASE-0.3.0.md)
+- [Local v0.3.0 validation results](docs/VERIFICATION-0.3.0.md)
 
 AxonLLM and Ostiari are pinned to immutable Git revisions in `pyproject.toml` and
 `uv.lock`. They remain separate projects; this app does not patch their source.

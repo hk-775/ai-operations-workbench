@@ -80,6 +80,8 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: npm test -- --reporter=line
       - run: npx playwright test --config=playwright.pilot.config.js --reporter=line
+      - run: uv run --locked python scripts/build_pages.py
+      - run: npx playwright test --config=playwright.pages.config.js --reporter=line
       - run: git diff --exit-code -- uv.lock package-lock.json
       - name: Keep browser evidence
         if: always()

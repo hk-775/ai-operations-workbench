@@ -7,6 +7,7 @@ import os
 import subprocess
 import sys
 import time
+import tomllib
 import uuid
 from contextlib import asynccontextmanager
 from decimal import Decimal
@@ -212,7 +213,7 @@ def create_app(state_dir: Path | None = None, recording: Path | None = None) -> 
              "role": "Actual model routing during recorded collection"},
             {"name": "Ostiari Guard", "version": importlib.metadata.version("ostiari"),
              "role": "Actual governance engine in the managed evaluation worker"},
-            {"name": "Workbench", "version": "0.1.0",
+            {"name": "Workbench", "version": tomllib.loads((ROOT/"pyproject.toml").read_text())["project"]["version"],
              "role": "Local ledger, deterministic checks, comparison, and proposal"},
         ], "native_connectors": "Codex, Cursor, Claude Code and billing feed importers are not implemented in this first demo."}
 
