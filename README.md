@@ -127,25 +127,31 @@ Pilot mode is opt-in (`WORKBENCH_MODE=pilot`); the default local demo retains it
 original behavior. Usage ingestion handles application metadata; quality
 evaluation currently requires a matching saved support-v1 recording.
 
+The current checkout also includes an **Amazon Bedrock application connector**
+for boto3 Converse and ConverseStream, with collector health and an offline
+two-step example. Follow the [Bedrock setup guide](docs/BEDROCK.md). Existing
+installations need the explicit schema-3 migration; the published v0.3.0 archive
+does not include this connector yet.
+
 ## What is working
 
 | Capability | Current implementation |
 |---|---|
-| Usage connection | AxonLLM metadata capture with a durable outbox and authenticated delivery; bundled recordings and compatible JSON import |
+| Usage connection | AxonLLM and Amazon Bedrock Converse/ConverseStream metadata capture; durable outboxes, authenticated source-scoped delivery, and collector heartbeats; bundled recordings and compatible JSON import |
 | Ledger | PostgreSQL in pilot mode; transactional source-scoped application-event deduplication and Decimal API estimates. Original demo uses SQLite |
 | Team access | Company OIDC/MFA or local test accounts; explicit administrator, analyst, viewer roles; revocable sessions and source tokens |
-| Operations | Administrator health dashboard, private Prometheus metrics, alert rules, structured request logs, and scheduled retention |
+| Operations | Administrator health dashboard, source backlog/stale-collector warnings, private Prometheus metrics, alert rules, structured request logs, and scheduled retention |
 | Scale | SQL totals, UTC time windows, paginated tasks and calls; historical prices and unknown costs preserved |
 | Job persistence | Pilot jobs, results, and routing reviews survive restarts; leases, retry recovery, cancellation, and independent timeouts |
-| Task inspection | Synthetic input, both requests and responses, token usage, API estimates, observed latency |
+| Task inspection | Recorded support inputs/outputs; application task stages, provider token categories, captured-call API estimates, latency and coverage gaps |
 | Model evaluation | Deterministic decision checks across all saved cases; failures retained |
 | Governance | Actual Ostiari Guard in the evaluation subprocess; draft permission and three blocked action controls |
 | Model selection | Complete evidence, minimum pass rate, zero critical failures, p95 limit, then lowest cost per passing task |
 | Review | Adjustable criteria and portable evidence export; no deployment |
 | Interface | Guided team screens with named recorded tasks, per-call costs, and expandable technical details. White navigation, stone backgrounds, violet buttons, sky overview cards matching the selected menu, and yellow/violet/teal workflow accents; desktop and mobile; small moving circles with pause and reduced-motion support |
 
-**Not yet implemented:** native Codex, Cursor, Claude Code, or Bedrock billing
-connectors; subscription invoice reconciliation; a coding workload; multi-company
+**Not yet implemented:** native Codex, Cursor or Claude Code connectors;
+account-wide Bedrock billing ingestion; subscription invoice reconciliation; a coding workload; multi-company
 SaaS tenant management; arbitrary workload evaluators; or production routing changes. The pilot
 is bounded to a single team, with a support-workflow evaluation contract.
 

@@ -61,6 +61,8 @@
 .help-details > summary { font-weight:600;font-size:12px; }
 .help-details > p { margin:10px 0;font-size:12px;line-height:1.7;color:#57534e; }
 .help-details .fine { overflow-wrap:anywhere; }
+.help-details code { overflow-wrap:anywhere; }
+.source-row > div { min-width:0;max-width:100%;overflow-wrap:anywhere; }
 .help-details a { text-decoration:underline; }
 .screen-steps { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;counter-reset:guide;list-style:none;padding:0;margin:22px 0; }
 .screen-steps li { padding:16px;background:var(--accent-soft);border:1px solid var(--accent-line);border-radius:12px; }

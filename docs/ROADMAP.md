@@ -65,7 +65,16 @@ provider and model, timestamps, reported usage, cost basis, currency, and stable
 deduplication identity. Preserve whether money is **estimated**, **billed**,
 **allocated from a subscription**, or **unknown**.
 
-Add the remaining Codex, Cursor, Claude Code, and Bedrock sources only after
+The current checkout adds the first additional connector: **Bedrock Converse and
+ConverseStream application capture**. It retains AWS token categories, reports
+SDK retry coverage, records incomplete streams/crashes, and delivers through the
+same durable outbox. Source-scoped heartbeats expose backlogs and stopped
+collectors; the setup guide includes a no-charge fixture and an explicit bounded
+live-call example. One reviewed model/region/mode rate is supported; other prices
+remain unknown. This is not AWS invoice ingestion. See [Bedrock](BEDROCK.md).
+The v0.3.0 release predates it; an explicit schema-3 migration is required.
+
+Add the remaining Codex, Cursor and Claude Code sources only after
 validating what their supported exports and APIs actually expose. Product names
 in the roadmap do not imply working integrations.
 

@@ -1,0 +1,26 @@
+{
+  "verified_on": "2026-10-27",
+  "currency": "USD",
+  "unit": "per_million_tokens",
+  "basis": "Captured token estimate, not an invoice. Exact model and source region only; cache, profiles, guardrails and other additional charges are not priced.",
+  "source": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonBedrock/current/us-east-1/index.json",
+  "publication_date": "2026-10-16T21:08:06Z",
+  "review_policy": "Refresh the reviewed snapshot within 30 days. The expiry is a Workbench review deadline, not an AWS price guarantee.",
+  "rates": [
+    {
+      "model": "amazon.nova-micro-v1:0",
+      "region": "us-east-1",
+      "service_tier": "default",
+      "performance": "standard",
+      "effective_from": "2026-10-01T00:00:00+00:00",
+      "review_expires_at": "2026-11-26T00:00:00+00:00",
+      "input": "0.035",
+      "output": "0.14",
+      "input_rate_code": "XAR69MSGZSU6FEM9.JRTCKXETXF.6YS6EN2CT7",
+      "output_rate_code": "YUSGHKDUPQRC75RK.JRTCKXETXF.6YS6EN2CT7",
+      "source_unit": "1K tokens",
+      "source_input_usd": "0.0000350000",
+      "source_output_usd": "0.0001400000"
+    }
+  ]
+}
