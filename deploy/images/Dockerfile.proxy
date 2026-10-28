@@ -7,7 +7,8 @@ RUN go mod download
 COPY proxy/*.go ./
 COPY proxy/patches/ patches/
 # Keep module versions visible to scanners; apply only to the verified v3 source.
-RUN go mod vendor \
+RUN apk add --no-cache patch \
+    && go mod vendor \
     && cd vendor/github.com/go-jose/go-jose/v3 \
     && sha256sum -c /build/patches/before.sha256 \
     && patch -p1 < /build/patches/go-jose-v3-CVE-2026-116587.patch \
