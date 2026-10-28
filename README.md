@@ -21,18 +21,19 @@ You can explore and regrade that recording without an API key or new model charg
 
 **[Watch the public demo](https://hk-775.github.io/ai-operations-workbench/)**
 · [Explore the narrated architecture](https://hk-775.github.io/ai-operations-workbench/architecture.html)
-· **[Download v0.3.0](https://github.com/hk-775/ai-operations-workbench/releases/tag/v0.3.0)**
+· **[Download v0.4.0](https://github.com/hk-775/ai-operations-workbench/releases/tag/v0.4.0)**
 · [Methodology](docs/METHODOLOGY.md) · [Architecture](docs/ARCHITECTURE.md)
 · [Production installation and two test deployments](docs/PRODUCTION.md)
 · [Team pilot setup](docs/PILOT.md) · [Roadmap](docs/ROADMAP.md)
 
-**New in v0.3.0:** a public video/audio walkthrough, narrated interactive architecture,
-and optional AWS hosted acceptance with separate
-seeded and clean workspaces, password-only test SSO, encrypted off-host backups,
-verified alert delivery, and clearer guidance across the team UI.
-The published v0.2.0 archive is unchanged. These additions are included in v0.3.0; see
-the [AWS hosted test guide](docs/HOSTED-TEST.md) and
-[dated acceptance results](docs/VERIFICATION-HOSTED-2026-10-26.md).
+**New in v0.4.0:** Amazon Bedrock Converse/ConverseStream application capture,
+durable delivery, and collector health with visible backlog and capture gaps.
+Exact captured-call estimates use a reviewed model/region/mode/date rate; unsupported
+prices remain unknown. Existing installations require an explicit **schema-3
+migration**. See the [release and upgrade notes](docs/RELEASE-0.4.0.md),
+[Bedrock setup guide](docs/BEDROCK.md), and
+[release verification](docs/VERIFICATION-0.4.0.md).
+The narrated demo and isolated seeded/clean deployment recipes remain included.
 Deployment addresses and credentials belong to each installer and are not published.
 
 **Watch or listen:** visit the [public player](https://hk-775.github.io/ai-operations-workbench/),
@@ -88,7 +89,7 @@ uv run --locked uvicorn workbench.app:app --host 127.0.0.1 --port 8767
 If you downloaded a release archive, extract it and start with
 `uv sync --locked --python 3.13` from the extracted directory. No provider
 credentials are needed for replay. The release includes `SHA256SUMS` to verify
-the archive; see [release verification](docs/RELEASE-0.3.0.md#download-and-verify).
+the archive; see [release verification](docs/RELEASE-0.4.0.md#download-and-verify).
 
 Open **http://127.0.0.1:8767/**.
 
@@ -127,11 +128,11 @@ Pilot mode is opt-in (`WORKBENCH_MODE=pilot`); the default local demo retains it
 original behavior. Usage ingestion handles application metadata; quality
 evaluation currently requires a matching saved support-v1 recording.
 
-The current **0.4.0 source checkout** also includes an **Amazon Bedrock application connector**
+The **v0.4.0 release** also includes an **Amazon Bedrock application connector**
 for boto3 Converse and ConverseStream, with collector health and an offline
 two-step example. Follow the [Bedrock setup guide](docs/BEDROCK.md). Existing
-installations need the explicit schema-3 migration; the published v0.3.0 archive
-does not include this connector yet.
+installations need the explicit schema-3 migration. Earlier release archives
+do not include this connector.
 
 ## What is working
 
@@ -279,8 +280,8 @@ evaluation results, and saved reviews in PostgreSQL.
 - [Authenticated team pilot and operations guide](docs/PILOT.md)
 - [MIT-0 license](LICENSE)
 - [Contributing](CONTRIBUTING.md), [support](SUPPORT.md), and [security reporting](SECURITY.md)
-- [v0.3.0 release notes and download verification](docs/RELEASE-0.3.0.md)
-- [Local v0.3.0 validation results](docs/VERIFICATION-0.3.0.md)
+- [v0.4.0 release notes and download verification](docs/RELEASE-0.4.0.md)
+- [v0.4.0 validation results](docs/VERIFICATION-0.4.0.md)
 
 AxonLLM and Ostiari are pinned to immutable Git revisions in `pyproject.toml` and
 `uv.lock`. They remain separate projects; this app does not patch their source.
