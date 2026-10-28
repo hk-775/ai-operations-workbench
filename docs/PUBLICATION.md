@@ -1,6 +1,29 @@
 # Publication inventory
 
-## v0.3.0 destination and distribution
+## v0.4.0 destination and distribution
+
+- Repository: `hk-775/ai-operations-workbench`, public and MIT-0.
+- GitHub Release `v0.4.0`: `ai-operations-workbench-0.4.0.tar.gz` and `SHA256SUMS`.
+- Canonical public demo and narrated architecture retain their existing Pages
+  addresses, bundled media, palette, and static-only network boundary.
+- The source includes the Bedrock application connector, collector health,
+  exact reviewed estimates, and explicit schema-3 migration. It preserves
+  unknown costs and does not claim account-wide billing or model-quality coverage.
+- The proxy recipe includes a checksum-verified JOSE security backport with its
+  upstream Apache-2.0 license. CI retains image-specific SBOM/VEX/scan evidence;
+  this source release does not distribute prebuilt images.
+- Both existing AWS test workspaces were upgraded and verified on October 28,
+  2026. Private deployment receipts, rollback data, addresses and credentials
+  remain outside Git and the archive. Release publication creates no cloud
+  infrastructure.
+- Earlier v0.2.0 and v0.3.0 releases remain unchanged. No package or container
+  registry is used.
+
+See [release, download and upgrade instructions](RELEASE-0.4.0.md) and
+[dated verification](VERIFICATION-0.4.0.md). The downloadable archive contains
+the existing editable/static AWS architecture and canonical demo assets.
+
+## Historical v0.3.0 destination and distribution
 
 - Repository: `hk-775/ai-operations-workbench`, public and MIT-0.
 - Canonical public walkthrough: `https://hk-775.github.io/ai-operations-workbench/`.

@@ -139,7 +139,7 @@ Production refuses startup without HTTPS, OIDC, an MFA requirement, monitoring
 credentials, explicit retention periods, and schema version 3. The API and worker
 check the schema rather than silently performing an upgrade. Install matching
 images for the app, worker, and maintenance service.
-The published v0.3.0 release used schema 2. The current checkout adds collector
+The v0.3.0 release used schema 2. Version 0.4.0 adds collector
 health in schema 3; follow the backup/migrate/restart and rollback instructions
 in [the Bedrock guide](BEDROCK.md#upgrade-an-existing-workbench-installation).
 
@@ -219,6 +219,8 @@ company sign-in, source delivery, totals, and reviews before switching traffic.
 For an upgrade: back up; stop app, worker, and maintenance; build the new release;
 run `migrate`; start the matched services; verify readiness and run the restore check.
 Migration 1→2 backfills query facts from saved accounting without repricing events.
+Migration 2→3 adds collector health and registers the reviewed Bedrock price
+snapshot; it preserves existing event fingerprints, accounting, and reviews.
 The migration is transactional and lock-protected. A failed migration rolls back.
 Unknown newer schemas refuse startup. Keep the pre-upgrade dump and prior image;
 do not downgrade the schema in place.
@@ -251,7 +253,11 @@ versions and `go.sum`, with patched Go/networking dependencies and unused curl
 packages removed. These recipes are in `deploy/images/`; they do not modify
 PostgreSQL's data format or add custom Caddy plugins.
 
+The proxy build also includes a checksum-verified
+[JOSE security backport](../deploy/images/proxy/patches/README.md) with its upstream
+Apache-2.0 license, build regression checks, and a runtime self-test. CI binds its
+VEX evidence to the actual scanned image and SBOM.
+
 CI scans all three resulting runtime images for high and critical vulnerabilities.
 Image and dependency pins still require updates as new findings appear. See the
-dated [release verification](VERIFICATION-0.2.0.md) for the scope and results of
-this release's local checks.
+dated [release verification](VERIFICATION-0.4.0.md) for this release's checks.

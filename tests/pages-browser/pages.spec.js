@@ -18,8 +18,8 @@ test('public entry plays bundled media, seeks chapters, loads captions, and link
   await expect(page.getByRole('heading',{level:1})).toHaveText('Follow the cost.Prove the model choice.');
   await expect(page.locator('.disclosure')).toContainText('Fictional support cases');
   await expect(page.locator('#chapters button')).toHaveCount(12);
-  await expect(page.getByRole('link',{name:'Download Workbench v0.3.0'})).toHaveAttribute(
-    'href','https://github.com/hk-775/ai-operations-workbench/releases/tag/v0.3.0');
+  await expect(page.getByRole('link',{name:'Download Workbench v0.4.0'})).toHaveAttribute(
+    'href','https://github.com/hk-775/ai-operations-workbench/releases/tag/v0.4.0');
   const video=page.locator('video'),audio=page.locator('audio');
   await page.locator('#chapters button').first().click();
   await expect.poll(()=>video.evaluate(el=>el.currentTime)).toBeGreaterThan(.15);
