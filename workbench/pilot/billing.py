@@ -10,6 +10,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 
 from workbench.billing import (BillingError, BillingMapping, BillingUpload, canonical,
                                decimal_text, difference, groups, parse_upload, total)
+from workbench.ledger_billing import LedgerBillingSnapshot
 from .database import (Conflict, billing_bindings, billing_families, billing_mappings,
                        billing_reports, events, facts, maintenance, sources, teams, uid)
 
@@ -40,14 +41,15 @@ def preview(database, team, upload):
             billing_families.c.team_id == team,
             billing_families.c.scope_key == parsed["family_key"])).mappings().first()
     snapshot = parsed["snapshot"]
+    ledger = LedgerBillingSnapshot(snapshot)
     return {
         "name": parsed["name"], "fingerprint": parsed["fingerprint"],
         "expected_revision": family["current_revision"] if family else 0,
         "account_id": snapshot["account_id"], "month": snapshot["month"],
         "currency": snapshot["currency"], "row_count": len(snapshot["rows"]),
-        "imported_charges": total(r["amount"] for r in snapshot["rows"]),
+        "imported_charges": ledger.total(), "billing_engine": ledger.evidence(),
         "outside_bedrock_rows": parsed["outside_bedrock_rows"],
-        "duplicate_rows": parsed["duplicate_rows"], "groups": groups(snapshot),
+        "duplicate_rows": parsed["duplicate_rows"], "groups": groups(snapshot, ledger=ledger),
         "uninvoiced_rows": sum(not bool(r["invoice_id"]) for r in snapshot["rows"]),
         "submitted_sha256": parsed["submitted_sha256"],
         "notice": "This is a complete replacement snapshot for the selected account, month and currency. "
@@ -57,6 +59,7 @@ def preview(database, team, upload):
 
 def import_report(database, team, upload, actor, *, fixture=False, collection_receipt=None):
     parsed = parse_upload(upload, fixture=fixture)
+    ledger = LedgerBillingSnapshot(parsed["snapshot"])
     with database.engine.begin() as db:
         # The team row exists even for the first report; it fences first-import
         # races as well as refresh/mapping writes. No AWS-wide line-ID dedupe.
@@ -91,12 +94,13 @@ def import_report(database, team, upload, actor, *, fixture=False, collection_re
             payload=canonical(parsed["snapshot"]),
             provenance=canonical({**{k: parsed[k] for k in
                 ("submitted_sha256", "outside_bedrock_rows", "duplicate_rows")},
+                "billing_engine": ledger.evidence(),
                 **({"collection": collection_receipt} if collection_receipt else {})}),
             created_at=now,
         ))
         # Carry forward only exact, still-eligible group selections. Changed
         # dimensions or removed groups require a new explicit mapping.
-        allowed = {g["id"] for g in groups(parsed["snapshot"]) if g["eligible"]}
+        allowed = {g["id"] for g in groups(parsed["snapshot"], ledger=ledger) if g["eligible"]}
         if previous:
             for row in mapping_rows(db, previous):
                 value = row["mapping"]
@@ -127,7 +131,7 @@ def list_reports(database, team, *, page=0):
                 "created_at": row["created_at"], "account_id": payload["account_id"],
                 "month": payload["month"], "currency": payload["currency"],
                 "evidence": payload["evidence"],
-                "charges": total(r["amount"] for r in payload["rows"]),
+                "charges": LedgerBillingSnapshot(payload).total(),
             })
     return {"reports": output, "page": page, "has_more": len(selected) > 25}
 
@@ -252,13 +256,14 @@ def reconcile(database, team, report_id, *, export=False):
         with db.begin():
             row = report_row(db, team, report_id)
             snapshot = json.loads(row["payload"])
-            grouped = {g["id"]: g for g in groups(snapshot)}
+            ledger = LedgerBillingSnapshot(snapshot)
+            grouped = {g["id"]: g for g in groups(snapshot, ledger=ledger)}
             comparisons, linked, selected_ids = [], set(), set()
             for stored in mapping_rows(db, report_id):
                 mapping = stored["mapping"]
                 evidence = captured(db, team, snapshot, mapping)
                 selected_ids.update(mapping["group_ids"])
-                billed = total(grouped[g]["charge_amount"] for g in mapping["group_ids"])
+                billed = ledger.total(mapping["group_ids"])
                 if evidence["calls"]:
                     linked.update(mapping["group_ids"])
                 comparisons.append({
@@ -275,6 +280,9 @@ def reconcile(database, team, report_id, *, export=False):
                 if snapshot["currency"] != "USD":
                     group["unassigned_reason"] = "Imported currency differs from the USD operational estimates."
             unassigned = [g for g in grouped.values() if not g["linked"]]
+            unassigned_ids = {g["id"] for g in unassigned}
+            if ledger.total() != total([ledger.total(linked), ledger.total(unassigned_ids)]):
+                raise BillingError("Linked and unassigned Ledger charges do not reconcile.")
             sources_available = [dict(r) for r in db.execute(select(
                 sources.c.id, sources.c.name).where(sources.c.team_id == team,
                                                    sources.c.kind == "bedrock")).mappings()]
@@ -286,11 +294,11 @@ def reconcile(database, team, report_id, *, export=False):
                                            "currency", "evidence", "cost_basis")},
                 "row_count": len(snapshot["rows"]),
                 "uninvoiced_rows": sum(not bool(r["invoice_id"]) for r in snapshot["rows"]),
-                "imported_charges": total(r["amount"] for r in snapshot["rows"]),
-                "linked_charges": total(grouped[g]["charge_amount"] for g in linked),
-                "unassigned_charges": total(g["charge_amount"] for g in unassigned),
-                "unassigned_positive_charges": total(g["positive_charges"] for g in unassigned),
-                "unassigned_adjustments": total(g["negative_adjustments"] for g in unassigned),
+                "imported_charges": ledger.total(), "billing_engine": ledger.evidence(),
+                "linked_charges": ledger.total(linked),
+                "unassigned_charges": ledger.total(unassigned_ids),
+                "unassigned_positive_charges": ledger.total(unassigned_ids, sign=1),
+                "unassigned_adjustments": ledger.total(unassigned_ids, sign=-1),
                 "unassigned_groups": len(unassigned), "groups": list(grouped.values()),
                 "comparisons": comparisons, "sources": sources_available,
                 "calculated_at": int(time.time()),

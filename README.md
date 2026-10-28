@@ -147,6 +147,8 @@ The existing seeded and clean AWS test workspaces have completed the
 [billing acceptance checks](docs/BILLING-ACCEPTANCE.md),
 [scheduled versioned CUR collection](docs/BILLING-COLLECTION.md), and
 [coding-task evaluations](docs/CODING-EVALS.md).
+Billing now uses AxonLLM Ledger's cost aggregation and integrity checks through
+a lossless adapter; Workbench retains source mappings and captured-call comparisons.
 Download the [fictional billing sample files](data/billing-sample/README.md) from
 the billing screen, or rebuild the ZIP with `scripts/build_billing_sample.py`.
 The sample includes both CSV formats, matching usage, and expected totals.
@@ -157,7 +159,8 @@ Real customer billing acceptance remains pending; authored samples do not establ
 | Capability | Current implementation |
 |---|---|
 | Usage connection | AxonLLM and Amazon Bedrock Converse/ConverseStream metadata capture; durable outboxes, authenticated source-scoped delivery, and collector heartbeats; bundled recordings and compatible JSON import |
-| Ledger | PostgreSQL in pilot mode; transactional source-scoped application-event deduplication and Decimal API estimates. Original demo uses SQLite |
+| Application event store | PostgreSQL in pilot mode; transactional source-scoped application-event deduplication and Decimal API estimates. Original demo uses SQLite |
+| AxonLLM Ledger billing engine (source) | Schema normalization, account/group cost aggregation and cross-dimension integrity checks; preserves unassigned charges and adjustments through the Workbench adapter |
 | Billing reconciliation | Complete Legacy CUR/CUR 2.0 CSV snapshots; explicit account/source/model mappings, exact charge differences, unassigned fees/credits, immutable revision history, and JSON export |
 | Scheduled billing collection (source) | Opt-in operator watcher for complete versioned Legacy CUR CSV/gzip assemblies in S3; bounded reads, hashes, revision checks, replay/refresh, collection health and alerts |
 | Coding evaluations (source) | Six bug-fix tasks, disposable offline containers, saved patches and every attempt, actual test timing, API cost per accepted patch, optional bounded AxonLLM model recording, and read-only result previews |

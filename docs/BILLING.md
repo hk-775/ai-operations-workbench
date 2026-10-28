@@ -216,11 +216,38 @@ explicit password-only hosted-test exception.
 
 ## Components and reference sources
 
-Workbench uses AxonLLM Ledger's pure `normalize_cost_row` aliases pinned to commit
-`d773dafda758755100104123c58c3a658e5866e2`. It owns financial validation,
-snapshot replacement, persistence, and reconciliation. Ledger's full ingestion,
-user/model filtering, in-memory deduplication, and quantity conversion are not
-used. AxonLLM and Ostiari's existing integration boundaries remain unchanged.
+The source checkout uses AxonLLM Ledger's `normalize_cost_row`,
+`AggregationEngine` and `DataIntegrityService`, pinned to commit
+`d773dafda758755100104123c58c3a658e5866e2`. Ledger computes billed account/group
+totals, linked/unassigned partitions and positive/negative amounts, and checks
+consistency between account and unattributed cost totals. The UI identifies
+Ledger on the imported-charge card; exports include its version and calculation
+contract. This expands the normalization-only integration shipped in v0.5.0.
+
+[`LedgerBillingSnapshot`](../workbench/ledger_billing.py) projects every accepted
+charge into Ledger's engine after Workbench validates and deduplicates the full
+snapshot. It preserves fees, credits and records without user/model identity.
+The projection uses the billing period for aggregation so adjustments for prior
+usage and charges without usage dates remain in the current bill. Original
+dates, quantities, cost basis and currency remain in the immutable source.
+Ledger's arithmetic runs at 50-digit Decimal precision.
+
+This private cost projection uses empty user/model identities and zero-valued
+token/invocation placeholders required by Ledger's record contract. Those
+placeholders are never exported or ingested as operational usage. Only Ledger's
+cost results are used; captured tokens, calls and per-call unknown invoice costs
+retain their original accounting.
+
+Workbench owns snapshot validation/replacement, PostgreSQL persistence, source
+mappings, complete-assembly collection and comparison with captured-call
+estimates. Ledger's current native importer skips rows without required
+identities and converts usage amounts to token counts, so the adapter bypasses
+that importer. Its native **CUR versus AWS Budgets actual spend** reconciliation
+is a separate capability: no matching Budgets feed is connected here, and the
+export explicitly reports `budgets_reconciliation: not_connected`. A captured
+estimate is never passed off as an AWS Budgets actual.
+
+All upstream repositories and dependency pins remain unchanged.
 
 - [AWS CUR 2.0 table dictionary](https://docs.aws.amazon.com/cur/latest/userguide/table-dictionary-cur2.html)
 - [AWS line-item columns](https://docs.aws.amazon.com/cur/latest/userguide/Lineitem-columns.html)

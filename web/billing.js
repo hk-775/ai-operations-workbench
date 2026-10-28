@@ -82,7 +82,7 @@ function createBilling({api, action, notice, isAdmin, getEpoch, onExample, onTas
         ${r.evidence==='fixture'?'<p class="data-note">All billing amounts, tokens and timings in this example are synthetic. It makes zero provider calls and is excluded from real usage totals.</p>':''}
       </article>
       <div class="metrics billing-metrics">
-        ${card('Imported Bedrock charges',money(r.imported_charges,r.currency),'Net unblended where supplied; otherwise unblended.')}
+        ${card('Imported Bedrock charges',money(r.imported_charges,r.currency),'Calculated with AxonLLM Ledger · net unblended where supplied; otherwise unblended.')}
         ${card('Charges linked to captured scope',money(r.linked_charges,r.currency),'Declared group matches with captured calls; no per-task invoice allocation.')}
         ${card('Unassigned net charges',money(r.unassigned_charges,r.currency),`${r.unassigned_groups} groups need attribution · positive ${money(r.unassigned_positive_charges,r.currency)} · adjustments ${money(r.unassigned_adjustments,r.currency)}`)}
         ${card('Usage comparisons',String(r.comparisons.length),`${incomplete} incomplete · differences need review before drawing conclusions.`)}

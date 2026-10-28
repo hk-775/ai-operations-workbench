@@ -29,6 +29,7 @@ test('billing import, declared scope, immutable refresh, export and private UI',
   await expect(comparisons).toContainText('2 captured calls across 1 task runs');
   await expect(comparisons).toContainText('USD 0.000018');
   await expect(report.locator('.billing-metrics')).toContainText('USD 0.0121475');
+  await expect(report.locator('.billing-metrics')).toContainText('Calculated with AxonLLM Ledger');
   await expect(report.locator('.billing-metrics')).toContainText('adjustments USD -0.002');
   const colors=await page.evaluate(()=>({
     card:getComputedStyle(document.querySelector('.billing-metrics .metric')).backgroundColor,
@@ -42,6 +43,8 @@ test('billing import, declared scope, immutable refresh, export and private UI',
   const evidence=JSON.parse(await readFile(await download.path(),'utf8'));
   expect(evidence.evidence).toBe('fixture');
   expect(evidence.billing_snapshot.rows).toHaveLength(5);
+  expect(evidence.billing_engine.name).toBe('AxonLLM Ledger');
+  expect(evidence.billing_engine.budgets_reconciliation).toBe('not_connected');
   expect(evidence.comparisons[0].difference_usd).toBe('0.000018');
   const source=evidence.comparisons[0].source_ids[0];
   await comparisons.getByRole('button',{name:/Inspect .* tasks/}).click();
