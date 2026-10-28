@@ -12,20 +12,21 @@ are outside its coverage. It does not prove answer quality.
 
 ## Upgrade an existing Workbench installation
 
-Use the [v0.4.0 release](RELEASE-0.4.0.md) containing this connector.
-This change requires **database schema 3**. Stop API, worker and maintenance,
-take your normal database backup, then run the explicit migration with the
-deployment's existing private environment:
+Use [v0.5.0](RELEASE-0.5.0.md), which includes this connector and manual billing reconciliation.
+Version 0.5.0 requires **database schema 4**. Stop API, worker and maintenance,
+take and verify your normal database backup, then run the explicit migration
+with the deployment's existing private environment:
 
 ```bash
 uv run --locked python -m workbench.pilot migrate
 ```
 
-Restart all services from the same checkout/image. Migration adds collector
-heartbeats and registers the reviewed price snapshot. Existing event payloads,
-fingerprints, costs, evaluations and reviews are preserved. It is idempotent.
-Version 0.3.0 expects schema 2: rolling the application back requires restoring
-the pre-upgrade database backup, not changing the version marker by hand.
+Restart all services from the same checkout/image. The earlier schema-3 migration
+added collector heartbeats and the reviewed price snapshot; schema 4 adds billing
+storage. Existing event payloads, fingerprints, costs, evaluations and reviews are
+preserved. Migration is idempotent. Version 0.4.0 expects schema 3, and v0.3.0
+expects schema 2: rollback requires restoring the pre-upgrade database backup
+with the matching previous services, not changing the version marker by hand.
 Do not run migration with a different company's environment.
 
 ## 1. Create a source

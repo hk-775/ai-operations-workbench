@@ -1,6 +1,29 @@
 # Publication inventory
 
-## v0.4.0 destination and distribution
+## v0.5.0 destination and distribution
+
+- Repository: `hk-775/ai-operations-workbench`, public and MIT-0.
+- GitHub Release `v0.5.0`: `ai-operations-workbench-0.5.0.tar.gz` and `SHA256SUMS`.
+- Includes manual Bedrock billing reconciliation: complete monthly CSV
+  snapshots, immutable revisions, declared aggregate comparisons, exact financial
+  values, unassigned charges/credits, JSON export, and an explicit schema-4 migration.
+- AxonLLM Ledger's pure schema normalization is pinned to an immutable revision.
+  Workbench owns billing validation and persistence; imported records are not
+  independently authenticated invoices or per-task cost allocations.
+- The canonical public player and narrated architecture retain their existing
+  Pages addresses, media, palette, animated solid circles, and static-only
+  network boundary. The player links to the v0.5.0 download.
+- The existing editable/static AWS architecture remains the implemented optional
+  test topology. Both workspaces were verified on schema 4; this publication
+  creates no AWS infrastructure or additional hosted deployment.
+- Earlier release assets remain unchanged. No package registry, container
+  registry, prebuilt image, or cryptographic publisher signature is introduced.
+
+See [release and upgrade instructions](RELEASE-0.5.0.md),
+[release verification](VERIFICATION-0.5.0.md), and
+[hosted acceptance](VERIFICATION-HOSTED-BILLING.md).
+
+## Historical v0.4.0 destination and distribution
 
 - Repository: `hk-775/ai-operations-workbench`, public and MIT-0.
 - GitHub Release `v0.4.0`: `ai-operations-workbench-0.4.0.tar.gz` and `SHA256SUMS`.
@@ -95,7 +118,7 @@ static imitation is published.
 | `web/media/workbench-demo.*` and `workbench-demo-poster.png` | Actual isolated local team UI capture with fictional saved support evidence, authored title cards, synthetic narration, and captions; no hosted login or company data |
 | `docs/demo/` and `scripts/*demo*` | Authored storyboard, audio provenance/hashes, capture manifest, transcript, and repeatable media authoring scripts; raw captures and runtime credentials stay in ignored paths |
 | `compose*.yaml` and `deploy/` | Company-neutral deployment recipes; installation-specific files are generated privately |
-| AxonLLM and Ostiari | Public MIT-0 dependencies, pinned to immutable Git revisions |
+| AxonLLM, Ostiari, and AxonLLM Ledger | Public MIT-0 dependencies, pinned to immutable Git revisions; billing uses Ledger's pure normalization functions |
 | Container build recipes | Pinned upstream Python, PostgreSQL, Go, uv, and Caddy images/modules; no prebuilt container images are distributed by this release |
 
 The recording includes provider response IDs for event deduplication; these

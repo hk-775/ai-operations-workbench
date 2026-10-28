@@ -81,7 +81,7 @@ in the roadmap do not imply working integrations.
 
 ## 5. Reconcile the bill and attribute outcomes
 
-Implemented in 0.5.0 source: [Bedrock billing reconciliation](BILLING.md), with
+Released in v0.5.0: [Bedrock billing reconciliation](BILLING.md), with
 Ledger schema normalization and Workbench-owned snapshot persistence. Administrators
 import complete monthly CSV exports and declare source/model scopes. The screen
 shows precise differences, incomplete comparisons, credits/fees and other

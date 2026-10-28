@@ -23,7 +23,7 @@ const product = {
       'Repeated events are acknowledged. Conflicting payloads roll back the batch.',
       'Reported token usage and provider response IDs are not authenticated provider invoices.'),
     node('ledger','PostgreSQL ledger','Usage, evidence, and job state',690,70,'yellow','WORKBENCH DATABASE',
-      'The ledger keeps events, historical price facts, recordings, queued jobs, results, and saved reviews in team scope. Version 0.5.0 source adds imported Bedrock billing snapshots and declared comparison scopes.',
+      'The ledger keeps events, historical price facts, recordings, queued jobs, results, and saved reviews in team scope. Version 0.5.0 adds imported Bedrock billing snapshots and declared comparison scopes.',
       'Known API estimates and imported charges as separate precise decimal amounts; unknown usage remains unknown.',
       'A durable cost trail and reproducible links from a review to its input evidence.',
       'Billing reconciliation uses administrator-supplied CSV and declared group mappings. It does not authenticate invoices or allocate them to tasks. Automated billing feeds remain future work.'),

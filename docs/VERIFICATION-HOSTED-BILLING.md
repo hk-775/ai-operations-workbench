@@ -2,8 +2,9 @@
 
 The existing seeded and clean AWS acceptance workspaces were upgraded to
 **0.5.0 / schema 4** from merged commit `abcdb60301b91fac70f68bd3ebf3d23cf90762c2`.
-This records a hosted source deployment. The published v0.4.0 archive remains
-unchanged; a v0.5.0 release has not been published.
+This records the hosted source deployment before release publication. At the time
+of this acceptance, v0.4.0 was the latest archive. See the subsequent
+[v0.5.0 release](RELEASE-0.5.0.md) and [release verification](VERIFICATION-0.5.0.md).
 
 ## Migration and preserved evidence
 

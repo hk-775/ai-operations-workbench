@@ -7,7 +7,7 @@ There is no vendor-hosted service or license activation call.
 
 The supported scope is AxonLLM and instrumented Bedrock usage capture, exact captured-call estimates,
 task inspection, support-v1 saved-output evaluations, and read-only routing reviews.
-Version 0.5.0 source adds [manual Bedrock billing reconciliation](BILLING.md)
+Version 0.5.0 adds [manual Bedrock billing reconciliation](BILLING.md)
 with declared aggregate scopes; the published 0.4.0 archive does not include it.
 Native subscription-tool billing connectors, automatic billing collection, arbitrary
 evaluation plugins, and automatic routing changes are separate product features.
@@ -138,11 +138,11 @@ Use encrypted host volumes and encrypted backup storage. Workbench does not
 implement application-level encryption of database fields.
 
 Production refuses startup without HTTPS, OIDC, an MFA requirement, monitoring
-credentials, explicit retention periods, and schema version 4 in 0.5.0 source. The API and worker
+credentials, explicit retention periods, and schema version 4 in v0.5.0. The API and worker
 check the schema rather than silently performing an upgrade. Install matching
 images for the app, worker, and maintenance service.
 The v0.3.0 release used schema 2. Version 0.4.0 adds collector
-health in schema 3. Version 0.5.0 source adds billing snapshots and declared
+health in schema 3. Version 0.5.0 adds billing snapshots and declared
 comparisons in schema 4; follow the backup/migrate/restart and rollback instructions
 in [the billing guide](BILLING.md#access-retention-and-upgrade). Billing revisions
 and mappings follow evidence retention. The v0.4.0 download remains schema 3.
@@ -264,4 +264,4 @@ VEX evidence to the actual scanned image and SBOM.
 
 CI scans all three resulting runtime images for high and critical vulnerabilities.
 Image and dependency pins still require updates as new findings appear. See the
-dated [release verification](VERIFICATION-0.4.0.md) for this release's checks.
+dated [release verification](VERIFICATION-0.5.0.md) for this release's checks.
