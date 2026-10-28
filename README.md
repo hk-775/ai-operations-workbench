@@ -139,6 +139,8 @@ adds administrator CSV import, snapshot history, declared source/model compariso
 unassigned charges, and evidence export. Try **Billing reconciliation → Load
 fictional billing example** in an authenticated workspace. This requires an
 explicit **schema-4 migration** and is not in the v0.4.0 download.
+The existing seeded and clean AWS test workspaces have completed the
+[hosted schema-4 acceptance](docs/VERIFICATION-HOSTED-BILLING.md).
 
 ## What is working
 

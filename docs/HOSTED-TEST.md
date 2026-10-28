@@ -5,6 +5,9 @@ It has two independent workspaces: a recorded demo and a clean installation.
 It uses fictional content, makes no paid model calls, and changes no routing.
 The [October 26 acceptance report](VERIFICATION-HOSTED-2026-10-26.md) records
 the completed hosted verification and its limits.
+The [October 28 billing acceptance](VERIFICATION-HOSTED-BILLING.md) records the
+existing workspaces' upgrade to 0.5.0 source and schema 4, preserved data, billing
+checks, and fresh backup restoration. The public v0.4.0 archive is unchanged.
 
 The requested test uses **password-only Amazon Cognito SSO, without MFA**.
 `WORKBENCH_HOSTED_TEST=true` makes this exception explicit. Standard production
@@ -89,6 +92,11 @@ Sign-in acceptance must complete the real Cognito browser flow for both users.
 Verify the demo's 144 calls, 72 tasks, exact `$0.088074750` recorded estimate,
 completed evaluation, and saved review. Verify that the clean workspace has
 zero sources, calls, recordings, evaluations, and reviews.
+The current seeded AWS workspace also contains the explicitly loaded fictional
+billing example, whose two synthetic calls are excluded from the original usage
+totals. The clean workspace has no billing snapshots. On a fresh installation,
+loading that example is an explicit administrator action; `seed-demo` alone does
+not import a bill.
 
 The browser harness targets the supplied Cognito test login and reads generated
 credentials from a private `logins.json` file:
@@ -99,7 +107,7 @@ node scripts/check_hosted_browser.mjs --state-dir .pilot/hosted
 ```
 
 Use `--show` for an interactive window. It uses the actual window viewport,
-checks all seven views in each workspace, and leaves both workspaces signed in.
+checks all eight views in each workspace, and leaves both workspaces signed in.
 The headless run signs out afterward. Reports and screenshots stay in the
 private state directory.
 

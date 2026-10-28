@@ -2,6 +2,8 @@
 
 Scope: 0.5.0 development source and schema 4. This is implementation evidence,
 not a release announcement or a claim that hosted v0.4.0 was upgraded.
+The subsequent [hosted upgrade and acceptance](VERIFICATION-HOSTED-BILLING.md)
+is recorded separately.
 
 ## Local checks
 

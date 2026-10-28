@@ -27,7 +27,7 @@ try {
   await page.locator('input[name="username"]:visible').fill(login.username);
   await page.locator('input[name="password"]:visible').fill(login.password);
   await page.locator('input[name="signInSubmitButton"]:visible').click();
-  await page.waitForURL(url=>url.origin===login.url,{timeout:45000});
+  await page.waitForURL(url=>url.origin===login.url,{timeout:45000,waitUntil:'domcontentloaded'});
   await page.locator('#team-view').waitFor({state:'visible',timeout:30000});
   const get=async path=>{const r=await context.request.get(login.url+path);assert.equal(r.status(),200,path);return r.json();};
   const session=await get('/api/auth/session');
@@ -58,7 +58,7 @@ try {
   const operations=await get('/api/pilot/operations');
   assert.equal(operations.status,'healthy');
   phase=label+' navigation';
-  const pages=['usage','tasks','evaluations','proposals','sources','operations','team'];
+  const pages=['usage','billing','tasks','evaluations','proposals','sources','operations','team'];
   const scrolling=[];
   for (const name of pages) {
    phase=label+' navigation '+name;
@@ -67,6 +67,7 @@ try {
    await page.locator('button[data-page="'+name+'"]').click();
    for(const response of await Promise.all(pending)) await response.finished();
    await page.locator('#page-'+name).waitFor({state:'visible'});
+   if(name==='billing') await page.locator('#billing-report > *').first().waitFor({state:'visible'});
    if(name==='proposals') await page.locator('#proposals > *').first().waitFor({state:'visible'});
    if(name==='team') await page.locator('#audit table').waitFor({state:'visible'});
    if(name==='operations') await page.locator('#operations-metrics .metric').first().waitFor({state:'visible'});

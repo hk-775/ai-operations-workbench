@@ -88,6 +88,9 @@ shows precise differences, incomplete comparisons, credits/fees and other
 unassigned charges, revisions, and exportable provenance. A fictional example
 exercises the full flow without model calls. Schema 4 is required; this feature
 is not included in the v0.4.0 release.
+The existing seeded and clean AWS test workspaces have been
+[upgraded and verified on schema 4](VERIFICATION-HOSTED-BILLING.md), including
+fresh restore checks and the isolated fictional billing example.
 
 Next validate representative customer exports and add supported automated
 collection and other providers. Imported records are not independently
