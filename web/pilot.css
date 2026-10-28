@@ -101,6 +101,20 @@
 #proposal-form .controls { align-items:start; }
 #proposal-form .controls > .field { min-width:0; }
 #evaluation-help { margin-top:14px; }
+.billing-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin:20px 0}
+.billing-confirm{align-items:flex-start;line-height:1.6;margin:20px 0;max-width:900px}
+.billing-confirm input{flex-shrink:0;margin-top:4px}
+.billing-table small{display:block;font-size:11px;color:#57534e;margin-top:7px;line-height:1.6}
+.billing-table input[type=checkbox]{width:18px;height:18px}
+.billing-comparison-values{grid-template-columns:repeat(3,minmax(0,1fr))}
+.billing-comparison-values dd{font-size:18px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.billing-scope .section-head{align-items:flex-start;flex-wrap:wrap}
+.billing-metrics .metric{background:var(--accent-soft);border-color:var(--accent-line)}
+#billing-report .help-details code{display:inline-block;max-width:100%;overflow-wrap:anywhere}
+#billing-preview{margin-top:24px;padding:20px;border:1px solid var(--accent-line);border-radius:12px;background:var(--accent-soft)}
+#billing-import-details>summary,#billing-mapping-details>summary{font-size:15px}
+#billing-report-select{margin-top:8px}
+@media(max-width:800px){.billing-form-grid,.billing-comparison-values{grid-template-columns:1fr}.billing-scope .row-actions{width:100%}.billing-table{min-width:700px}}
 .journey-step[aria-current="step"] { outline:2px solid var(--accent-line);outline-offset:2px; }
 @media(max-width:800px) {
   .screen-steps,.role-guide,.result-guide,.task-steps { grid-template-columns:1fr; }

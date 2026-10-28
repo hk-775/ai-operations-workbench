@@ -19,6 +19,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from starlette.datastructures import Headers, MutableHeaders
 
 from workbench.domain import ROOT, evaluation_revision, strict_json
+from workbench.billing import BillingError
 from workbench.evidence import recommend
 from . import auth
 from .config import Settings
@@ -64,7 +65,8 @@ class Boundary:
         if scope["method"] not in {"GET", "HEAD", "OPTIONS"}:
             if headers.get("content-type", "").split(";")[0] != "application/json":
                 return await reject(415, "JSON content type required")
-            limit = (8_000_000 if scope["path"] == "/api/pilot/recordings"
+            limit = (16_500_000 if scope["path"] in {"/api/pilot/billing/preview", "/api/pilot/billing/imports"}
+                     else 8_000_000 if scope["path"] == "/api/pilot/recordings"
                      else 512_000 if scope["path"] == "/api/pilot/ingest" else 16_000)
             length = headers.get("content-length")
             if length and (not length.isdigit() or int(length) > limit):
@@ -162,6 +164,10 @@ def create_pilot_app(settings: Settings | None = None) -> FastAPI:
     async def conflict(request, exc):
         return JSONResponse({"detail": str(exc)}, status_code=409)
 
+    @app.exception_handler(BillingError)
+    async def billing_error(request, exc):
+        return JSONResponse({"detail": str(exc)}, status_code=422)
+
     @app.exception_handler(KeyError)
     async def missing(request, exc):
         return JSONResponse({"detail": "Record not found"}, status_code=404)
@@ -190,6 +196,9 @@ def create_pilot_app(settings: Settings | None = None) -> FastAPI:
         if actor["role"] != "admin":
             raise HTTPException(403, "Administrator role required")
         return actor
+
+    from .billing_routes import register as register_billing
+    register_billing(app, database, member, admin)
 
     @app.get("/health/live")
     def live():

@@ -33,6 +33,13 @@ AxonLLM, Ostiari, or Ledger repositories to make this app work.
   clip content without triggering scrollbars. Check that every navigation view
   reaches its footer using wheel/keyboard scrolling in the visible window.
 - Keep monetary values as Decimal text. Missing cost is unknown, not zero.
+- Billing imports are complete replacement snapshots scoped to usage account,
+  month, currency, and fixture/imported evidence. Retain immutable revisions.
+  Use Ledger's pure schema aliases; never drop charges for missing user/model
+  identity or assume billing units are tokens. Admin-declared mappings do not
+  authenticate invoices or allocate them to individual tasks. Keep adjustments
+  and unassigned spend visible; incomplete capture yields unknown variance.
+  Preserve original event accounting and per-call unknown invoice costs.
 - Bedrock capture is opt-in boto3 Converse/ConverseStream metadata. Preserve AWS
   cache categories and exact model/region/tier/date pricing; do not guess profile
   mappings or retry costs. Keep legacy Axon event fingerprints unchanged.

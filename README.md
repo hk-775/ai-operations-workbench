@@ -134,12 +134,19 @@ two-step example. Follow the [Bedrock setup guide](docs/BEDROCK.md). Existing
 installations need the explicit schema-3 migration. Earlier release archives
 do not include this connector.
 
+**In 0.5.0 source development:** [Bedrock billing reconciliation](docs/BILLING.md)
+adds administrator CSV import, snapshot history, declared source/model comparisons,
+unassigned charges, and evidence export. Try **Billing reconciliation → Load
+fictional billing example** in an authenticated workspace. This requires an
+explicit **schema-4 migration** and is not in the v0.4.0 download.
+
 ## What is working
 
 | Capability | Current implementation |
 |---|---|
 | Usage connection | AxonLLM and Amazon Bedrock Converse/ConverseStream metadata capture; durable outboxes, authenticated source-scoped delivery, and collector heartbeats; bundled recordings and compatible JSON import |
 | Ledger | PostgreSQL in pilot mode; transactional source-scoped application-event deduplication and Decimal API estimates. Original demo uses SQLite |
+| Billing reconciliation (0.5.0 source) | Complete Legacy CUR/CUR 2.0 CSV snapshots; explicit account/source/model mappings, exact charge differences, unassigned fees/credits, immutable revision history, and JSON export |
 | Team access | Company OIDC/MFA or local test accounts; explicit administrator, analyst, viewer roles; revocable sessions and source tokens |
 | Operations | Administrator health dashboard, source backlog/stale-collector warnings, private Prometheus metrics, alert rules, structured request logs, and scheduled retention |
 | Scale | SQL totals, UTC time windows, paginated tasks and calls; historical prices and unknown costs preserved |
@@ -152,7 +159,7 @@ do not include this connector.
 | Interface | Guided team screens with named recorded tasks, per-call costs, and expandable technical details. White navigation, stone backgrounds, violet buttons, sky overview cards matching the selected menu, and yellow/violet/teal workflow accents; desktop and mobile; small moving circles with pause and reduced-motion support |
 
 **Not yet implemented:** native Codex, Cursor or Claude Code connectors;
-account-wide Bedrock billing ingestion; subscription invoice reconciliation; a coding workload; multi-company
+automatic account-wide Bedrock billing collection; subscription invoice reconciliation; a coding workload; multi-company
 SaaS tenant management; arbitrary workload evaluators; or production routing changes. The pilot
 is bounded to a single team, with a support-workflow evaluation contract.
 

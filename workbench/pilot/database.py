@@ -128,6 +128,35 @@ proposals = Table("wb_proposals", metadata,
                   Column("job_id", ForeignKey("wb_jobs.id"), nullable=False),
                   Column("payload", Text, nullable=False),
                   Column("created_at", BigInteger, nullable=False))
+billing_families = Table("wb_billing_families", metadata,
+    Column("id", String(36), primary_key=True),
+    Column("team_id", ForeignKey("wb_teams.id"), nullable=False),
+    Column("scope_key", String(64), nullable=False),
+    Column("current_revision", Integer, nullable=False),
+    UniqueConstraint("team_id", "scope_key"))
+billing_reports = Table("wb_billing_reports", metadata,
+    Column("id", String(36), primary_key=True),
+    Column("family_id", ForeignKey("wb_billing_families.id", ondelete="CASCADE"), nullable=False),
+    Column("team_id", ForeignKey("wb_teams.id"), nullable=False),
+    Column("revision", Integer, nullable=False),
+    Column("fingerprint", String(64), nullable=False),
+    Column("name", String(100), nullable=False),
+    Column("payload", Text, nullable=False),
+    Column("provenance", Text, nullable=False),
+    Column("created_at", BigInteger, nullable=False),
+    UniqueConstraint("family_id", "revision"),
+    UniqueConstraint("family_id", "fingerprint"))
+billing_bindings = Table("wb_billing_bindings", metadata,
+    Column("source_id", ForeignKey("wb_sources.id", ondelete="CASCADE"), primary_key=True),
+    Column("team_id", ForeignKey("wb_teams.id"), nullable=False),
+    Column("account_id", String(12), nullable=False),
+    Column("created_at", BigInteger, nullable=False))
+billing_mappings = Table("wb_billing_mappings", metadata,
+    Column("id", String(36), primary_key=True),
+    Column("report_id", ForeignKey("wb_billing_reports.id", ondelete="CASCADE"), nullable=False),
+    Column("payload", Text, nullable=False),
+    Column("created_at", BigInteger, nullable=False))
+Index("wb_billing_reports_team_time", billing_reports.c.team_id, billing_reports.c.created_at)
 
 
 def uid() -> str:
@@ -161,10 +190,10 @@ class Database:
                 db.exec_driver_sql("SELECT pg_advisory_xact_lock(2026102301)")
             schema.create(db, checkfirst=True)
             versions = db.execute(select(schema.c.version)).scalars().all()
-            if versions and versions not in ([1], [2], [3]):
+            if versions and versions not in ([1], [2], [3], [4]):
                 raise RuntimeError("Unsupported pilot database schema")
             metadata.create_all(db)
-            if versions not in ([2], [3]):
+            if versions not in ([2], [3], [4]):
                 # Only copy persisted accounting: repricing would rewrite historical evidence.
                 while True:
                     batch = db.execute(select(events.c.source_id, events.c.event_id, events.c.accounting)
@@ -175,17 +204,18 @@ class Database:
                         break
                     db.execute(insert(facts), [self.fact(row["source_id"], row["event_id"],
                                                         json.loads(row["accounting"])) for row in batch])
-            if versions != [3]:
-                # v3 adds collector heartbeats; existing payloads/facts stay byte-for-byte intact.
+            if versions != [4]:
+                # v4 adds billing snapshots/bindings; historical event accounting
+                # and the v3 collector records remain byte-for-byte intact.
                 db.execute(delete(schema))
-                db.execute(insert(schema).values(version=3))
+                db.execute(insert(schema).values(version=4))
             book = pricebook()
             if not db.execute(select(books.c.id).where(books.c.id == book["id"])).first():
                 db.execute(insert(books).values(id=book["id"], payload=json.dumps(book["snapshot"])))
 
     def check_schema(self):
         with self.engine.connect() as db:
-            if db.execute(select(schema.c.version)).scalars().all() != [3]:
+            if db.execute(select(schema.c.version)).scalars().all() != [4]:
                 raise RuntimeError("Run the explicit database migration before starting this release")
 
     @staticmethod

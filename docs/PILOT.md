@@ -90,6 +90,9 @@ For native boto3 Converse/ConverseStream application capture, follow
 nonstreaming contract. Source tokens accept their selected connector's schema.
 Version 0.4.0 requires an explicit migration to schema 3 for collector
 health; v0.3.0 deployments use schema 2.
+Version 0.5.0 source requires schema 4 for
+[Bedrock billing reconciliation](BILLING.md), including its explicit fictional
+example. Follow the backup and migration instructions before upgrading.
 
 ## First connector delivery, without model calls
 

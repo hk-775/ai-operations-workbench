@@ -85,8 +85,11 @@ cost estimates.
 
 This version embeds **Ostiari Guard**, not Ostiari's complete gateway/control
 plane. It does not exercise Ostiari's billing dashboard, identity, approvals,
-or full trace retention. AxonLLM Ledger is a possible later source for billing
-ingestion; it is not integrated here.
+or full trace retention. In 0.5.0 source, **AxonLLM Ledger** supplies pure schema
+aliases for Legacy CUR/CUR 2.0 CSV. Workbench validates and persists complete
+billing snapshots, revision history, source-account bindings, and declared
+model-scope comparisons in PostgreSQL. It does not use Ledger's full ingestion
+pipeline. See [billing reconciliation](BILLING.md) for scope and interpretation.
 
 Dependencies are pinned to immutable upstream Git commits. There are no changes
 to the AxonLLM, Ostiari, or Ledger repositories.
