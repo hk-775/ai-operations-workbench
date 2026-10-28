@@ -33,6 +33,10 @@ AxonLLM, Ostiari, or Ledger repositories to make this app work.
   clip content without triggering scrollbars. Check that every navigation view
   reaches its footer using wheel/keyboard scrolling in the visible window.
 - Keep monetary values as Decimal text. Missing cost is unknown, not zero.
+- Bedrock capture is opt-in boto3 Converse/ConverseStream metadata. Preserve AWS
+  cache categories and exact model/region/tier/date pricing; do not guess profile
+  mappings or retry costs. Keep legacy Axon event fingerprints unchanged.
+  Collector heartbeats prove delivery liveness, not complete application coverage.
 - Pilot mode requires PostgreSQL, authenticated access, server-derived team/source
   scope, metadata-only ingestion, and durable worker leases/results. Preserve the
   default loopback-only demo. No paid model calls are part of verification.

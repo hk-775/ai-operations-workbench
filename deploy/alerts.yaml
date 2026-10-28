@@ -35,3 +35,17 @@ groups:
         for: 5m
         labels: {severity: critical}
         annotations: {summary: More than one percent of requests are failing}
+      - alert: WorkbenchUsageCollectorStale
+        expr: workbench_stale_usage_sources > 0
+        for: 2m
+        labels: {severity: warning}
+        annotations:
+          summary: A usage collector has stopped reporting
+          description: Check Usage sources, its application host, source token, and delivery supervisor. Missing costs are unknown.
+      - alert: WorkbenchUsageDeliveryBacklog
+        expr: workbench_backlog_usage_sources > 0
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: A usage source continues to report undelivered events
+          description: Inspect the local outbox and delivery errors. Reported queue counts may be stale.

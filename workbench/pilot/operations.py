@@ -11,7 +11,7 @@ from prometheus_client import CollectorRegistry, Counter, Gauge, Histogram, gene
 from sqlalchemy import and_, func, select
 from starlette.datastructures import MutableHeaders
 
-from .database import events, facts, jobs, maintenance, workers
+from .database import events, facts, jobs, maintenance, sources, workers
 
 log = logging.getLogger("workbench.operations")
 
@@ -39,6 +39,11 @@ def snapshot(database, settings, team=None):
         latest = db.execute(select(func.max(events.c.received_at)).where(
             *([events.c.team_id == team] if team else []), events.c.evidence == "observed")).scalar_one()
         upkeep = db.execute(select(maintenance).where(maintenance.c.id == "last_run")).mappings().first()
+        teams = [team] if team else db.execute(select(sources.c.team_id).distinct()).scalars().all()
+    connections = [source for identity in teams for source in database.list_sources(identity)
+                   if source["kind"] != "recording"]
+    stale_sources = sum(s["collection"]["stale_collectors"] > 0 for s in connections)
+    backlog_sources = sum(bool(s["collection"]["pending_events"]) for s in connections)
     worker_age = None if heartbeat is None else max(0, now - heartbeat)
     maintenance_age = None if not upkeep else max(0, now - upkeep["updated_at"])
     result = {"worker_healthy": worker_age is not None and worker_age < 45,
@@ -51,6 +56,11 @@ def snapshot(database, settings, team=None):
               "audit_retention_days": settings.audit_retention_days,
               "maintenance_age_seconds": maintenance_age,
               "maintenance": json.loads(upkeep["payload"]) if upkeep else None}
+    result["collection"] = {"application_sources": len(connections),
+        "stale_sources": stale_sources, "backlog_sources": backlog_sources,
+        "unmonitored_sources": sum(s["collection"]["status"] == "unmonitored" for s in connections)}
+    result["stale_usage_sources"] = stale_sources
+    result["backlog_usage_sources"] = backlog_sources
     alerts = []
     if not result["worker_healthy"]:
         alerts.append({"severity": "critical", "message": "Evaluation worker is unavailable."})
@@ -60,6 +70,10 @@ def snapshot(database, settings, team=None):
         alerts.append({"severity": "warning", "message": f"{failed} evaluations failed in the last 24 hours."})
     if captured and unknown / captured > .05:
         alerts.append({"severity": "warning", "message": "More than 5% of observed calls have unknown costs."})
+    if stale_sources:
+        alerts.append({"severity": "warning", "message": f"{stale_sources} usage sources have stopped reporting collector health. Check Usage sources."})
+    if backlog_sources:
+        alerts.append({"severity": "warning", "message": f"{backlog_sources} usage sources last reported undelivered events. Check Usage sources."})
     if settings.retention_days and (maintenance_age is None or maintenance_age > 7200):
         alerts.append({"severity": "critical", "message": "Scheduled maintenance has not completed in two hours."})
     result["alerts"] = alerts
@@ -76,7 +90,8 @@ class Metrics:
                                   ["route"], buckets=(.01, .05, .1, .25, .5, 1, 2, 5, 15),
                                   registry=self.registry)
         names = ("worker_healthy", "oldest_queued_seconds", "failed_jobs_24h",
-                 "observed_calls_24h", "unknown_cost_calls_24h", "maintenance_age_seconds")
+                 "observed_calls_24h", "unknown_cost_calls_24h", "maintenance_age_seconds",
+                 "stale_usage_sources", "backlog_usage_sources")
         self.gauges = {name: Gauge(f"workbench_{name}", name.replace("_", " "),
                                   registry=self.registry) for name in names}
 

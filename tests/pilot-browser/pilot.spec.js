@@ -34,7 +34,8 @@ test('authenticated team journey persists evidence and exports a read-only propo
   await page.getByLabel('Source name').fill('Application connector');
   await page.getByRole('button',{name:'Create AxonLLM source'}).click();
   await expect(page.getByRole('heading',{name:'Application connector'})).toBeVisible();
-  await page.getByRole('button',{name:'Issue token',exact:true}).click();
+  await page.locator('.source-row').filter({has:page.getByRole('heading',{name:'Application connector',exact:true})})
+    .getByRole('button',{name:'Issue token',exact:true}).click();
   await expect(page.getByLabel('Ingestion token',{exact:true})).toHaveValue(/^wb_ing_/);
   await page.getByRole('button',{name:'I have saved the token'}).click();
   await recorded(page);

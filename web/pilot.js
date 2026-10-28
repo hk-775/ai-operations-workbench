@@ -10,6 +10,10 @@ const stageName = value => ({triage:'Classify request',draft:'Draft decision and
 const stageHelp = value => ({triage:'Identify what the customer needs.',draft:'Propose a policy-based decision and a customer reply.'}[value] || 'A model call captured by your application.');
 const coverageName = value => ({single_attempt:'This attempt captured',final_response_only:'Final response only; earlier attempts may be missing',unknown:'Attempt capture is unknown'}[value] || readable(value));
 const usageName = value => ({provider_reported:'Tokens reported by provider',estimated:'Estimated tokens',unknown:'Token usage unknown'}[value] || readable(value));
+const timing = value => value === null || value === undefined ? 'Unmeasured' : `${value} ms`;
+const tokenDetails = call => !call.usage ? 'Tokens unknown' : call.schema_version==='bedrock.usage.v1' ?
+  `${call.usage.input_tokens} input / ${call.usage.output_tokens} output / ${call.usage.cache_read_input_tokens} cache read / ${call.usage.cache_write_input_tokens} cache write tokens (AWS categories)` :
+  `${call.usage.prompt_tokens} input / ${call.usage.completion_tokens} output / ${call.usage.cached_tokens} cached tokens`;
 const taskAmount = task => task.call_count > 0 && task.unknown_cost_calls === task.call_count ? 'Unknown' : amount(task.api_estimate_usd);
 const exclusionName = value => ({
   'Contract pass rate below threshold':'Too few tickets passed all checks',
@@ -112,8 +116,8 @@ function callDetail(call) {
   return `<tr><td>${escape(readable(call.stage))}<br>${badge(evidenceName(call.evidence))}</td>
     <td>${escape(call.provider)}<br>${escape(call.model)}</td>
     <td>${escape(amount(call.api_estimate_usd))}<br><small>${escape(call.unknown_reason || `Saved price reference ${call.pricebook_id.slice(0,12)}`)}</small></td>
-    <td>${escape(usageName(call.usage_basis))}<br>${escape(coverageName(call.attempt_coverage))}<br><small>${call.usage?`${call.usage.prompt_tokens} input / ${call.usage.completion_tokens} output / ${call.usage.cached_tokens} cached tokens`:'Tokens unknown'}</small></td>
-    <td>${escape(call.latency_ms)} ms</td></tr>`;
+    <td>${escape(usageName(call.usage_basis))}<br>${escape(coverageName(call.attempt_coverage))}<br><small>${escape(tokenDetails(call))}</small>${call.bedrock?`<br><small>${escape(call.bedrock.region)} · ${escape(call.bedrock.service_tier)} tier · SDK retries: ${call.bedrock.sdk_retry_count ?? 'unknown'}${call.bedrock.capture_issue?` · ${escape(readable(call.bedrock.capture_issue))}`:''}</small>`:''}</td>
+    <td>${escape(timing(call.latency_ms))}${call.bedrock?`<br><small>Provider: ${escape(timing(call.bedrock.provider_latency_ms))}</small>`:''}</td></tr>`;
 }
 function taskBody(task,index) {
   const calls=orderedCalls(task);
@@ -123,7 +127,7 @@ function taskBody(task,index) {
       <div class="section-head"><strong>${escape(task.context?stageName(call.stage):readable(call.stage))}</strong>${badge(call.status==='success'?'Call completed':call.status==='error'?'Call failed':'Call interrupted',call.status==='success'?'good':'danger')}</div>
       <p>${escape(task.context?stageHelp(call.stage):'A model call captured by your application.')}</p>
       <p class="call-cost">${escape(amount(call.api_estimate_usd))}<small>estimated API cost</small></p>
-      <p class="fine">${escape(modelName(call.model))} · ${escape(call.latency_ms)} ms · ${escape(evidenceName(call.evidence))}</p>
+      <p class="fine">${escape(modelName(call.model))} · ${escape(timing(call.latency_ms))} · ${escape(evidenceName(call.evidence))}</p>
       ${call.unknown_reason?`<p class="data-note">${escape(call.unknown_reason)}</p>`:''}
     </li>`).join('')}</ol>
     <div class="task-total"><span>${task.unknown_cost_calls?'Known API subtotal':'Total estimated API cost'}<small>${task.call_count} captured model calls${task.unknown_cost_calls?` · ${task.unknown_cost_calls} with unknown cost`:''}${task.uncovered_attempt_calls?` · ${task.uncovered_attempt_calls} with incomplete attempt capture`:''}</small></span><strong>${escape(taskAmount(task))}</strong></div>
@@ -183,12 +187,26 @@ async function loadSources() {
   $('source-filter').innerHTML = '<option value="">All sources</option>' + result.sources.map(s=>`<option value="${escape(s.id)}">${escape(s.name)}</option>`).join('');
   $('source-filter').value = selected;
   $('sources').innerHTML = result.sources.map(s=>`<article class="panel source-row"><div><h2>${escape(s.kind==='recording'?'Recorded support comparison':s.name)}</h2>
-    <p class="fine">${s.kind==='recording'?'Saved example; not a live connection':'Application connection'} · ${s.event_count} captured calls · Last received: ${escape(date(s.last_received_at))}</p>
+    <p class="fine">${s.kind==='recording'?'Saved example; not a live connection':s.kind==='bedrock'?'Amazon Bedrock · Converse / ConverseStream':'AxonLLM application connection'} · ${s.event_count} captured calls · Last received: ${escape(date(s.last_received_at))}</p>
+    ${sourceHealth(s)}
     ${s.kind!=='recording' && !s.event_count?'<p class="data-note">Waiting for calls. Configure the application connector with an active token to begin sending usage.</p>':''}
     <div class="fine">${s.tokens.map(t=>`<p>Connection token ${escape(t.prefix)}… · ${t.revoked?'revoked':`expires ${escape(date(t.expires_at))}`}
       ${isAdmin()&&!t.revoked?`<button class="button small" data-revoke-token="${t.id}" data-source="${s.id}">Revoke token ${escape(t.prefix)}</button>`:''}</p>`).join('')}</div></div>
-    ${isAdmin() && s.kind==='axonllm' ? `<div class="row-actions"><button class="button soft" data-token="${s.id}">Issue token</button><button class="button" data-revoke="${s.id}">Revoke all tokens</button></div>` : ''}</article>`).join('') ||
-      '<p class="notice">No sources connected yet. An administrator can create the first AxonLLM source.</p>';
+    ${isAdmin() && s.kind!=='recording' ? `<div class="row-actions"><button class="button soft" data-token="${s.id}">Issue token</button><button class="button" data-revoke="${s.id}">Revoke all tokens</button></div>` : ''}</article>`).join('') ||
+      '<p class="notice">No sources connected yet. An administrator can create an AxonLLM or Amazon Bedrock source.</p>';
+}
+function sourceHealth(source) {
+  const state=source.collection;
+  if (!state || source.kind==='recording') return '';
+  const labels={connected:'Connected',backlog:'Delivery backlog',stale:'Collector stopped reporting',unmonitored:'Health not reported',token_required:'Active token required'};
+  const explanations={connected:'Delivery is running. An idle application can have zero calls.',
+    backlog:'Events are waiting in the local outbox. Check the delivery process and retry status.',
+    stale:'No heartbeat from one or more collectors for over three minutes. Check the application host and delivery process; costs may be missing.',
+    unmonitored:'Run deliver --watch with this source token to report collection health.',
+    token_required:'Issue or rotate a token, then restart delivery with the new token.'};
+  return `<p>${badge(labels[state.status] || 'Unknown',state.status==='connected'?'good':'warn')}</p><p class="data-note">${escape(explanations[state.status] || '')}</p>
+    ${state.collectors?`<p class="fine">Last reported: ${state.pending_events} waiting · ${state.retrying_events} retrying · ${state.inflight_calls} in progress or interrupted. Heartbeat: ${escape(date(state.last_heartbeat_at))}${state.oldest_pending_at?` · Oldest waiting: ${escape(state.oldest_pending_at)}`:''}</p><p class="fine">After an application crash, stop capture before running recover-inflight. Interrupted calls keep unknown costs.</p>`:''}
+    ${isAdmin()&&state.reports?.some(r=>r.stale)?`<details class="help-details"><summary>Retire a collector you have stopped permanently</summary><p>Retiring removes this collector’s stale warning. Check and deliver its remaining outbox first.</p>${state.reports.filter(r=>r.stale).map(r=>`<button class="button small" data-retire-collector="${escape(r.collector_id)}" data-source="${escape(source.id)}">Retire collector ${escape(r.collector_id.slice(0,8))}</button>`).join('')}</details>`:''}`;
 }
 async function loadRecordings() {
   const result = await api('/api/pilot/recordings');
@@ -294,7 +312,9 @@ submit('filters', async data=>{
 $('tasks-previous').onclick = ()=>action(async()=>{taskPage=Math.max(0,taskPage-1); await loadUsage(); navigate('tasks');});
 $('tasks-next').onclick = ()=>action(async()=>{taskPage++; await loadUsage(); navigate('tasks');});
 $('refresh-operations').onclick = ()=>action(loadOperations);
-submit('source-form', async data=>{await api('/api/pilot/sources',{name:data.get('name')}); $('source-form').reset(); await loadSources(); notice('Source created. Issue a token to connect the application.');});
+submit('source-form', async data=>{await api('/api/pilot/sources',{name:data.get('name'),kind:data.get('kind')}); $('source-form').reset(); $('create-source').textContent='Create AxonLLM source'; await loadSources(); notice('Source created. Issue a token to connect the application.');});
+$('source-kind').onchange=()=>{$('create-source').textContent=$('source-kind').value==='bedrock'?'Create Amazon Bedrock source':'Create AxonLLM source';};
+$('refresh-sources').onclick=()=>action(loadSources);
 submit('evaluate-form', async()=>{await api('/api/pilot/evaluations',{recording_id:$('recording-select').value}); await loadJobs(); notice('Evaluation queued. You can leave this page; the worker will save its result.');});
 submit('proposal-form', async data=>{
   await api(`/api/pilot/evaluations/${$('proposal-job').value}/recommend`,{min_pass_rate:Number(data.get('pass'))/100,max_p95_ms:Number(data.get('latency')),monthly_tasks:Number(data.get('volume'))});
@@ -324,12 +344,14 @@ document.addEventListener('click', event=>{
   if (d.token) action(async()=>{const token=await api(`/api/pilot/sources/${d.token}/token`,{}); $('token-value').value=token.token; $('token-panel').hidden=false; await loadSources(); $('token-panel').scrollIntoView();});
   if (d.revoke && confirm('Revoke all tokens for this source? Its connectors will need a new token.')) action(async()=>{await api(`/api/pilot/sources/${d.revoke}/revoke`,{}); $('dismiss-token').click(); await loadSources();});
   if (d.revokeToken && confirm('Revoke this token? Other tokens for this source will keep working.')) action(async()=>{await api(`/api/pilot/sources/${d.source}/tokens/${d.revokeToken}/revoke`,{}); $('dismiss-token').click(); await loadSources();});
+  if (d.retireCollector && confirm('Retire this collector? Check its host and undelivered outbox first.')) action(async()=>{await api(`/api/pilot/sources/${d.source}/collectors/${d.retireCollector}/retire`,{}); await loadSources();});
   if (d.disable && confirm('Disable this account and revoke its active sessions?')) action(async()=>{await api(`/api/pilot/users/${d.disable}/disable`,{}); await loadTeam();});
   if (d.exportProposal) download('routing-review.json',proposalRows.find(p=>p.id===d.exportProposal));
 });
 setInterval(()=>{ if (session && page==='evaluations' && !document.hidden) action(loadJobs); },3000);
 setInterval(()=>{ if (session?.user && page==='usage' && !document.hidden) action(loadUsage); },10000);
 setInterval(()=>{ if (session?.user && page==='operations' && !document.hidden) action(loadOperations); },15000);
+setInterval(()=>{ if (session?.user && page==='sources' && !document.hidden) action(loadSources); },15000);
 (async()=>{
   try {
     session=await api('/api/auth/session');

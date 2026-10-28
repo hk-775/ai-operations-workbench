@@ -1,6 +1,6 @@
 [project]
 name = "ai-operations-workbench"
-version = "0.3.0"
+version = "0.4.0"
 description = "Connect AI usage to task evidence and reviewable routing recommendations."
 requires-python = ">=3.12"
 dependencies = [
@@ -16,8 +16,17 @@ dependencies = [
   "prometheus-client>=0.23,<1",
 ]
 
+[project.optional-dependencies]
+bedrock = [
+    "boto3>=1.40,<2",
+]
+
 [dependency-groups]
-dev = ["pytest>=8,<9", "httpx>=0.28,<1"]
+dev = [
+    "pytest>=8,<9",
+    "httpx>=0.28,<1",
+    "boto3>=1.40,<2",
+]
 
 [tool.uv.sources]
 axon-llm = { git = "https://github.com/hk-775/axonllm", rev = "e24b6dd9a3545132d746a298ee34e35b3235f12a" }

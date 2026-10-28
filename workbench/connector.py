@@ -1,4 +1,4 @@
-"""AxonLLM metadata capture with a durable, replayable local outbox.
+"""Application metadata capture with a durable, replayable local outbox.
 
 No prompts, responses, provider credentials, or client-supplied prices are sent.
 Call IDs belong to the application; provider response IDs are correlation only.
@@ -21,7 +21,7 @@ import httpx
 
 from .domain import digest, strict_json
 from .evidence import verify_recording
-from .pilot.events import Usage, UsageEvent, recording_events
+from .pilot.events import CollectorHealth, Usage, UsageEvent, event_adapter, recording_events
 
 
 class DeliveryError(RuntimeError):
@@ -49,6 +49,8 @@ class Outbox:
                 retry_after REAL NOT NULL DEFAULT 0)""")
             db.execute("CREATE TABLE IF NOT EXISTS destination (singleton INTEGER PRIMARY KEY, url TEXT NOT NULL)")
             db.execute("CREATE TABLE IF NOT EXISTS source_binding (singleton INTEGER PRIMARY KEY, source_id TEXT NOT NULL)")
+            db.execute("CREATE TABLE IF NOT EXISTS collector_identity (singleton INTEGER PRIMARY KEY, id TEXT NOT NULL)")
+            db.execute("INSERT OR IGNORE INTO collector_identity VALUES (1, ?)", (uuid.uuid4().hex,))
 
     @contextmanager
     def connect(self):
@@ -118,9 +120,20 @@ class Outbox:
         with self.connect() as db:
             db.execute("UPDATE outbox SET retry_after=0 WHERE delivered=0")
 
+    def health(self):
+        with self.connect() as db:
+            row = db.execute("""SELECT COUNT(*) AS pending,
+                COALESCE(SUM(CASE WHEN attempts>0 THEN 1 ELSE 0 END),0) AS retrying,
+                MIN(json_extract(payload,'$.occurred_at')) AS oldest
+                FROM outbox WHERE delivered=0""").fetchone()
+            identity = db.execute("SELECT id FROM collector_identity WHERE singleton=1").fetchone()[0]
+        inflight = sum(1 for _ in Path(str(self.path) + ".inflight").glob("*.json"))
+        return CollectorHealth(collector_id=identity, pending_events=row["pending"],
+            retrying_events=row["retrying"], oldest_pending_at=row["oldest"], inflight_calls=inflight)
+
 
 class Connector:
-    def __init__(self, endpoint: str, token: str, outbox: Outbox, *, client=None):
+    def __init__(self, endpoint: str, token: str, outbox: Outbox, *, client=None, report_health=False):
         parsed = urlsplit(endpoint)
         if (parsed.scheme not in {"http", "https"} or not parsed.hostname or parsed.username
                 or parsed.password or parsed.query or parsed.fragment or
@@ -133,6 +146,16 @@ class Connector:
         self.endpoint, self.token, self.outbox = endpoint, token, outbox
         self.outbox.bind(endpoint)
         self.client = client
+        self.report_health = report_health
+
+    def heartbeat(self, client):
+        try:
+            response = client.post(self.endpoint + "/health",
+                headers={"Authorization": f"Bearer {self.token}"}, json=self.outbox.health().model_dump())
+            if response.status_code != 200 or response.json().get("accepted") is not True:
+                raise ValueError("Health report rejected")
+        except (httpx.HTTPError, ValueError, KeyError, TypeError):
+            raise DeliveryError("Collector heartbeat failed; check Workbench version and source token") from None
 
     def flush(self, max_batches=10):
         """Bounded delivery; acknowledgments may be retried safely after a crash."""
@@ -148,6 +171,10 @@ class Connector:
                 self.outbox.bind_source(source_id)
             except (httpx.HTTPError, ValueError, KeyError, TypeError):
                 raise DeliveryError("Cannot verify ingestion source; events remain in the outbox") from None
+            if self.report_health:
+                if not identity.json().get("collector_health"):
+                    raise DeliveryError("Upgrade Workbench for collector health, or explicitly use --no-health")
+                self.heartbeat(client)
             for _ in range(max_batches):
                 rows = self.outbox.batch()
                 if not rows:
@@ -170,6 +197,8 @@ class Connector:
                     raise DeliveryError("No valid acknowledgment; events remain in the outbox") from None
                 self.outbox.acknowledge(rows)
                 sent += len(rows)
+            if self.report_health:
+                self.heartbeat(client)
         return {"acknowledged": sent, "pending": self.outbox.pending()}
 
 
@@ -216,14 +245,7 @@ async def capture_completion(router, outbox: Outbox, *, task_id: str, project: s
         model=request["model"], provider="unknown", occurred_at=timestamp,
         status="interrupted", latency_ms=0.0)
     # A mutable local reservation is not eligible for delivery until finalized.
-    reservation = Path(str(outbox.path) + ".inflight")
-    reservation.mkdir(mode=0o700, exist_ok=True)
-    call_file = reservation / (identity + ".json")
-    descriptor = os.open(call_file, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-    with os.fdopen(descriptor, "w") as handle:
-        json.dump(pending.model_dump(), handle)
-        handle.flush()
-        os.fsync(handle.fileno())
+    call_file = reserve_call(outbox, pending)
     try:
         response = await router.chat.completions.create(**request)
     except BaseException as exc:
@@ -240,6 +262,25 @@ async def capture_completion(router, outbox: Outbox, *, task_id: str, project: s
     return response
 
 
+def reserve_call(outbox, pending):
+    """Persist metadata before the billable operation; sync directory entries too."""
+    reservation = Path(str(outbox.path) + ".inflight")
+    reservation.mkdir(mode=0o700, exist_ok=True)
+    call_file = reservation / (pending.event_id + ".json")
+    descriptor = os.open(call_file, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with os.fdopen(descriptor, "w") as handle:
+        json.dump(pending.model_dump(), handle)
+        handle.flush()
+        os.fsync(handle.fileno())
+    for directory in (reservation, reservation.parent):
+        descriptor = os.open(directory, os.O_RDONLY)
+        try:
+            os.fsync(descriptor)
+        finally:
+            os.close(descriptor)
+    return call_file
+
+
 def recover_inflight(outbox):
     """Run only after stopping capture processes; an interrupted call has unknown cost."""
     directory = Path(str(outbox.path) + ".inflight")
@@ -247,7 +288,7 @@ def recover_inflight(outbox):
         return 0
     recovered = 0
     for path in directory.glob("*.json"):
-        event = UsageEvent.model_validate(strict_json(path.read_text()))
+        event = event_adapter.validate_python(strict_json(path.read_text()))
         with outbox.connect() as db:
             exists = db.execute("SELECT id FROM outbox WHERE id=?", (event.event_id,)).fetchone()
         if not exists:
@@ -264,8 +305,10 @@ def main():
     backfill = command.add_parser("backfill")
     backfill.add_argument("recording", type=Path)
     command.add_parser("recover-inflight")
+    command.add_parser("status")
     delivery = command.add_parser("deliver")
     delivery.add_argument("--watch", action="store_true")
+    delivery.add_argument("--no-health", action="store_true", help="Compatibility with pre-connector-health servers")
     args = parser.parse_args()
     outbox = Outbox(args.outbox)
     if args.command == "backfill":
@@ -276,10 +319,13 @@ def main():
         print(f"{outbox.pending()} recorded events ready for delivery. No model calls made.")
     elif args.command == "recover-inflight":
         print(f"{recover_inflight(outbox)} interrupted calls recovered with unknown costs.")
+    elif args.command == "status":
+        print(outbox.health().model_dump_json())
     else:
         token_file = os.environ.get("WORKBENCH_INGEST_TOKEN_FILE")
         token = Path(token_file).read_text().strip() if token_file else os.environ.get("WORKBENCH_INGEST_TOKEN", "")
-        connector = Connector(os.environ.get("WORKBENCH_INGEST_URL", ""), token, outbox)
+        connector = Connector(os.environ.get("WORKBENCH_INGEST_URL", ""), token, outbox,
+                              report_health=not args.no_health)
         while True:
             try:
                 result = connector.flush()

@@ -1,11 +1,11 @@
 # Self-host Workbench
 
-Workbench 0.3 is a self-hosted, single-organization product. Each company runs its own
+Workbench 0.4 is a self-hosted, single-organization product. Each company runs its own
 stack and supplies its own DNS name, OIDC identity provider, secrets, monitoring,
 and backup storage. None of those company values belongs in the release archive.
 There is no vendor-hosted service or license activation call.
 
-The supported scope is AxonLLM usage capture, exact captured-call estimates,
+The supported scope is AxonLLM and instrumented Bedrock usage capture, exact captured-call estimates,
 task inspection, support-v1 saved-output evaluations, and read-only routing reviews.
 Native subscription-tool billing connectors, invoice reconciliation, arbitrary
 evaluation plugins, and automatic routing changes are separate product features.
@@ -136,14 +136,19 @@ Use encrypted host volumes and encrypted backup storage. Workbench does not
 implement application-level encryption of database fields.
 
 Production refuses startup without HTTPS, OIDC, an MFA requirement, monitoring
-credentials, explicit retention periods, and schema version 2. The API and worker
+credentials, explicit retention periods, and schema version 3. The API and worker
 check the schema rather than silently performing an upgrade. Install matching
 images for the app, worker, and maintenance service.
+The published v0.3.0 release used schema 2. The current checkout adds collector
+health in schema 3; follow the backup/migrate/restart and rollback instructions
+in [the Bedrock guide](BEDROCK.md#upgrade-an-existing-workbench-installation).
 
 ## Monitor and operate
 
 - **Operations** is administrator-only and shows worker heartbeat, queue age,
-  failed evaluations, unknown-cost coverage, and maintenance freshness.
+  failed evaluations, unknown-cost coverage, maintenance freshness, and sources
+  with reported backlogs or stale collectors. **Usage sources** shows last-reported
+  queue counts; disconnected collectors may have additional unknown backlog.
 - `/metrics` requires the independent monitoring bearer token. Install the generated
   Prometheus scrape configuration, mount its token as
   `/run/secrets/workbench_metrics_token`, and install

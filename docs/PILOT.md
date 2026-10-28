@@ -63,7 +63,7 @@ port. The worker health check checks that container's own worker identity.
 1. In **Team & audit**, create individual accounts. Viewers read evidence;
    analysts import recordings, queue/cancel evaluations, and save reviews;
    administrators also manage users and ingestion tokens.
-2. In **Usage sources**, create an AxonLLM source and issue its token. Save the
+2. In **Usage sources**, create an AxonLLM or Amazon Bedrock source and issue its token. Save the
    token once in a private file on the application host. Tokens expire after
    30 days.
 3. Deliver usage events with the connector below. The overview refreshes every
@@ -84,6 +84,12 @@ Usage metadata cannot establish output quality. The evaluation engine currently
 accepts only the versioned support-v1 contract. It does not evaluate arbitrary
 application tasks just because their usage appears in the ledger. A generic
 workload adapter and representative held-out data are future milestones.
+
+For native boto3 Converse/ConverseStream application capture, follow
+[the Bedrock guide](BEDROCK.md). The AxonLLM wrapper below retains its existing
+nonstreaming contract. Source tokens accept their selected connector's schema.
+The current checkout requires an explicit migration to schema 3 for collector
+health; v0.3.0 deployments use schema 2.
 
 ## First connector delivery, without model calls
 
@@ -174,9 +180,16 @@ uv run --locked python -m workbench.connector \
 
 Recovered calls are labeled interrupted with unknown usage/cost. Recovery does
 not invent provider results or automatically rerun paid calls. Restart the
-application and delivery supervisor afterward. Streaming, per-attempt provider
-hooks, automatic invoice reconciliation, and an installable standalone connector
-package are not implemented.
+application and delivery supervisor afterward. Streaming through AxonLLM,
+per-attempt provider hooks, automatic invoice reconciliation, and an installable
+standalone connector package are not implemented. The separate Bedrock connector
+supports ConverseStream.
+
+The delivery CLI now sends source-scoped heartbeats. Use `deliver --watch` under
+a supervisor for continuous health; a one-shot delivery becomes stale after
+three minutes. `status` inspects the local queue without sending data.
+`--no-health` explicitly disables monitoring for old AxonLLM servers. See the
+[collector health guide](BEDROCK.md#4-supervise-delivery-and-inspect-health).
 
 ## Event and accounting contract
 
@@ -221,7 +234,9 @@ Invoice reconciliation and cost-enforcement budgets remain separate features.
 PostgreSQL stores team accounts, revocable sessions, sources/token hashes, immutable
 usage events and pricebooks, original recordings, leased jobs, evaluation results,
 saved routing reviews, and metadata audit events. The first schema migration is
-idempotent and advisory-lock protected. An unknown schema version refuses startup.
+idempotent and advisory-lock protected. Schema 3 adds collector health while
+preserving prior payloads, costs and fingerprints. An unknown schema version
+refuses startup.
 
 Queueing is serialized per team and deduplicated by recording plus evaluator
 revision. Workers claim with `FOR UPDATE SKIP LOCKED`, renew a 30-second lease,

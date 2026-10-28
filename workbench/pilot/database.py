@@ -16,7 +16,7 @@ from sqlalchemy.exc import IntegrityError
 
 from workbench.domain import digest, evaluation_revision, money
 from workbench.evidence import verify_recording
-from .events import UsageEvent, account, pricebook, recording_events
+from .events import CollectorHealth, UsageEvent, account, pricebook, recording_events
 
 metadata = MetaData()
 schema = Table("wb_schema", metadata, Column("version", Integer, primary_key=True))
@@ -53,6 +53,11 @@ tokens = Table("wb_source_tokens", metadata, Column("id", String(64), primary_ke
                Column("created_at", BigInteger, nullable=False),
                Column("expires_at", BigInteger, nullable=False),
                Column("revoked", Boolean, nullable=False, default=False))
+collectors = Table("wb_collectors", metadata,
+                   Column("source_id", ForeignKey("wb_sources.id", ondelete="CASCADE"), primary_key=True),
+                   Column("collector_id", String(32), primary_key=True),
+                   Column("payload", Text, nullable=False),
+                   Column("received_at", BigInteger, nullable=False))
 books = Table("wb_pricebooks", metadata, Column("id", String(64), primary_key=True),
               Column("payload", Text, nullable=False))
 events = Table("wb_events", metadata,
@@ -156,10 +161,10 @@ class Database:
                 db.exec_driver_sql("SELECT pg_advisory_xact_lock(2026102301)")
             schema.create(db, checkfirst=True)
             versions = db.execute(select(schema.c.version)).scalars().all()
-            if versions and versions not in ([1], [2]):
+            if versions and versions not in ([1], [2], [3]):
                 raise RuntimeError("Unsupported pilot database schema")
             metadata.create_all(db)
-            if versions != [2]:
+            if versions not in ([2], [3]):
                 # Only copy persisted accounting: repricing would rewrite historical evidence.
                 while True:
                     batch = db.execute(select(events.c.source_id, events.c.event_id, events.c.accounting)
@@ -170,15 +175,17 @@ class Database:
                         break
                     db.execute(insert(facts), [self.fact(row["source_id"], row["event_id"],
                                                         json.loads(row["accounting"])) for row in batch])
+            if versions != [3]:
+                # v3 adds collector heartbeats; existing payloads/facts stay byte-for-byte intact.
                 db.execute(delete(schema))
-                db.execute(insert(schema).values(version=2))
+                db.execute(insert(schema).values(version=3))
             book = pricebook()
             if not db.execute(select(books.c.id).where(books.c.id == book["id"])).first():
                 db.execute(insert(books).values(id=book["id"], payload=json.dumps(book["snapshot"])))
 
     def check_schema(self):
         with self.engine.connect() as db:
-            if db.execute(select(schema.c.version)).scalars().all() != [2]:
+            if db.execute(select(schema.c.version)).scalars().all() != [3]:
                 raise RuntimeError("Run the explicit database migration before starting this release")
 
     @staticmethod
@@ -211,6 +218,8 @@ class Database:
             return db.execute(select(teams.c.id)).first() is not None
 
     def create_source(self, team_id: str, name: str, actor: str, kind="axonllm"):
+        if kind not in {"axonllm", "bedrock"}:
+            raise ValueError("Unsupported application connector")
         identity = uid()
         try:
             with self.engine.begin() as db:
@@ -231,7 +240,7 @@ class Database:
         with self.engine.begin() as db:
             source = db.execute(select(sources).where(
                 sources.c.id == source_id, sources.c.team_id == team_id).with_for_update()).mappings().first()
-            if not source or source["kind"] != "axonllm":
+            if not source or source["kind"] not in {"axonllm", "bedrock"}:
                 raise KeyError("Source not found")
             db.execute(insert(tokens).values(id=hash_secret(raw), source_id=source_id,
                 prefix=raw[:15], created_at=now, expires_at=now + 30 * 86400, revoked=False))
@@ -252,6 +261,9 @@ class Database:
             sources.c.team_id == team_id).with_for_update()).mappings().first()
         if not source:
             raise KeyError("Source not found")
+        expected = "bedrock.usage.v1" if source["kind"] == "bedrock" else "axon.usage.v1"
+        if any(event.schema_version != expected for event in batch):
+            raise Conflict("Event schema does not match this source's connector")
         policy = db.execute(select(maintenance.c.payload).where(
             maintenance.c.id == "retention_cutoff")).scalar_one_or_none()
         if source["kind"] != "recording" and policy:
@@ -340,8 +352,65 @@ class Database:
                     events.c.team_id == team_id, events.c.source_id == row["id"])).scalar_one()
                 row["last_received_at"] = db.execute(select(func.max(events.c.received_at)).where(
                     events.c.team_id == team_id, events.c.source_id == row["id"])).scalar_one()
+                row["collection"] = self.collection_health(db, row)
                 result.append(row)
             return result
+
+    @staticmethod
+    def collection_health(db, source):
+        now = int(time.time())
+        rows = db.execute(select(collectors).where(collectors.c.source_id == source["id"])).mappings().all()
+        reports = [json.loads(row["payload"]) for row in rows]
+        stale = sum(now - row["received_at"] > 180 for row in rows)
+        active_token = any(not t["revoked"] and t["expires_at"] > now for t in source["tokens"])
+        state = ("recorded" if source["kind"] == "recording" else
+                 "token_required" if not active_token else
+                 "unmonitored" if not rows else
+                 "stale" if stale else
+                 "backlog" if any(r["pending_events"] for r in reports) else "connected")
+        return {"status": state, "collectors": len(rows), "stale_collectors": stale,
+                "reports": [{"collector_id": r["collector_id"], "last_heartbeat_at": r["received_at"],
+                             "stale": now - r["received_at"] > 180} for r in rows],
+                "last_heartbeat_at": max((r["received_at"] for r in rows), default=None),
+                "pending_events": sum(r["pending_events"] for r in reports) if rows else None,
+                "inflight_calls": sum(r["inflight_calls"] for r in reports) if rows else None,
+                "retrying_events": sum(r["retrying_events"] for r in reports) if rows else None,
+                "oldest_pending_at": min((r["oldest_pending_at"] for r in reports
+                                           if r["oldest_pending_at"]), default=None)}
+
+    def report_collector(self, raw: str, report: CollectorHealth):
+        with self.engine.begin() as db:
+            source = db.execute(select(sources).join(tokens, sources.c.id == tokens.c.source_id)
+                .where(tokens.c.id == hash_secret(raw))).mappings().first()
+            if not source or source["kind"] not in {"axonllm", "bedrock"}:
+                raise PermissionError("Valid ingestion token required")
+            db.execute(select(sources.c.id).where(sources.c.id == source["id"]).with_for_update()).first()
+            valid = db.execute(select(tokens.c.id).where(tokens.c.id == hash_secret(raw),
+                tokens.c.revoked.is_(False), tokens.c.expires_at > int(time.time()))).first()
+            if not valid:
+                raise PermissionError("Valid ingestion token required")
+            where = [collectors.c.source_id == source["id"], collectors.c.collector_id == report.collector_id]
+            values = {"payload": report.model_dump_json(), "received_at": int(time.time())}
+            if db.execute(select(collectors.c.collector_id).where(*where)).first():
+                db.execute(update(collectors).where(*where).values(**values))
+            else:
+                count = db.execute(select(func.count()).select_from(collectors).where(
+                    collectors.c.source_id == source["id"])).scalar_one()
+                if count >= 100:
+                    raise Conflict("Collector limit reached; use a separate source")
+                db.execute(insert(collectors).values(source_id=source["id"],
+                    collector_id=report.collector_id, **values))
+        return {"accepted": True}
+
+    def retire_collector(self, team_id, source_id, collector_id, actor):
+        """Only an administrator can dismiss a stopped collector's stale signal."""
+        with self.engine.begin() as db:
+            if not db.execute(select(sources.c.id).where(sources.c.team_id == team_id,
+                    sources.c.id == source_id).with_for_update()).first():
+                raise KeyError("Source not found")
+            db.execute(delete(collectors).where(collectors.c.source_id == source_id,
+                                                collectors.c.collector_id == collector_id))
+            self.audit(db, team_id, actor, "source.collector_retired", collector_id)
 
     def revoke_tokens(self, team_id: str, source_id: str, actor: str):
         with self.engine.begin() as db:

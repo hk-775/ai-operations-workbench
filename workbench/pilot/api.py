@@ -23,7 +23,7 @@ from workbench.evidence import recommend
 from . import auth
 from .config import Settings
 from .database import Conflict, Database, audits, recordings, users, events
-from .events import EventBatch
+from .events import CollectorHealth, EventBatch
 from .identity import BINDING_COOKIE, CALLBACK, CompanyIdentity, provision
 from .operations import Instrumentation, Metrics, snapshot
 from .queries import call_rows, conditions
@@ -117,6 +117,7 @@ class NewIdentity(Input):
 
 class SourceName(Input):
     name: str = Field(min_length=1, max_length=100, pattern=r".*\S.*")
+    kind: Literal["axonllm", "bedrock"] = "axonllm"
 
 
 class Evaluation(Input):
@@ -304,7 +305,18 @@ def create_pilot_app(settings: Settings | None = None) -> FastAPI:
         source = database.token_source(authorization[7:]) if authorization.startswith("Bearer ") else None
         if not source:
             raise HTTPException(401, "Valid ingestion token required")
-        return {"source_id": source["id"], "schema_version": "axon.usage.v1"}
+        version = "bedrock.usage.v1" if source["kind"] == "bedrock" else "axon.usage.v1"
+        return {"source_id": source["id"], "schema_version": version, "collector_health": True}
+
+    @app.post("/api/pilot/ingest/health")
+    def collector_health(payload: CollectorHealth, request: Request):
+        authorization = request.headers.get("authorization", "")
+        if not authorization.startswith("Bearer "):
+            raise HTTPException(401, "Valid ingestion token required")
+        try:
+            return database.report_collector(authorization[7:], payload)
+        except PermissionError:
+            raise HTTPException(401, "Valid ingestion token required") from None
 
     @app.get("/api/pilot/usage")
     def usage(project: str | None = None, source_id: str | None = None,
@@ -338,7 +350,14 @@ def create_pilot_app(settings: Settings | None = None) -> FastAPI:
 
     @app.post("/api/pilot/sources")
     def create_source(payload: SourceName, actor=Depends(admin)):
-        return {"id": database.create_source(actor["team_id"], payload.name.strip(), actor["username"])}
+        return {"id": database.create_source(actor["team_id"], payload.name.strip(), actor["username"], payload.kind)}
+
+    @app.post("/api/pilot/sources/{identity}/collectors/{collector_id}/retire")
+    def retire_collector(identity: str, collector_id: str, actor=Depends(admin)):
+        if len(collector_id) != 32 or any(char not in "0123456789abcdef" for char in collector_id):
+            raise HTTPException(422, "Invalid collector ID")
+        database.retire_collector(actor["team_id"], identity, collector_id, actor["username"])
+        return {"retired": True}
 
     @app.post("/api/pilot/sources/{identity}/token")
     def source_token(identity: str, actor=Depends(admin)):

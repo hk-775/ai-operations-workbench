@@ -158,8 +158,10 @@ capabilities.
 
 ```mermaid
 flowchart LR
-    App["Application + AxonLLM"] --> Outbox["Durable metadata outbox"]
+    App["Application + AxonLLM or boto3 Bedrock"] --> Outbox["Durable metadata outbox"]
     Outbox -->|"Source bearer token"| Ingest["Scoped ingestion API"]
+    Outbox -->|"Collector heartbeat"| Health["Source health + collection gaps"]
+    Health --> UI
     User["Signed-in team member"] --> UI["Pilot dashboard"]
     UI -->|"Session + role + CSRF"| API["Team API"]
     Ingest --> DB[("PostgreSQL events + pricebooks")]
@@ -178,6 +180,10 @@ IDs are allowed. Duplicate events are acknowledged; conflicting payloads roll
 back the entire batch. The connector verifies its source identity before delivery
 and keeps unacknowledged events for retries. The API recomputes Decimal estimates
 from an immutable pricebook and preserves unknown usage/attempt coverage.
+Bedrock events use their own versioned schema and preserve AWS token categories.
+Reviewed prices match the exact model, region, mode and date. Collector reports
+are independent of call traffic; a stopped collector remains visible even when
+another collector for that source is healthy. See [Bedrock setup](BEDROCK.md).
 
 The worker process outlives browser/API sessions, claims jobs with PostgreSQL row
 locks, and supervises a subprocess with a fixed timeout. Expired leases can be
@@ -198,7 +204,7 @@ flowchart LR
     Employee["Company employee"] --> TLS["Company HTTPS endpoint"]
     Identity["Company OIDC + MFA"] --> TLS
     TLS --> API["Workbench API + dashboard"]
-    Connector["AxonLLM outbox"] --> TLS
+    Connector["AxonLLM / Bedrock outboxes"] --> TLS
     API --> Database[("Private PostgreSQL")]
     Database --> Worker["Leased offline evaluator"]
     Worker --> Database

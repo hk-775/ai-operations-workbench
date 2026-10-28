@@ -105,7 +105,7 @@ test('every public asset is available and browser policy blocks API and WebSocke
   const manifestResponse=await page.request.get(new URL('site-manifest.json',baseURL).href);
   expect(manifestResponse.ok()).toBe(true);
   const manifest=await manifestResponse.json();
-  expect(manifest.version).toBe('0.3.0');
+  expect(manifest.version).toBe('0.4.0');
   for(const file of Object.keys(manifest.files)) {
     // GitHub consumes this build marker and intentionally does not serve it.
     // Keep checking every actual page, media file, diagram, and metadata asset.
