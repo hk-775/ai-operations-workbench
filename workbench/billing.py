@@ -1,8 +1,8 @@
 """Lossless financial values and bounded, explicit AWS billing snapshots.
 
-Ledger supplies schema aliases. Workbench deliberately does not use its
-identity-requiring ingestion or its token-quantity conversion: unmatched
-charges must remain in the report, and billing units are not assumed to be tokens.
+Ledger supplies schema aliases, billed-cost aggregation and integrity checks.
+Workbench preserves every charge before adapting it to Ledger's cost engine;
+billing units are not converted into captured tokens.
 """
 from __future__ import annotations
 
@@ -268,14 +268,15 @@ def parse_upload(upload: BillingUpload, *, fixture=False):
     }
 
 
-def groups(snapshot):
+def groups(snapshot, *, ledger=None):
+    from .ledger_billing import LedgerBillingSnapshot
+    ledger = ledger if ledger is not None else LedgerBillingSnapshot(snapshot)
     result = {}
     for row in snapshot["rows"]:
         group = result.setdefault(row["group_id"], {
-            "id": row["group_id"], **row["dimensions"], "amounts": [], "quantities": [],
+            "id": row["group_id"], **row["dimensions"], "quantities": [],
             "row_count": 0, "uninvoiced_rows": 0, "bases": set(), "eligible": True,
         })
-        group["amounts"].append(row["amount"])
         if row["quantity"] is not None:
             group["quantities"].append(row["quantity"])
         group["row_count"] += 1
@@ -287,10 +288,9 @@ def groups(snapshot):
             and snapshot["period_start"] <= row["usage_start"] < row["usage_end"] <= snapshot["period_end"]
         )
     for group in result.values():
-        amounts = group.pop("amounts")
-        group["charge_amount"] = total(amounts)
-        group["positive_charges"] = total(v for v in amounts if Decimal(v) > 0)
-        group["negative_adjustments"] = total(v for v in amounts if Decimal(v) < 0)
+        group["charge_amount"] = ledger.total([group["id"]])
+        group["positive_charges"] = ledger.total([group["id"]], sign=1)
+        group["negative_adjustments"] = ledger.total([group["id"]], sign=-1)
         quantities = group.pop("quantities")
         group["quantity"] = total(quantities) if len(quantities) == group["row_count"] else None
         group["bases"] = sorted(group["bases"])

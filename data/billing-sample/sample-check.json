@@ -3,7 +3,7 @@
   "status": "fixture_checks_passed",
   "evidence": "fixture",
   "snapshot_sha256": "5915a3ee8c1e8c9812f668ea50e3707d859752b5b8402a87da16ebae6e06bc4e",
-  "reconciliation_sha256": "5e128b8642d40c6c77ebb9c5be256208744e05ad039944ff281a2575a5cb6cc5",
+  "reconciliation_sha256": "87b8493d01641b5671d996b025e10cd521dd995d78efc57e22e326b4e4319cf9",
   "controls_sha256": "309d01f95ed36d6c09ff5d83fd2b55dbd732f3e0ee76f5b8b32be84bda95824f",
   "checks": [
     "imported_charges",
