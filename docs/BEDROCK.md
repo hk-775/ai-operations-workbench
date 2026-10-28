@@ -12,7 +12,7 @@ are outside its coverage. It does not prove answer quality.
 
 ## Upgrade an existing Workbench installation
 
-Use a checkout containing this connector. The published v0.3.0 archive predates
+Use the 0.4.0 source checkout containing this connector. The published v0.3.0 archive predates
 it. This change requires **database schema 3**. Stop API, worker and maintenance,
 take your normal database backup, then run the explicit migration with the
 deployment's existing private environment:

@@ -127,7 +127,7 @@ Pilot mode is opt-in (`WORKBENCH_MODE=pilot`); the default local demo retains it
 original behavior. Usage ingestion handles application metadata; quality
 evaluation currently requires a matching saved support-v1 recording.
 
-The current checkout also includes an **Amazon Bedrock application connector**
+The current **0.4.0 source checkout** also includes an **Amazon Bedrock application connector**
 for boto3 Converse and ConverseStream, with collector health and an offline
 two-step example. Follow the [Bedrock setup guide](docs/BEDROCK.md). Existing
 installations need the explicit schema-3 migration; the published v0.3.0 archive
