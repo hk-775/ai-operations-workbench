@@ -47,7 +47,9 @@ async function api(path, body) {
   if (epoch !== generation) throw new Error('Session changed. Retry after signing in.');
   if (!response.ok) {
     if (response.status === 401 && !path.endsWith('/login')) showLogin();
-    throw new Error(value.detail || `Request failed (${response.status})`);
+    const error = new Error(value.detail || `Request failed (${response.status})`);
+    error.status = response.status;
+    throw error;
   }
   return value;
 }

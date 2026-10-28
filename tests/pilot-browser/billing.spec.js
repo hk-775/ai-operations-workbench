@@ -118,3 +118,42 @@ test('billing import, declared scope, immutable refresh, export and private UI',
   await expect(report.getByRole('button',{name:'Export reconciliation',exact:true})).toBeVisible();
   await page.getByRole('button',{name:'Sign out',exact:true}).click();
 });
+
+test('billing refresh recovers when retention removes the selected snapshot',async({page})=>{
+  await login(page);
+  await page.getByRole('button',{name:'Load fictional billing example',exact:true}).click();
+  const report=page.locator('#billing-report');
+  await expect(report.getByText('FICTIONAL BILLING EXAMPLE',{exact:true})).toBeVisible();
+  const expired=await page.locator('#billing-report-select').inputValue();
+  const session=await (await page.request.get('/api/auth/session')).json();
+  const imported=await page.request.post('/api/pilot/billing/imports',{
+    headers:{'X-Workbench-CSRF':session.csrf},
+    data:{format:'legacy-cur',account_id:'000000000001',month:'2026-10',currency:'USD',
+      name:'Retention test · authored billing',complete_snapshot:true,expected_revision:0,
+      files:[csv('0.25').replaceAll('000000000000','000000000001')]},
+  });
+  expect(imported.status()).toBe(200);
+  const retained=(await imported.json()).id;
+  let removedAll=false;
+  // Deterministically reproduce retention between selecting a report and
+  // refreshing it, without altering the shared test server's other evidence.
+  await page.route(/\/api\/pilot\/billing\/reports(?:\?.*)?$/,async route=>{
+    const response=await route.fetch(), body=await response.json();
+    await route.fulfill({response,json:{...body,page:0,has_more:false,
+      reports:removedAll?[]:body.reports.filter(row=>row.id===retained)}});
+  });
+  await page.route(`**/api/pilot/billing/reports/${expired}`,route=>
+    route.fulfill({status:404,json:{detail:'Record not found'}}));
+  await page.route(`**/api/pilot/billing/reports/${retained}`,route=>removedAll?
+    route.fulfill({status:404,json:{detail:'Record not found'}}):route.continue());
+  await page.getByRole('button',{name:'Refresh billing view',exact:true}).click();
+  await expect(report.getByRole('heading',{name:'Retention test · authored billing',exact:true})).toBeVisible();
+  await expect(report.locator('.billing-metrics')).toContainText('USD 0.25');
+  removedAll=true;
+  await page.getByRole('button',{name:'Refresh billing view',exact:true}).click();
+  await expect(report.getByRole('heading',{name:'No billing report is connected yet.',exact:true})).toBeVisible();
+  await expect(report.locator('.billing-metrics')).toHaveCount(0);
+  await expect(report.getByRole('button',{name:'Export reconciliation',exact:true})).toHaveCount(0);
+  await expect(page.locator('#billing-report-select')).toHaveValue('');
+  await page.getByRole('button',{name:'Sign out',exact:true}).click();
+});

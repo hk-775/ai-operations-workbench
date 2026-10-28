@@ -15,10 +15,12 @@ not a release announcement or a claim that hosted v0.4.0 was upgraded.
   replacement revisions, stale previews, duplicate scope prevention, fixture
   isolation, roles, team isolation, CSRF, export, concurrent imports/mappings,
   and compatibility with unrelated audit transactions.
-- **12 authenticated browser journeys passed**, including the complete billing
+- **13 authenticated browser journeys passed**, including the complete billing
   upload/preview/import/map/refresh/history/export flow and all existing screens.
   Untrusted names rendered as text. Sign-out cleared private billing DOM content.
   Viewer access remained read-only. Desktop and mobile layouts were inspected.
+  Review reproduced and fixed an expired-report refresh issue: removed snapshots
+  now recover to an available report or clear stale totals and export actions.
 - **13 existing demo/architecture/media journeys and 3 Pages checks passed.**
   Local macOS media checks used an external test configuration disabling audio
   output while retaining media playback assertions; CI configuration was unchanged.

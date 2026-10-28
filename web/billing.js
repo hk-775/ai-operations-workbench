@@ -20,7 +20,7 @@ function createBilling({api, action, notice, isAdmin, getEpoch, onExample, onTas
   function invalidatePreview() {
     pending=null; importGeneration++; $('billing-preview').replaceChildren(); $('billing-preview').hidden=true;
   }
-  async function load(selected) {
+  async function load(selected, recoverMissing=true) {
     const epoch=getEpoch(), token=++request;
     const value=await api(`/api/pilot/billing/reports?page=${listingPage}`);
     if(!stable(epoch)||token!==request) return;
@@ -31,15 +31,27 @@ function createBilling({api, action, notice, isAdmin, getEpoch, onExample, onTas
     $('billing-previous').disabled=!value.page; $('billing-next').disabled=!value.has_more;
     if(identity) {
       $('billing-report-select').value=identity;
-      await show(identity);
+      await show(identity,recoverMissing);
     } else {
       report=null;
       $('billing-report').innerHTML=`<article class="panel screen-guide"><h2>No billing report is connected yet.</h2><p>Usage overview contains captured API estimates. Import a complete billing export to compare provider charges against the appropriate captured sources.</p><p>${isAdmin()?'Start with the fictional example above or preview your CSV files below.':'An administrator can import billing records and declare source mappings. You can inspect the resulting comparisons here.'}</p></article>`;
     }
   }
-  async function show(identity) {
+  async function show(identity, recoverMissing=true) {
     const epoch=getEpoch(), token=++request;
-    const value=await api(`/api/pilot/billing/reports/${encodeURIComponent(identity)}`);
+    let value;
+    try {
+      value=await api(`/api/pilot/billing/reports/${encodeURIComponent(identity)}`);
+    } catch(error) {
+      if(!stable(epoch)||token!==request)return;
+      report=null;
+      $('billing-report-select').value='';
+      $('billing-report').innerHTML='<article class="panel screen-guide"><h2>Billing snapshot unavailable.</h2><p>Refresh the billing view or choose another snapshot to inspect current evidence.</p></article>';
+      // Retention can remove the selected revision between listing and reading.
+      // Retry selection once, without retaining stale amounts or export actions.
+      if(error.status===404&&recoverMissing){listingPage=0;await load(undefined,false);return;}
+      throw error;
+    }
     if(!stable(epoch)||token!==request) return;
     report=value; render();
     const select=$('billing-report-select');
