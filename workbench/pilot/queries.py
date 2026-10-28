@@ -102,4 +102,4 @@ def usage(database, team, project=None, source_id=None, include_fixtures=False, 
             "evidence_counts": evidence, "page": page, "page_size": page_size,
             "has_more": (page + 1) * page_size < count, "start": start, "end": end,
             "invoice_usd": None, "hardware_electricity_usd": None,
-            "cost_note": "Captured-call estimate for this time window; provider invoices and missing calls are not reconciled."}
+            "cost_note": "Captured-call estimate for this time window. Billing reconciliation compares separately imported charges; invoice costs are not allocated to individual tasks."}

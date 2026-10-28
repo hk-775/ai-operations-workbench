@@ -26,6 +26,18 @@ let generation = 0;
 let taskPage = 0, loginMethods = {local:true,company:false}, usageRequest = 0;
 const canEdit = () => session?.user && session.user.role !== 'viewer';
 const isAdmin = () => session?.user?.role === 'admin';
+const billing = createBilling({api, action, notice, isAdmin, getEpoch:()=>generation,
+  onExample:()=>Promise.all([loadUsage(),loadSources()]),
+  onTasks:async scope=>{
+    const params=new URLSearchParams({...scope,include_fixtures:String(scope.include_fixtures)});
+    filters=params.toString();taskPage=0;
+    const form=$('filters');form.reset();
+    form.elements.source_id.value=scope.source_id;
+    form.elements.start.value=scope.start.slice(0,10);form.elements.end.value=scope.end.slice(0,10);
+    form.elements.include_fixtures.checked=scope.include_fixtures;
+    await loadUsage();navigate('tasks');
+  }
+});
 
 async function api(path, body) {
   const epoch = generation;
@@ -49,6 +61,7 @@ async function action(fn) {
 }
 function showLogin() {
   session = null; generation++;
+  billing.reset();
   usage = null; jobRows = []; proposalRows = [];
   for (const id of ['metrics','task-list','sources','jobs','evaluation-result','proposals','users','audit',
                     'recording-select','proposal-job','evidence-counts','cost-note',
@@ -74,6 +87,7 @@ function navigate(next) {
   if (page === 'proposals') action(loadProposals);
   if (page === 'team') action(loadTeam);
   if (page === 'operations') action(loadOperations);
+  if (page === 'billing') action(()=>billing.load());
 }
 function access() {
   document.querySelectorAll('[data-admin]').forEach(el => el.hidden = !isAdmin());
@@ -275,7 +289,7 @@ async function loadOperations() {
     metric('Failed evaluations',state.failed_jobs_24h,'Last 24 hours','compare') +
     metric('Calls without a price',state.unknown_cost_calls_24h,`Out of ${state.observed_calls_24h} new application calls in 24 hours`,'proposal');
   $('operations-alerts').innerHTML = state.alerts.length ? state.alerts.map(a=>`<p class="data-note">${badge(a.severity,a.severity==='critical'?'warn':'accent')} ${escape(a.message)}</p>`).join('') : '<p class="data-note">No active operational alerts.</p>';
-  $('operations-retention').textContent = `${state.retention_days ? `Usage metadata: ${state.retention_days} days. Evidence and saved reviews: ${state.evidence_retention_days || 'unlimited'} days. Audit history: ${state.audit_retention_days || 'unlimited'} days.` : 'Scheduled data retention is not enabled in this local environment.'} ${state.maintenance_age_seconds===null?'Maintenance has not run yet.':`Last maintenance completed ${Math.floor(state.maintenance_age_seconds/60)} minutes ago.`}`;
+  $('operations-retention').textContent = `${state.retention_days ? `Usage metadata: ${state.retention_days} days. Evidence, billing snapshots and saved reviews: ${state.evidence_retention_days || 'unlimited'} days. Audit history: ${state.audit_retention_days || 'unlimited'} days.` : 'Scheduled usage retention is not enabled in this local environment.'} ${state.maintenance_age_seconds===null?'Maintenance has not run yet.':`Last maintenance completed ${Math.floor(state.maintenance_age_seconds/60)} minutes ago.`}`;
 }
 function download(name, data) {
   const url = URL.createObjectURL(new Blob([JSON.stringify(data,null,2)], {type:'application/json'}));

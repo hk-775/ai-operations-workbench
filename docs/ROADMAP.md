@@ -81,9 +81,17 @@ in the roadmap do not imply working integrations.
 
 ## 5. Reconcile the bill and attribute outcomes
 
-Consider AxonLLM Ledger for provider/cloud billing ingestion, then join its
-financial records to the operational task events. Keep invoice reconciliation
-separate from the pricing estimates already shown.
+Implemented in 0.5.0 source: [Bedrock billing reconciliation](BILLING.md), with
+Ledger schema normalization and Workbench-owned snapshot persistence. Administrators
+import complete monthly CSV exports and declare source/model scopes. The screen
+shows precise differences, incomplete comparisons, credits/fees and other
+unassigned charges, revisions, and exportable provenance. A fictional example
+exercises the full flow without model calls. Schema 4 is required; this feature
+is not included in the v0.4.0 release.
+
+Next validate representative customer exports and add supported automated
+collection and other providers. Imported records are not independently
+authenticated invoices, and aggregate links do not allocate bills to tasks.
 
 Decide how to attribute subscriptions, shared infrastructure, retries, caches,
 human review, and incomplete traces. Unknown values must remain visible instead
@@ -93,7 +101,7 @@ of being converted to zero.
 
 Provenance, role-based access, durable jobs/results, restart recovery, and
 readiness checks are in the pilot. Next add representative held-out workloads,
-repeated evaluation, independent review, billing reconciliation, and customer-specific
+repeated evaluation, independent review, customer billing validation, and customer-specific
 load/restore objectives. SSO/MFA, scheduled retention, monitoring/alert rules,
 and repeatable local load/restore checks are implemented in 0.2.
 

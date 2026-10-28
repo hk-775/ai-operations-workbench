@@ -1,6 +1,6 @@
 [project]
 name = "ai-operations-workbench"
-version = "0.4.0"
+version = "0.5.0"
 description = "Connect AI usage to task evidence and reviewable routing recommendations."
 requires-python = ">=3.12"
 dependencies = [
@@ -8,6 +8,7 @@ dependencies = [
   "uvicorn>=0.30,<1",
   "axon-llm",
   "ostiari",
+  "axonllm-ledger",
   "sqlalchemy>=2.0,<3",
   "psycopg[binary]>=3.2,<4",
   "argon2-cffi>=23.1,<26",
@@ -31,6 +32,7 @@ dev = [
 [tool.uv.sources]
 axon-llm = { git = "https://github.com/hk-775/axonllm", rev = "e24b6dd9a3545132d746a298ee34e35b3235f12a" }
 ostiari = { git = "https://github.com/hk-775/ostiari", rev = "d9abfcf576535327a4aee93d93cc690e85f88a53" }
+axonllm-ledger = { git = "https://github.com/hk-775/axonllm-ledger", rev = "d773dafda758755100104123c58c3a658e5866e2" }
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

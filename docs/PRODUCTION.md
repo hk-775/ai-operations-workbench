@@ -1,13 +1,15 @@
 # Self-host Workbench
 
-Workbench 0.4 is a self-hosted, single-organization product. Each company runs its own
+Workbench is a self-hosted, single-organization product. Each company runs its own
 stack and supplies its own DNS name, OIDC identity provider, secrets, monitoring,
 and backup storage. None of those company values belongs in the release archive.
 There is no vendor-hosted service or license activation call.
 
 The supported scope is AxonLLM and instrumented Bedrock usage capture, exact captured-call estimates,
 task inspection, support-v1 saved-output evaluations, and read-only routing reviews.
-Native subscription-tool billing connectors, invoice reconciliation, arbitrary
+Version 0.5.0 source adds [manual Bedrock billing reconciliation](BILLING.md)
+with declared aggregate scopes; the published 0.4.0 archive does not include it.
+Native subscription-tool billing connectors, automatic billing collection, arbitrary
 evaluation plugins, and automatic routing changes are separate product features.
 
 ## Try the seeded and clean deployments
@@ -136,12 +138,14 @@ Use encrypted host volumes and encrypted backup storage. Workbench does not
 implement application-level encryption of database fields.
 
 Production refuses startup without HTTPS, OIDC, an MFA requirement, monitoring
-credentials, explicit retention periods, and schema version 3. The API and worker
+credentials, explicit retention periods, and schema version 4 in 0.5.0 source. The API and worker
 check the schema rather than silently performing an upgrade. Install matching
 images for the app, worker, and maintenance service.
 The v0.3.0 release used schema 2. Version 0.4.0 adds collector
-health in schema 3; follow the backup/migrate/restart and rollback instructions
-in [the Bedrock guide](BEDROCK.md#upgrade-an-existing-workbench-installation).
+health in schema 3. Version 0.5.0 source adds billing snapshots and declared
+comparisons in schema 4; follow the backup/migrate/restart and rollback instructions
+in [the billing guide](BILLING.md#access-retention-and-upgrade). Billing revisions
+and mappings follow evidence retention. The v0.4.0 download remains schema 3.
 
 ## Monitor and operate
 

@@ -6,7 +6,8 @@
   <title>Team workspace · AI Operations Workbench</title>
   <link rel="stylesheet" href="/static/styles.css?v=5d412360ea41">
   <link rel="stylesheet" href="/static/pilot.css?v=2e9bfb4e25a1">
-  <script src="/static/pilot.js?v=efa68ec31424" defer></script>
+  <script src="/static/billing.js?v=0.5.0" defer></script>
+  <script src="/static/pilot.js?v=0.5.0" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -35,6 +36,7 @@
     <div class="workspace"><span class="avatar">W</span><div><strong id="team-name"></strong><small id="user-role"></small></div></div>
     <nav aria-label="Workspace">
       <button class="nav-item active" data-page="usage" data-flow="connect">Usage overview</button>
+      <button class="nav-item" data-page="billing" data-flow="connect">Billing reconciliation</button>
       <button class="nav-item" data-page="tasks" data-flow="tasks">Task explorer</button>
       <button class="nav-item" data-page="evaluations" data-flow="compare">Model evaluations</button>
       <button class="nav-item" data-page="proposals" data-flow="proposal">Routing review</button>
@@ -42,7 +44,7 @@
       <button class="nav-item" data-page="operations" data-flow="compare" data-admin>Operations</button>
       <button class="nav-item" data-page="team" data-admin>Team &amp; audit</button>
     </nav>
-    <div class="sidebar-bottom"><p class="sidebar-note">Recorded costs stay separate from invoices. Routing proposals require human review.</p></div>
+    <div class="sidebar-bottom"><p class="sidebar-note">Captured estimates and imported charges stay separate. Routing proposals require human review.</p></div>
   </aside>
   <div class="content" role="region" aria-label="Workspace content" tabindex="0">
     <header class="topbar"><p class="breadcrumb">Team workspace <span>/</span><strong id="page-label">Usage overview</strong></p><div class="top-actions"><span id="signed-in" class="fine"></span><button id="logout" class="button">Sign out</button></div></header>
@@ -66,8 +68,38 @@
           <label class="check"><input name="include_fixtures" type="checkbox"> Include synthetic test data</label><button class="button primary">Apply filters</button>
         </form>
         <div id="metrics" class="metrics"></div>
-        <div class="grid-two"><article class="panel"><h2>How to read these costs</h2><p class="data-note" id="cost-note"></p><p id="evidence-counts" class="fine"></p><details class="help-details"><summary>What is included in the estimate?</summary><p>Token counts reported by the provider are multiplied by the saved model prices. Calls with missing usage or unsupported prices remain unknown. A known subtotal can therefore be lower than the full cost.</p><p>Hardware and electricity are unmeasured. Provider invoices have not been reconciled. Calls captured only at the final response may omit retries and failed attempts. Synthetic test data is excluded unless you select it above.</p></details></article>
+        <div class="grid-two"><article class="panel"><h2>How to read these costs</h2><p class="data-note" id="cost-note"></p><p id="evidence-counts" class="fine"></p><details class="help-details"><summary>What is included in the estimate?</summary><p>Token counts reported by the provider are multiplied by the saved model prices. Calls with missing usage or unsupported prices remain unknown. A known subtotal can therefore be lower than the full cost.</p><p>Hardware and electricity are unmeasured. Billing reconciliation compares imported charges with declared captured scopes separately; individual task invoice costs remain unknown. Calls captured only at the final response may omit retries and failed attempts. Synthetic test data is excluded unless you select it above.</p></details></article>
         <article class="panel spotlight"><p class="eyebrow">NEXT STEP</p><h2>See what happened inside a task.</h2><p class="lede">Open a task to follow its model calls, see the cost of each step, and choose what to investigate.</p><button class="button primary" data-goto="tasks">Open task explorer</button></article></div>
+      </section>
+      <section id="page-billing" data-flow="connect" hidden>
+        <div class="page-heading"><p class="eyebrow">BILLING RECONCILIATION</p><h1>Explain the gap between usage and the bill.</h1><p class="lede">Import Bedrock charges, link comparable billing groups to captured application calls, and see what still needs an explanation.</p></div>
+        <article class="panel screen-guide">
+          <h2>Three steps to a reviewable comparison.</h2>
+          <ol class="screen-steps"><li><strong>Import the billing snapshot</strong><span>Use every CSV part for one AWS account, billing month and currency.</span></li><li><strong>Declare the matching scope</strong><span>Link the input and output charge groups to the exact sources, model, region and mode.</span></li><li><strong>Inspect differences</strong><span>Keep missing capture, fees, credits and unassigned charges visible. Export the evidence.</span></li></ol>
+          <div class="row-actions"><button class="button primary" id="billing-example" data-admin>Load fictional billing example</button><button class="button" data-goto="sources">Connect a Bedrock application</button></div>
+          <p class="fine">The fictional example makes zero model calls and stays separate from real billing and normal usage totals. Billing files are supplied by your administrator; Workbench does not independently authenticate invoices or assign a bill to individual tasks.</p>
+        </article>
+        <div class="section-head"><div><h2>Billing snapshots</h2><p class="fine">A refreshed export replaces the current snapshot for its scope. Earlier revisions remain inspectable.</p></div><button class="button" id="billing-refresh">Refresh billing view</button></div>
+        <label class="field">Choose an account, month and revision<select id="billing-report-select"><option value="">No billing snapshots yet</option></select></label>
+        <div class="pagination"><button class="button" id="billing-previous" disabled>Previous snapshots</button><p class="fine" id="billing-list-page"></p><button class="button" id="billing-next" disabled>More snapshots</button></div>
+        <div id="billing-report"></div>
+        <details id="billing-import-details" class="panel help-details" data-admin open>
+          <summary>Import a complete Bedrock billing snapshot</summary>
+          <p>Choose Legacy CUR CSV or CUR 2.0 CSV with the documented projected columns. Combine all report parts for the selected account and month. The import is limited to 20,000 rows and 8 MB of CSV text; other AWS service rows are counted separately and excluded from Bedrock totals.</p>
+          <form id="billing-import-form">
+            <div class="billing-form-grid">
+              <label class="field">Report name<input name="name" required maxlength="100" placeholder="Bedrock · October application costs"></label>
+              <label class="field">CSV format<select name="format"><option value="legacy-cur">Legacy CUR</option><option value="cur-2.0">CUR 2.0 · projected CSV</option></select></label>
+              <label class="field">AWS usage account ID<input name="account_id" required inputmode="numeric" pattern="[0-9]{12}" maxlength="12" placeholder="12-digit account from the report"><small>Use the usage account, which can differ from the payer account.</small></label>
+              <label class="field">Billing month · UTC<input name="month" type="month" required></label>
+              <label class="field">Currency<input name="currency" value="USD" required pattern="[A-Z]{3}" maxlength="3"><small>Other currencies can be imported. Captured-call comparisons currently use USD.</small></label>
+              <label class="field">Complete CSV export · all parts<input id="billing-files" type="file" accept=".csv,text/csv" multiple required></label>
+            </div>
+            <label class="check billing-confirm"><input name="complete_snapshot" type="checkbox" required><span>I have included the complete Bedrock snapshot for this account, month and currency. A refresh will supersede the earlier snapshot.</span></label>
+            <button type="submit" class="button primary">Preview charges</button>
+          </form>
+          <div id="billing-preview" hidden></div>
+        </details>
       </section>
       <section id="page-tasks" data-flow="tasks" hidden>
         <div class="page-heading"><p class="eyebrow">TASK EXPLORER</p><h1>See the work behind each cost.</h1><p class="lede">A task run groups the model calls used for one piece of work. Open a card to follow the steps and their estimated API cost.</p></div>
