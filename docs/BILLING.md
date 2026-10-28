@@ -12,6 +12,14 @@ from this screen.
 
 ## Try the complete workflow
 
+The source checkout adds **Download sample CSVs and usage**, containing
+[fictional Legacy CUR/CUR 2.0 files](../data/billing-sample/README.md), matching
+events and expected totals. The CSV fixture marker prevents importing the sample
+as real billing; use the existing fictional-example action to load it.
+See [acceptance checks](BILLING-ACCEPTANCE.md) for private customer exports and
+[scheduled collection](BILLING-COLLECTION.md) for the opt-in S3 operator process.
+These source additions are not included in the v0.5.0 archive.
+
 1. Open the authenticated pilot and choose **Billing reconciliation**.
 2. Select **Load fictional billing example** as an administrator.
 3. Inspect the two-call task comparison, unassigned charges, and separate credit.
@@ -221,6 +229,7 @@ used. AxonLLM and Ostiari's existing integration boundaries remain unchanged.
 
 Local validation uses authored CSV and synthetic usage. It does not establish
 compatibility with every AWS export configuration or validate a customer's
-invoice. Automated billing collection, subscription allocation, other provider
-bills, and cost-based routing activation remain future work.
+invoice. Versioned Legacy CUR CSV/gzip collection is now available in the source
+checkout; real-delivery acceptance, other formats/providers, subscription
+allocation and cost-based routing activation remain future work.
 See the [dated implementation verification](VERIFICATION-BILLING.md).

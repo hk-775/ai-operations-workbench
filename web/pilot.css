@@ -112,6 +112,8 @@
 .billing-metrics .metric{background:var(--accent-soft);border-color:var(--accent-line)}
 #billing-report .help-details code{display:inline-block;max-width:100%;overflow-wrap:anywhere}
 #billing-preview{margin-top:24px;padding:20px;border:1px solid var(--accent-line);border-radius:12px;background:var(--accent-soft)}
+#coding-result .fine,#coding-result pre{overflow-wrap:anywhere}
+#coding-result pre{white-space:pre-wrap;max-width:100%;overflow:auto}
 #billing-import-details>summary,#billing-mapping-details>summary{font-size:15px}
 #billing-report-select{margin-top:8px}
 @media(max-width:800px){.billing-form-grid,.billing-comparison-values{grid-template-columns:1fr}.billing-scope .row-actions{width:100%}.billing-table{min-width:700px}}

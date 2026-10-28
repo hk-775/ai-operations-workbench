@@ -26,6 +26,7 @@ let generation = 0;
 let taskPage = 0, loginMethods = {local:true,company:false}, usageRequest = 0;
 const canEdit = () => session?.user && session.user.role !== 'viewer';
 const isAdmin = () => session?.user?.role === 'admin';
+const coding = createCoding({api, action, notice, getEpoch:()=>generation});
 const billing = createBilling({api, action, notice, isAdmin, getEpoch:()=>generation,
   onExample:()=>Promise.all([loadUsage(),loadSources()]),
   onTasks:async scope=>{
@@ -64,6 +65,7 @@ async function action(fn) {
 function showLogin() {
   session = null; generation++;
   billing.reset();
+  coding.reset();
   usage = null; jobRows = []; proposalRows = [];
   for (const id of ['metrics','task-list','sources','jobs','evaluation-result','proposals','users','audit',
                     'recording-select','proposal-job','evidence-counts','cost-note',

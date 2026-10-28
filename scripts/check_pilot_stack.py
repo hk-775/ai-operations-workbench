@@ -24,7 +24,7 @@ def run(args, **kwargs):
 
 
 seed = r'''
-import json, os, secrets, subprocess, sys, tempfile
+import io, json, os, secrets, subprocess, sys, tempfile, zipfile
 from pathlib import Path
 from sqlalchemy.engine import make_url
 from sqlalchemy import select
@@ -64,6 +64,16 @@ with tempfile.TemporaryDirectory(prefix="pilot-bootstrap-check-") as directory:
         signed = client.post("/api/auth/login",json={"username":"smoke-admin","password":password})
         assert signed.status_code == 200
         client.headers["X-Workbench-CSRF"] = signed.json()["csrf"]
+        coding = client.get("/api/pilot/coding/example")
+        assert coding.status_code == 200, "Bundled coding evidence is unavailable"
+        assert client.post("/api/pilot/coding/preview", json=coding.json()).status_code == 200
+        sample = client.get("/api/pilot/billing/example-files")
+        assert sample.status_code == 200, "Bundled billing sample is unavailable"
+        with zipfile.ZipFile(io.BytesIO(sample.content)) as bundle:
+            assert len(bundle.namelist()) == 6
+            receipt = json.loads(bundle.read("bedrock-billing-sample/sample-check.json"))
+            assert receipt["status"] == "fixture_checks_passed"
+        assert client.get("/api/pilot/billing/collection").json() == {"collectors": []}
         imported = client.post("/api/pilot/recordings/example",json={}).json()
         queued = client.post("/api/pilot/evaluations",json={"recording_id":imported["recording_id"]}).json()
         assert EvaluationWorker(app.state.database, settings).run_once()
@@ -73,7 +83,8 @@ with tempfile.TemporaryDirectory(prefix="pilot-bootstrap-check-") as directory:
         assert review["status"] == "no_eligible_model"
         summary = client.get("/api/pilot/usage").json()
         assert summary["events"] == 144 and summary["api_estimate_usd"] == "0.088074750"
-print(json.dumps({"bootstrap":"passed","nonsuperuser_role":"passed","container_evaluation":"passed"}))
+print(json.dumps({"bootstrap":"passed","nonsuperuser_role":"passed","container_evaluation":"passed",
+                  "coding_preview":"passed","billing_sample":"passed"}))
 '''
 
 verify = r'''

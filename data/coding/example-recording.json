@@ -1,0 +1,494 @@
+{
+  "schema": "workbench.coding.recording.v1",
+  "mode": "fixture",
+  "dataset_sha256": "01f4bd3e565acfa626205548dc49304d5e5c05140fe38afc60b33410d18fc03a",
+  "provenance": "Authored patches, API estimates, token counts and model latency. No model generated these responses.",
+  "samples": [
+    {
+      "candidate": "example-fast",
+      "case_id": "decimal-charge",
+      "repetition": 1,
+      "attempts": [
+        {
+          "replacement": "def solve(x):\n    return str(round(x['tokens'] * float(x['rate']) / 1000000, 2))\n",
+          "calls": [
+            {
+              "response_id": "authored-example-fast-decimal-charge-0",
+              "input_tokens": 1000,
+              "output_tokens": 100,
+              "api_estimate_usd": "0.002",
+              "latency_ms": 500.0,
+              "cost_basis": "fixture"
+            }
+          ],
+          "other_tool_api_usd": "0",
+          "human_review_ms": null
+        }
+      ]
+    },
+    {
+      "candidate": "example-fast",
+      "case_id": "exclusive-window",
+      "repetition": 1,
+      "attempts": [
+        {
+          "replacement": "def solve(x):\n    return x['start'] <= x['now'] < x['end']\n",
+          "calls": [
+            {
+              "response_id": "authored-example-fast-exclusive-window-0",
+              "input_tokens": 1000,
+              "output_tokens": 100,
+              "api_estimate_usd": "0.002",
+              "latency_ms": 500.0,
+              "cost_basis": "fixture"
+            }
+          ],
+          "other_tool_api_usd": "0",
+          "human_review_ms": null
+        }
+      ]
+    },
+    {
+      "candidate": "example-fast",
+      "case_id": "source-deduplication",
+      "repetition": 1,
+      "attempts": [
+        {
+          "replacement": "def solve(x):\n    seen = set()\n    return [e for e in x if not (e['id'] in seen or seen.add(e['id']))]\n",
+          "calls": [
+            {
+              "response_id": "authored-example-fast-source-deduplication-0",
+              "input_tokens": 1000,
+              "output_tokens": 100,
+              "api_estimate_usd": "0.002",
+              "latency_ms": 500.0,
+              "cost_basis": "fixture"
+            }
+          ],
+          "other_tool_api_usd": "0",
+          "human_review_ms": null
+        }
+      ]
+    },
+    {
+      "candidate": "example-fast",
+      "case_id": "retry-cap",
+      "repetition": 1,
+      "attempts": [
+        {
+          "replacement": "def solve(x):\n    return min(x['cap'], max(2 ** x['attempt'], x.get('retry_after') or 0))\n",
+          "calls": [
+            {
+              "response_id": "authored-example-fast-retry-cap-0",
+              "input_tokens": 1000,
+              "output_tokens": 100,
+              "api_estimate_usd": "0.002",
+              "latency_ms": 500.0,
+              "cost_basis": "fixture"
+            }
+          ],
+          "other_tool_api_usd": "0",
+          "human_review_ms": null
+        }
+      ]
+    },
+    {
+      "candidate": "example-fast",
+      "case_id": "qualified-route",
+      "repetition": 1,
+      "attempts": [
+        {
+          "replacement": "def solve(x):\n    return min(x['models'], key=lambda m: float(m['cost'] or 0))['name'] if x['models'] else None\n",
+          "calls": [
+            {
+              "response_id": "authored-example-fast-qualified-route-0",
+              "input_tokens": 1000,
+              "output_tokens": 100,
+              "api_estimate_usd": "0.002",
+              "latency_ms": 500.0,
+              "cost_basis": "fixture"
+            }
+          ],
+          "other_tool_api_usd": "0",
+          "human_review_ms": null
+        }
+      ]
+    },
+    {
+      "candidate": "example-fast",
+      "case_id": "header-redaction",
+      "repetition": 1,
+      "attempts": [
+        {
+          "replacement": "def solve(x):\n    return {k: '[REDACTED]' if k == 'Authorization' else v for k, v in x.items()}\n",
+          "calls": [
+            {
+              "response_id": "authored-example-fast-header-redaction-0",
+              "input_tokens": 1000,
+              "output_tokens": 100,
+              "api_estimate_usd": "0.002",
+              "latency_ms": 500.0,
+              "cost_basis": "fixture"
+            }
+          ],
+          "other_tool_api_usd": "0",
+          "human_review_ms": null
+        }
+      ]
+    },
+    {
+      "candidate": "example-repair",
+      "case_id": "decimal-charge",
+      "repetition": 1,
+      "attempts": [
+        {
+          "replacement": "def solve(x):\n    return str(round(x['tokens'] * float(x['rate']) / 1000000, 2))\n",
+          "calls": [
+            {
+              "response_id": "authored-example-repair-decimal-charge-0",
+              "input_tokens": 1000,
+              "output_tokens": 100,
+              "api_estimate_usd": "0.002",
+              "latency_ms": 500.0,
+              "cost_basis": "fixture"
+            }
+          ],
+          "other_tool_api_usd": "0",
+          "human_review_ms": null
+        },
+        {
+          "replacement": "from decimal import Decimal\n\ndef solve(x):\n    return format(Decimal(x['tokens']) * Decimal(x['rate']) / Decimal(1000000), 'f')\n",
+          "calls": [
+            {
+              "response_id": "authored-example-repair-decimal-charge-1",
+              "input_tokens": 1000,
+              "output_tokens": 100,
+              "api_estimate_usd": "0.002",
+              "latency_ms": 500.0,
+              "cost_basis": "fixture"
+            }
+          ],
+          "other_tool_api_usd": "0",
+          "human_review_ms": null
+        }
+      ]
+    },
+    {
+      "candidate": "example-repair",
+      "case_id": "exclusive-window",
+      "repetition": 1,
+      "attempts": [
+        {
+          "replacement": "def solve(x):\n    return x['start'] <= x['now'] <= x['end']\n",
+          "calls": [
+            {
+              "response_id": "authored-example-repair-exclusive-window-0",
+              "input_tokens": 1000,
+              "output_tokens": 100,
+              "api_estimate_usd": "0.002",
+              "latency_ms": 500.0,
+              "cost_basis": "fixture"
+            }
+          ],
+          "other_tool_api_usd": "0",
+          "human_review_ms": null
+        },
+        {
+          "replacement": "def solve(x):\n    return x['start'] <= x['now'] < x['end']\n",
+          "calls": [
+            {
+              "response_id": "authored-example-repair-exclusive-window-1",
+              "input_tokens": 1000,
+              "output_tokens": 100,
+              "api_estimate_usd": "0.002",
+              "latency_ms": 500.0,
+              "cost_basis": "fixture"
+            }
+          ],
+          "other_tool_api_usd": "0",
+          "human_review_ms": null
+        }
+      ]
+    },
+    {
+      "candidate": "example-repair",
+      "case_id": "source-deduplication",
+      "repetition": 1,
+      "attempts": [
+        {
+          "replacement": "def solve(x):\n    seen = set()\n    return [e for e in x if not (e['id'] in seen or seen.add(e['id']))]\n",
+          "calls": [
+            {
+              "response_id": "authored-example-repair-source-deduplication-0",
+              "input_tokens": 1000,
+              "output_tokens": 100,
+              "api_estimate_usd": "0.002",
+              "latency_ms": 500.0,
+              "cost_basis": "fixture"
+            }
+          ],
+          "other_tool_api_usd": "0",
+          "human_review_ms": null
+        },
+        {
+          "replacement": "def solve(x):\n    seen, result = set(), []\n    for e in x:\n        key = (e['source'], e['id'])\n        if key not in seen:\n            seen.add(key)\n            result.append(e)\n    return result\n",
+          "calls": [
+            {
+              "response_id": "authored-example-repair-source-deduplication-1",
+              "input_tokens": 1000,
+              "output_tokens": 100,
+              "api_estimate_usd": "0.002",
+              "latency_ms": 500.0,
+              "cost_basis": "fixture"
+            }
+          ],
+          "other_tool_api_usd": "0",
+          "human_review_ms": null
+        }
+      ]
+    },
+    {
+      "candidate": "example-repair",
+      "case_id": "retry-cap",
+      "repetition": 1,
+      "attempts": [
+        {
+          "replacement": "def solve(x):\n    return 2 ** x['attempt']\n",
+          "calls": [
+            {
+              "response_id": "authored-example-repair-retry-cap-0",
+              "input_tokens": 1000,
+              "output_tokens": 100,
+              "api_estimate_usd": "0.002",
+              "latency_ms": 500.0,
+              "cost_basis": "fixture"
+            }
+          ],
+          "other_tool_api_usd": "0",
+          "human_review_ms": null
+        },
+        {
+          "replacement": "def solve(x):\n    return min(x['cap'], max(2 ** x['attempt'], x.get('retry_after') or 0))\n",
+          "calls": [
+            {
+              "response_id": "authored-example-repair-retry-cap-1",
+              "input_tokens": 1000,
+              "output_tokens": 100,
+              "api_estimate_usd": "0.002",
+              "latency_ms": 500.0,
+              "cost_basis": "fixture"
+            }
+          ],
+          "other_tool_api_usd": "0",
+          "human_review_ms": null
+        }
+      ]
+    },
+    {
+      "candidate": "example-repair",
+      "case_id": "qualified-route",
+      "repetition": 1,
+      "attempts": [
+        {
+          "replacement": "def solve(x):\n    return min(x['models'], key=lambda m: float(m['cost'] or 0))['name'] if x['models'] else None\n",
+          "calls": [
+            {
+              "response_id": "authored-example-repair-qualified-route-0",
+              "input_tokens": 1000,
+              "output_tokens": 100,
+              "api_estimate_usd": "0.002",
+              "latency_ms": 500.0,
+              "cost_basis": "fixture"
+            }
+          ],
+          "other_tool_api_usd": "0",
+          "human_review_ms": null
+        },
+        {
+          "replacement": "from decimal import Decimal\n\ndef solve(x):\n    valid = [m for m in x['models'] if m['cost'] is not None and m['quality'] >= x['min_quality'] and m['latency'] <= x['max_latency']]\n    return min(valid, key=lambda m: (Decimal(m['cost']), m['name']))['name'] if valid else None\n",
+          "calls": [
+            {
+              "response_id": "authored-example-repair-qualified-route-1",
+              "input_tokens": 1000,
+              "output_tokens": 100,
+              "api_estimate_usd": "0.002",
+              "latency_ms": 500.0,
+              "cost_basis": "fixture"
+            }
+          ],
+          "other_tool_api_usd": "0",
+          "human_review_ms": null
+        }
+      ]
+    },
+    {
+      "candidate": "example-repair",
+      "case_id": "header-redaction",
+      "repetition": 1,
+      "attempts": [
+        {
+          "replacement": "def solve(x):\n    return {k: '[REDACTED]' if k == 'Authorization' else v for k, v in x.items()}\n",
+          "calls": [
+            {
+              "response_id": "authored-example-repair-header-redaction-0",
+              "input_tokens": 1000,
+              "output_tokens": 100,
+              "api_estimate_usd": "0.002",
+              "latency_ms": 500.0,
+              "cost_basis": "fixture"
+            }
+          ],
+          "other_tool_api_usd": "0",
+          "human_review_ms": null
+        },
+        {
+          "replacement": "def solve(x):\n    return {k: '[REDACTED]' if k.lower() in ('authorization', 'x-api-key') else v for k, v in x.items()}\n",
+          "calls": [
+            {
+              "response_id": "authored-example-repair-header-redaction-1",
+              "input_tokens": 1000,
+              "output_tokens": 100,
+              "api_estimate_usd": "0.002",
+              "latency_ms": 500.0,
+              "cost_basis": "fixture"
+            }
+          ],
+          "other_tool_api_usd": "0",
+          "human_review_ms": null
+        }
+      ]
+    },
+    {
+      "candidate": "example-careful",
+      "case_id": "decimal-charge",
+      "repetition": 1,
+      "attempts": [
+        {
+          "replacement": "from decimal import Decimal\n\ndef solve(x):\n    return format(Decimal(x['tokens']) * Decimal(x['rate']) / Decimal(1000000), 'f')\n",
+          "calls": [
+            {
+              "response_id": "authored-example-careful-decimal-charge-0",
+              "input_tokens": 1000,
+              "output_tokens": 100,
+              "api_estimate_usd": "0.005",
+              "latency_ms": 900.0,
+              "cost_basis": "fixture"
+            }
+          ],
+          "other_tool_api_usd": "0",
+          "human_review_ms": null
+        }
+      ]
+    },
+    {
+      "candidate": "example-careful",
+      "case_id": "exclusive-window",
+      "repetition": 1,
+      "attempts": [
+        {
+          "replacement": "def solve(x):\n    return x['start'] <= x['now'] < x['end']\n",
+          "calls": [
+            {
+              "response_id": "authored-example-careful-exclusive-window-0",
+              "input_tokens": 1000,
+              "output_tokens": 100,
+              "api_estimate_usd": "0.005",
+              "latency_ms": 900.0,
+              "cost_basis": "fixture"
+            }
+          ],
+          "other_tool_api_usd": "0",
+          "human_review_ms": null
+        }
+      ]
+    },
+    {
+      "candidate": "example-careful",
+      "case_id": "source-deduplication",
+      "repetition": 1,
+      "attempts": [
+        {
+          "replacement": "def solve(x):\n    seen, result = set(), []\n    for e in x:\n        key = (e['source'], e['id'])\n        if key not in seen:\n            seen.add(key)\n            result.append(e)\n    return result\n",
+          "calls": [
+            {
+              "response_id": "authored-example-careful-source-deduplication-0",
+              "input_tokens": 1000,
+              "output_tokens": 100,
+              "api_estimate_usd": "0.005",
+              "latency_ms": 900.0,
+              "cost_basis": "fixture"
+            }
+          ],
+          "other_tool_api_usd": "0",
+          "human_review_ms": null
+        }
+      ]
+    },
+    {
+      "candidate": "example-careful",
+      "case_id": "retry-cap",
+      "repetition": 1,
+      "attempts": [
+        {
+          "replacement": "def solve(x):\n    return min(x['cap'], max(2 ** x['attempt'], x.get('retry_after') or 0))\n",
+          "calls": [
+            {
+              "response_id": "authored-example-careful-retry-cap-0",
+              "input_tokens": 1000,
+              "output_tokens": 100,
+              "api_estimate_usd": "0.005",
+              "latency_ms": 900.0,
+              "cost_basis": "fixture"
+            }
+          ],
+          "other_tool_api_usd": "0",
+          "human_review_ms": null
+        }
+      ]
+    },
+    {
+      "candidate": "example-careful",
+      "case_id": "qualified-route",
+      "repetition": 1,
+      "attempts": [
+        {
+          "replacement": "from decimal import Decimal\n\ndef solve(x):\n    valid = [m for m in x['models'] if m['cost'] is not None and m['quality'] >= x['min_quality'] and m['latency'] <= x['max_latency']]\n    return min(valid, key=lambda m: (Decimal(m['cost']), m['name']))['name'] if valid else None\n",
+          "calls": [
+            {
+              "response_id": "authored-example-careful-qualified-route-0",
+              "input_tokens": 1000,
+              "output_tokens": 100,
+              "api_estimate_usd": "0.005",
+              "latency_ms": 900.0,
+              "cost_basis": "fixture"
+            }
+          ],
+          "other_tool_api_usd": "0",
+          "human_review_ms": null
+        }
+      ]
+    },
+    {
+      "candidate": "example-careful",
+      "case_id": "header-redaction",
+      "repetition": 1,
+      "attempts": [
+        {
+          "replacement": "def solve(x):\n    return {k: '[REDACTED]' if k.lower() in ('authorization', 'x-api-key') else v for k, v in x.items()}\n",
+          "calls": [
+            {
+              "response_id": "authored-example-careful-header-redaction-0",
+              "input_tokens": 1000,
+              "output_tokens": 100,
+              "api_estimate_usd": "0.005",
+              "latency_ms": 900.0,
+              "cost_basis": "fixture"
+            }
+          ],
+          "other_tool_api_usd": "0",
+          "human_review_ms": null
+        }
+      ]
+    }
+  ]
+}

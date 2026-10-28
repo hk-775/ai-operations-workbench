@@ -38,8 +38,12 @@ the authenticated application remains a customer-owned deployment.
 
 ## 3. Coding-task demonstration
 
-Add a reproducible **bug fix plus tests** workflow to address the Codex, Cursor,
-and Claude Code customer conversations directly.
+Implemented in the source checkout: a reproducible **bug fix plus tests**
+workflow with six separate cases, frozen snapshots, Docker execution, public
+and acceptance tests, recorded final patches, every attempt's API accounting,
+and a read-only result screen. An optional bounded AxonLLM recorder collects
+actual model patches; verification used authored patches and zero paid calls.
+See [coding evaluations](CODING-EVALS.md).
 
 Each task should use an isolated repository snapshot with a known bug, a bounded
 tool environment, hidden acceptance tests, and a recorded final patch. Measure
@@ -50,8 +54,10 @@ the entire task, including repair attempts and tool steps. Compare:
 - Cost per accepted patch, including failed attempts.
 - Human-review effort and compute costs when actually measured.
 
-Do not replace the support recording or relabel it as coding evidence. A coding
-adapter needs its own dataset, contract, artifact format, and integrity checks.
+The coding adapter has its own dataset, contract, artifact format, and integrity
+checks. It preserves the support recording. Representative private held-out
+workloads, repeat model runs, native subscription-tool capture, and customer
+model recommendations remain future work.
 
 ## 4. Expand connector coverage
 
@@ -92,8 +98,16 @@ The existing seeded and clean AWS test workspaces have been
 [upgraded and verified on schema 4](VERIFICATION-HOSTED-BILLING.md), including
 fresh restore checks and the isolated fictional billing example.
 
-Next validate representative customer exports and add supported automated
-collection and other providers. Imported records are not independently
+The source checkout adds [independent billing acceptance checks](BILLING-ACCEPTANCE.md),
+a [downloadable fictional sample](../data/billing-sample/README.md), and
+[scheduled collection](BILLING-COLLECTION.md) for versioned Legacy CUR CSV/gzip
+assemblies in S3. Collection status, failure preservation and alerts are included.
+These additions are not in the v0.5.0 archive.
+
+Real customer export acceptance and a real scheduled S3 delivery remain pending:
+the configured account had no exports and the supplied sample is explicitly
+fictional. Next validate that private evidence, then expand supported formats,
+large organization exports and other providers. Imported records are not independently
 authenticated invoices, and aggregate links do not allocate bills to tasks.
 
 Decide how to attribute subscriptions, shared infrastructure, retries, caches,

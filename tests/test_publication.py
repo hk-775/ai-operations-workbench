@@ -40,7 +40,7 @@ def test_downloaded_source_includes_hosted_deployment_and_excludes_private_state
         target = tmp_path / name
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes((ROOT / name).read_bytes())
-    for name in ("data/cases.json", "data/model-comparison.json",
+    for name in (*package.DATA_FILES,
                  "deploy/aws/configure_host.py", "deploy/aws/hosted-test.json",
                  "deploy/aws/hosted.guard", "docs/architecture/aws-hosted-test.drawio",
                  "docs/architecture/aws-hosted-test.png", "web/architecture.html",
@@ -67,6 +67,7 @@ def test_downloaded_source_includes_hosted_deployment_and_excludes_private_state
         assert "docs/architecture/aws-hosted-test.drawio" in paths
         assert "docs/architecture/aws-hosted-test.png" in paths
         assert {"web/architecture.html", "web/architecture.css", "web/architecture.js"} <= paths
+        assert set(package.DATA_FILES) <= paths
         assert not any({".pilot", ".state", "__pycache__"} & set(Path(path).parts)
                        or path == ".env" for path in paths)
 

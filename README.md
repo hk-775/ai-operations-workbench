@@ -125,8 +125,9 @@ Choose your administrator password at the prompt, then open
 job recovery, backups, remote HTTPS configuration, and current limits.
 
 Pilot mode is opt-in (`WORKBENCH_MODE=pilot`); the default local demo retains its
-original behavior. Usage ingestion handles application metadata; quality
-evaluation currently requires a matching saved support-v1 recording.
+original behavior. Usage ingestion handles application metadata; the durable
+evaluation queue uses matching support-v1 recordings. The separate coding
+workload described below uses an operator CLI and read-only result previews.
 
 The **Amazon Bedrock application connector**, introduced in v0.4.0, remains included
 for boto3 Converse and ConverseStream, with collector health and an offline
@@ -142,6 +143,15 @@ explicit **schema-4 migration**; the v0.4.0 archive does not contain billing rec
 The existing seeded and clean AWS test workspaces have completed the
 [hosted schema-4 acceptance](docs/VERIFICATION-HOSTED-BILLING.md).
 
+**New in the source checkout (not in the v0.5.0 download):**
+[billing acceptance checks](docs/BILLING-ACCEPTANCE.md),
+[scheduled versioned CUR collection](docs/BILLING-COLLECTION.md), and
+[coding-task evaluations](docs/CODING-EVALS.md).
+Download the [fictional billing sample files](data/billing-sample/README.md) from
+the billing screen, or rebuild the ZIP with `scripts/build_billing_sample.py`.
+The sample includes both CSV formats, matching usage, and expected totals.
+Real customer billing acceptance remains pending; authored samples do not establish it.
+
 ## What is working
 
 | Capability | Current implementation |
@@ -149,6 +159,8 @@ The existing seeded and clean AWS test workspaces have completed the
 | Usage connection | AxonLLM and Amazon Bedrock Converse/ConverseStream metadata capture; durable outboxes, authenticated source-scoped delivery, and collector heartbeats; bundled recordings and compatible JSON import |
 | Ledger | PostgreSQL in pilot mode; transactional source-scoped application-event deduplication and Decimal API estimates. Original demo uses SQLite |
 | Billing reconciliation | Complete Legacy CUR/CUR 2.0 CSV snapshots; explicit account/source/model mappings, exact charge differences, unassigned fees/credits, immutable revision history, and JSON export |
+| Scheduled billing collection (source) | Opt-in operator watcher for complete versioned Legacy CUR CSV/gzip assemblies in S3; bounded reads, hashes, revision checks, replay/refresh, collection health and alerts |
+| Coding evaluations (source) | Six bug-fix tasks, disposable offline containers, saved patches and every attempt, actual test timing, API cost per accepted patch, optional bounded AxonLLM model recording, and read-only result previews |
 | Team access | Company OIDC/MFA or local test accounts; explicit administrator, analyst, viewer roles; revocable sessions and source tokens |
 | Operations | Administrator health dashboard, source backlog/stale-collector warnings, private Prometheus metrics, alert rules, structured request logs, and scheduled retention |
 | Scale | SQL totals, UTC time windows, paginated tasks and calls; historical prices and unknown costs preserved |
@@ -161,9 +173,10 @@ The existing seeded and clean AWS test workspaces have completed the
 | Interface | Guided team screens with named recorded tasks, per-call costs, and expandable technical details. White navigation, stone backgrounds, violet buttons, sky overview cards matching the selected menu, and yellow/violet/teal workflow accents; desktop and mobile; small moving circles with pause and reduced-motion support |
 
 **Not yet implemented:** native Codex, Cursor or Claude Code connectors;
-automatic account-wide Bedrock billing collection; subscription invoice reconciliation; a coding workload; multi-company
+automatic account-wide/all-format Bedrock billing collection; subscription invoice reconciliation; multi-company
 SaaS tenant management; arbitrary workload evaluators; or production routing changes. The pilot
-is bounded to a single team, with a support-workflow evaluation contract.
+is bounded to a single team. Coding remains a separate demonstration workload,
+not a representative model leaderboard or native coding-tool connector.
 
 ## See the decision
 

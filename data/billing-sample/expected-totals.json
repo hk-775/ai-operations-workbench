@@ -1,0 +1,15 @@
+{
+  "evidence": "fixture",
+  "account_id": "000000000000",
+  "month": "2026-10",
+  "currency": "USD",
+  "imported_charges": "0.0121475",
+  "positive_charges": "0.0141475",
+  "negative_adjustments": "-0.002",
+  "row_count": 5,
+  "captured_calls": 2,
+  "comparable_estimate_usd": "0.0001295",
+  "linked_charges": "0.0001475",
+  "unassigned_charges": "0.012",
+  "charges_minus_estimate": "0.000018"
+}

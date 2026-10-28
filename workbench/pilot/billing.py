@@ -55,7 +55,7 @@ def preview(database, team, upload):
     }
 
 
-def import_report(database, team, upload, actor, *, fixture=False):
+def import_report(database, team, upload, actor, *, fixture=False, collection_receipt=None):
     parsed = parse_upload(upload, fixture=fixture)
     with database.engine.begin() as db:
         # The team row exists even for the first report; it fences first-import
@@ -89,8 +89,9 @@ def import_report(database, team, upload, actor, *, fixture=False):
             id=identity, family_id=family["id"], team_id=team, revision=revision + 1,
             fingerprint=parsed["fingerprint"], name=parsed["name"],
             payload=canonical(parsed["snapshot"]),
-            provenance=canonical({k: parsed[k] for k in
-                ("submitted_sha256", "outside_bedrock_rows", "duplicate_rows")}),
+            provenance=canonical({**{k: parsed[k] for k in
+                ("submitted_sha256", "outside_bedrock_rows", "duplicate_rows")},
+                **({"collection": collection_receipt} if collection_receipt else {})}),
             created_at=now,
         ))
         # Carry forward only exact, still-eligible group selections. Changed

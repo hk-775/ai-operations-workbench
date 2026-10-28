@@ -1,0 +1,115 @@
+"""Build authored coding fixtures; never label these patches as model output."""
+import json
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+from workbench.coding import fingerprint
+
+
+def main():
+    cases = [
+        {
+            "id": "decimal-charge", "title": "Preserve fractional API charges",
+            "prompt": "Return the exact Decimal cost as text: tokens * USD per million / 1000000. Do not round away small charges.",
+            "source": "def solve(x):\n    return str(round(x['tokens'] * float(x['rate']) / 1000000, 2))\n",
+            "reference": "from decimal import Decimal\n\ndef solve(x):\n    return format(Decimal(x['tokens']) * Decimal(x['rate']) / Decimal(1000000), 'f')\n",
+            "public_tests": [{"input": {"tokens": 1000000, "rate": "2"}, "expected": "2"}],
+            "acceptance_tests": [
+                {"input": {"tokens": 7, "rate": "0.035"}, "expected": "0.000000245"},
+                {"input": {"tokens": 1000, "rate": "0.14"}, "expected": "0.00014"},
+                {"input": {"tokens": 999999, "rate": "1.234567"}, "expected": "1.234565765433"},
+            ],
+        },
+        {
+            "id": "exclusive-window", "title": "Stop counting at the billing boundary",
+            "prompt": "Return whether an integer timestamp is inside [start, end). The end is exclusive.",
+            "source": "def solve(x):\n    return x['start'] <= x['now'] <= x['end']\n",
+            "reference": "def solve(x):\n    return x['start'] <= x['now'] < x['end']\n",
+            "public_tests": [{"input": {"start": 10, "end": 20, "now": 15}, "expected": True}],
+            "acceptance_tests": [
+                {"input": {"start": 10, "end": 20, "now": 20}, "expected": False},
+                {"input": {"start": 10, "end": 20, "now": 10}, "expected": True},
+                {"input": {"start": 10, "end": 20, "now": 9}, "expected": False},
+            ],
+        },
+        {
+            "id": "source-deduplication", "title": "Deduplicate within each source",
+            "prompt": "Return events in input order, keeping only the first occurrence of each (source, id). The same ID in two sources is two events.",
+            "source": "def solve(x):\n    seen = set()\n    return [e for e in x if not (e['id'] in seen or seen.add(e['id']))]\n",
+            "reference": "def solve(x):\n    seen, result = set(), []\n    for e in x:\n        key = (e['source'], e['id'])\n        if key not in seen:\n            seen.add(key)\n            result.append(e)\n    return result\n",
+            "public_tests": [{"input": [{"source": "a", "id": "1"}, {"source": "a", "id": "1"}], "expected": [{"source": "a", "id": "1"}]}],
+            "acceptance_tests": [
+                {"input": [{"source": "a", "id": "1"}, {"source": "b", "id": "1"}], "expected": [{"source": "a", "id": "1"}, {"source": "b", "id": "1"}]},
+                {"input": [], "expected": []},
+                {"input": [{"source": "a", "id": "2"}, {"source": "a", "id": "1"}, {"source": "a", "id": "2"}], "expected": [{"source": "a", "id": "2"}, {"source": "a", "id": "1"}]},
+            ],
+        },
+        {
+            "id": "retry-cap", "title": "Bound retries without discarding Retry-After",
+            "prompt": "For attempt 0..30, return min(cap, max(2**attempt, retry_after or 0)). Inputs are nonnegative integers.",
+            "source": "def solve(x):\n    return 2 ** x['attempt']\n",
+            "reference": "def solve(x):\n    return min(x['cap'], max(2 ** x['attempt'], x.get('retry_after') or 0))\n",
+            "public_tests": [{"input": {"attempt": 1, "cap": 10}, "expected": 2}],
+            "acceptance_tests": [
+                {"input": {"attempt": 5, "cap": 10}, "expected": 10},
+                {"input": {"attempt": 1, "cap": 10, "retry_after": 8}, "expected": 8},
+                {"input": {"attempt": 0, "cap": 0}, "expected": 0},
+            ],
+        },
+        {
+            "id": "qualified-route", "title": "Keep unknown cost out of cheapest-model selection",
+            "prompt": "Choose the lowest Decimal cost model meeting min_quality and max_latency with known cost. Break cost ties by model name. Return null if none qualify.",
+            "source": "def solve(x):\n    return min(x['models'], key=lambda m: float(m['cost'] or 0))['name'] if x['models'] else None\n",
+            "reference": "from decimal import Decimal\n\ndef solve(x):\n    valid = [m for m in x['models'] if m['cost'] is not None and m['quality'] >= x['min_quality'] and m['latency'] <= x['max_latency']]\n    return min(valid, key=lambda m: (Decimal(m['cost']), m['name']))['name'] if valid else None\n",
+            "public_tests": [{"input": {"models": [{"name": "a", "cost": "1", "quality": 1, "latency": 10}], "min_quality": 0.9, "max_latency": 20}, "expected": "a"}],
+            "acceptance_tests": [
+                {"input": {"models": [{"name": "unknown", "cost": None, "quality": 1, "latency": 10}, {"name": "known", "cost": "1", "quality": 1, "latency": 10}], "min_quality": 0.9, "max_latency": 20}, "expected": "known"},
+                {"input": {"models": [{"name": "bad", "cost": "0.01", "quality": 0.5, "latency": 10}], "min_quality": 0.9, "max_latency": 20}, "expected": None},
+                {"input": {"models": [{"name": "z", "cost": "1", "quality": 1, "latency": 10}, {"name": "a", "cost": "1", "quality": 1, "latency": 10}], "min_quality": 0.9, "max_latency": 20}, "expected": "a"},
+            ],
+        },
+        {
+            "id": "header-redaction", "title": "Redact credentials regardless of header case",
+            "prompt": "Return headers with case-insensitive authorization and x-api-key values replaced by [REDACTED]. Preserve original keys and all other values.",
+            "source": "def solve(x):\n    return {k: '[REDACTED]' if k == 'Authorization' else v for k, v in x.items()}\n",
+            "reference": "def solve(x):\n    return {k: '[REDACTED]' if k.lower() in ('authorization', 'x-api-key') else v for k, v in x.items()}\n",
+            "public_tests": [{"input": {"Authorization": "fixture-placeholder"}, "expected": {"Authorization": "[REDACTED]"}}],
+            "acceptance_tests": [
+                {"input": {"authorization": "fixture-placeholder", "X-API-Key": "fixture-placeholder"}, "expected": {"authorization": "[REDACTED]", "X-API-Key": "[REDACTED]"}},
+                {"input": {"Content-Type": "application/json"}, "expected": {"Content-Type": "application/json"}},
+                {"input": {"AUTHORIZATION": "", "x-api-key": ""}, "expected": {"AUTHORIZATION": "[REDACTED]", "x-api-key": "[REDACTED]"}},
+            ],
+        },
+    ]
+    dataset = {"schema": "workbench.coding.cases.v1", "cases": cases}
+    samples = []
+    for candidate in ("example-fast", "example-repair", "example-careful"):
+        for i, case in enumerate(cases):
+            correct = candidate == "example-careful" or (candidate == "example-fast" and i in (1, 3))
+            sources = [case["reference"] if correct else case["source"]]
+            if candidate == "example-repair":
+                sources.append(case["reference"])
+            attempts = []
+            for attempt, source in enumerate(sources):
+                attempts.append({"replacement": source, "calls": [{
+                    "response_id": f"authored-{candidate}-{case['id']}-{attempt}",
+                    "input_tokens": 1000, "output_tokens": 100,
+                    "api_estimate_usd": "0.002" if candidate != "example-careful" else "0.005",
+                    "latency_ms": 500.0 if candidate != "example-careful" else 900.0,
+                    "cost_basis": "fixture",
+                }], "other_tool_api_usd": "0", "human_review_ms": None})
+            samples.append({"candidate": candidate, "case_id": case["id"], "repetition": 1, "attempts": attempts})
+    recording = {"schema": "workbench.coding.recording.v1", "mode": "fixture",
+                 "dataset_sha256": fingerprint(dataset),
+                 "provenance": "Authored patches, API estimates, token counts and model latency. No model generated these responses.",
+                 "samples": samples}
+    directory = ROOT / "data/coding"
+    directory.mkdir(exist_ok=True)
+    for name, value in (("cases.json", dataset), ("example-recording.json", recording)):
+        (directory / name).write_text(json.dumps(value, indent=2) + "\n")
+
+
+if __name__ == "__main__":
+    main()

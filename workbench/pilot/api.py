@@ -66,7 +66,7 @@ class Boundary:
             if headers.get("content-type", "").split(";")[0] != "application/json":
                 return await reject(415, "JSON content type required")
             limit = (16_500_000 if scope["path"] in {"/api/pilot/billing/preview", "/api/pilot/billing/imports"}
-                     else 8_000_000 if scope["path"] == "/api/pilot/recordings"
+                     else 8_000_000 if scope["path"] in {"/api/pilot/recordings", "/api/pilot/coding/preview"}
                      else 512_000 if scope["path"] == "/api/pilot/ingest" else 16_000)
             length = headers.get("content-length")
             if length and (not length.isdigit() or int(length) > limit):
@@ -199,6 +199,8 @@ def create_pilot_app(settings: Settings | None = None) -> FastAPI:
 
     from .billing_routes import register as register_billing
     register_billing(app, database, member, admin)
+    from .coding_routes import register as register_coding
+    register_coding(app, member)
 
     @app.get("/health/live")
     def live():

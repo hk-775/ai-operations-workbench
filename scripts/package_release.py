@@ -11,6 +11,11 @@ FILES = ("README.md","LICENSE","SECURITY.md","SUPPORT.md","CONTRIBUTING.md","COD
          "Dockerfile",".dockerignore",".gitignore",
          "compose.pilot.yaml","compose.production.yaml","compose.instances.yaml","compose.hosted-test.yaml")
 DIRECTORIES = ("workbench","scripts","config","web","docs","tests",".github")
+DATA_FILES = ("data/cases.json", "data/model-comparison.json",
+              "data/coding/cases.json", "data/coding/example-recording.json", "data/coding/example-result.json",
+              "data/billing-sample/README.md", "data/billing-sample/legacy-cur.csv",
+              "data/billing-sample/cur-2.0.csv", "data/billing-sample/matching-usage.json",
+              "data/billing-sample/expected-totals.json", "data/billing-sample/sample-check.json")
 
 
 def main():
@@ -22,7 +27,7 @@ def main():
     for directory in (*DIRECTORIES,"deploy"):
         paths.extend(p for p in (ROOT/directory).rglob("*") if p.is_file()
                      and "__pycache__" not in p.parts and not p.name.endswith((".pyc",".DS_Store")))
-    paths.extend(ROOT/path for path in ("data/cases.json","data/model-comparison.json"))
+    paths.extend(ROOT/path for path in DATA_FILES)
     archive = output / f"{name}.tar.gz"
     with tarfile.open(archive,"w:gz") as bundle:
         for path in sorted(set(paths)):
