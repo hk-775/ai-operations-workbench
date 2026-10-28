@@ -10,7 +10,7 @@ not a release announcement or a claim that hosted v0.4.0 was upgraded.
   PostgreSQL checks used an isolated PostgreSQL 16 container, separate schemas,
   and generated temporary credentials.
 - The focused billing suite passed **56 tests**, with two SQLite concurrency
-  skip. Cases include Legacy CUR/CUR 2.0, Decimal precision, negative adjustments,
+  skips. Cases include Legacy CUR/CUR 2.0, Decimal precision, negative adjustments,
   unsupported/missing values, account/currency/month validation, atomic rejection,
   replacement revisions, stale previews, duplicate scope prevention, fixture
   isolation, roles, team isolation, CSRF, export, concurrent imports/mappings,
