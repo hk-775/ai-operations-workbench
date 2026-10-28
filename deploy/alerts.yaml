@@ -49,3 +49,10 @@ groups:
         annotations:
           summary: A usage source continues to report undelivered events
           description: Inspect the local outbox and delivery errors. Reported queue counts may be stale.
+      - alert: WorkbenchBillingCollectionFailed
+        expr: workbench_failed_billing_collectors > 0 or workbench_stale_billing_collectors > 0
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: Billing collection failed or stopped reporting
+          description: Check the collector host, AWS access and complete versioned export. The last accepted snapshot remains available.

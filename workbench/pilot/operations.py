@@ -61,6 +61,10 @@ def snapshot(database, settings, team=None):
         "unmonitored_sources": sum(s["collection"]["status"] == "unmonitored" for s in connections)}
     result["stale_usage_sources"] = stale_sources
     result["backlog_usage_sources"] = backlog_sources
+    from workbench.billing_collection import statuses
+    billing_status = statuses(database, team)
+    result["failed_billing_collectors"] = sum(c["status"] == "failed" for c in billing_status)
+    result["stale_billing_collectors"] = sum(c["stale"] for c in billing_status)
     alerts = []
     if not result["worker_healthy"]:
         alerts.append({"severity": "critical", "message": "Evaluation worker is unavailable."})
@@ -74,6 +78,8 @@ def snapshot(database, settings, team=None):
         alerts.append({"severity": "warning", "message": f"{stale_sources} usage sources have stopped reporting collector health. Check Usage sources."})
     if backlog_sources:
         alerts.append({"severity": "warning", "message": f"{backlog_sources} usage sources last reported undelivered events. Check Usage sources."})
+    if result["failed_billing_collectors"] or result["stale_billing_collectors"]:
+        alerts.append({"severity": "warning", "message": "Billing collection failed or stopped reporting. Check Billing reconciliation; the last accepted snapshot remains available."})
     if settings.retention_days and (maintenance_age is None or maintenance_age > 7200):
         alerts.append({"severity": "critical", "message": "Scheduled maintenance has not completed in two hours."})
     result["alerts"] = alerts
@@ -91,7 +97,8 @@ class Metrics:
                                   registry=self.registry)
         names = ("worker_healthy", "oldest_queued_seconds", "failed_jobs_24h",
                  "observed_calls_24h", "unknown_cost_calls_24h", "maintenance_age_seconds",
-                 "stale_usage_sources", "backlog_usage_sources")
+                 "stale_usage_sources", "backlog_usage_sources",
+                 "failed_billing_collectors", "stale_billing_collectors")
         self.gauges = {name: Gauge(f"workbench_{name}", name.replace("_", " "),
                                   registry=self.registry) for name in names}
 

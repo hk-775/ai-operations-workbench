@@ -231,3 +231,26 @@ The local test profile creates separate demo and clean volumes, users, database
 secrets, and browser cookie names. Demo seeding imports the same bundled saved
 evidence and runs the real offline evaluator. The clean profile imports nothing.
 See [production deployment](PRODUCTION.md) for the installer and operational checks.
+
+## Source additions after v0.5.0
+
+The opt-in billing collector reads a complete versioned Legacy CUR S3 assembly
+and calls the existing transactional import path. It retains the original
+usage ledger, uses revision checks, preserves S3 provenance, and writes health
+to operator maintenance state. The browser shows status and reads reports;
+it holds no AWS credentials and never starts S3 collection. Private acceptance
+checks compare an exact export with independently supplied controls. The
+downloadable billing sample is explicitly fictional.
+
+Coding uses a separate contract. An operator may explicitly collect model
+patches through AxonLLM under a configured-price envelope. The CLI grades
+patches in disposable containers, with expected outputs retained by the host
+grader. The authenticated UI only reads the bundled result or validates and
+previews a supplied result; it never launches a container or executes code.
+Previews are not persisted, and sign-out clears them. No coding result changes
+the support recording, application usage ledger, or production routing.
+
+These processes require no database schema change or change to AxonLLM,
+Ostiari or Ledger upstream repositories. The v0.5.0 hosted diagram and video
+remain demonstrations of the released deployment; customer billing/S3
+acceptance is still pending.

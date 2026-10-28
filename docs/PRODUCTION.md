@@ -9,8 +9,15 @@ The supported scope is AxonLLM and instrumented Bedrock usage capture, exact cap
 task inspection, support-v1 saved-output evaluations, and read-only routing reviews.
 Version 0.5.0 adds [manual Bedrock billing reconciliation](BILLING.md)
 with declared aggregate scopes; the published 0.4.0 archive does not include it.
-Native subscription-tool billing connectors, automatic billing collection, arbitrary
+Native subscription-tool billing connectors, arbitrary
 evaluation plugins, and automatic routing changes are separate product features.
+The source checkout after v0.5.0 adds an opt-in
+[versioned Legacy CUR collector](BILLING-COLLECTION.md), private
+[billing acceptance checks](BILLING-ACCEPTANCE.md), and a separate
+[coding demonstration](CODING-EVALS.md). They retain schema 4. The collector is
+an operator process on a customer host; candidate code executes only in a
+separate disposable Docker environment, never on the web server. The released
+v0.5.0 archive and existing hosted deployments do not include these source changes.
 
 ## Try the seeded and clean deployments
 

@@ -1,0 +1,28 @@
+{
+  "schema": "workbench.billing.acceptance.v1",
+  "status": "fixture_checks_passed",
+  "evidence": "fixture",
+  "snapshot_sha256": "5915a3ee8c1e8c9812f668ea50e3707d859752b5b8402a87da16ebae6e06bc4e",
+  "reconciliation_sha256": "5e128b8642d40c6c77ebb9c5be256208744e05ad039944ff281a2575a5cb6cc5",
+  "controls_sha256": "309d01f95ed36d6c09ff5d83fd2b55dbd732f3e0ee76f5b8b32be84bda95824f",
+  "checks": [
+    "imported_charges",
+    "positive_charges",
+    "negative_adjustments",
+    "row_count",
+    "captured_calls",
+    "comparable_estimate_usd",
+    "snapshot_identity",
+    "scope",
+    "comparison_arithmetic",
+    "unassigned_preserved"
+  ],
+  "row_count": 5,
+  "captured_calls": 2,
+  "limitations": [
+    "Authored sample only. This is not real-bill acceptance.",
+    "Operator-supplied files and control totals; no independent invoice authentication.",
+    "The reviewer must confirm origin, export completeness, source scope, and control-total independence.",
+    "Passing this sample does not validate every export configuration or allocate invoice costs to tasks."
+  ]
+}

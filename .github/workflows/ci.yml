@@ -14,6 +14,25 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  coding-sandbox:
+    name: Coding sandbox
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      WORKBENCH_CODING_IMAGE: python:3.13-alpine@sha256:bf12ecc0bea3f171d55145dd02c78b5eeb09f30ee2ac9cc2b4c9e4e8f5e30741
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+        with:
+          version: "0.10.7"
+          enable-cache: false
+      - run: uv sync --locked --python 3.13
+      - run: docker pull "$WORKBENCH_CODING_IMAGE"
+      - run: uv run --locked pytest tests/test_coding.py::test_real_container_contract_and_execution_limits -q
+      - run: uv run --locked python -m workbench.coding evaluate --image "$WORKBENCH_CODING_IMAGE" --output artifacts/coding/ci-result.json
+
   python:
     name: Python ${{ matrix.python }}
     runs-on: ubuntu-24.04

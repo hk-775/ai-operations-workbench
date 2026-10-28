@@ -11,7 +11,7 @@ function createBilling({api, action, notice, isAdmin, getEpoch, onExample, onTas
 
   function reset() {
     report=null; pending=null; listingPage=0; request++; importGeneration++;
-    for(const id of ['billing-report','billing-preview','billing-report-select','billing-list-page']) $(id).replaceChildren();
+    for(const id of ['billing-report','billing-preview','billing-report-select','billing-list-page','billing-collection']) $(id).replaceChildren();
     $('billing-preview').hidden=true; $('billing-import-form').reset(); $('billing-files').value='';
     $('billing-example').disabled=false;
     $('billing-import-form').querySelector('button[type="submit"]').disabled=false;
@@ -22,8 +22,10 @@ function createBilling({api, action, notice, isAdmin, getEpoch, onExample, onTas
   }
   async function load(selected, recoverMissing=true) {
     const epoch=getEpoch(), token=++request;
-    const value=await api(`/api/pilot/billing/reports?page=${listingPage}`);
+    const [value, collection]=await Promise.all([api(`/api/pilot/billing/reports?page=${listingPage}`),api('/api/pilot/billing/collection')]);
     if(!stable(epoch)||token!==request) return;
+    const date = value => value ? new Date(value*1000).toLocaleString() : 'Never';
+    $('billing-collection').innerHTML=collection.collectors.length?collection.collectors.map(c=>`<div class="billing-comparison"><div class="section-head"><strong>${esc(c.name)}</strong>${tag(c.stale?'Stopped reporting':c.status,c.stale||c.status==='failed'?'warn':'accent')}</div><p>Last attempt: ${esc(date(c.last_attempt_at))}. Last successful collection: ${esc(date(c.last_success_at))}.</p>${c.error?`<p class="data-note">${esc(c.error)} The last accepted snapshot is preserved.</p>`:''}</div>`).join(''):'<p>No automatic collector is configured. Manual CSV import remains available below. Operators can follow docs/BILLING-COLLECTION.md in the source checkout.</p>';
     const options=value.reports;
     const identity=selected || report?.id || options.find(r=>r.current)?.id || options[0]?.id;
     $('billing-report-select').innerHTML=options.length?options.map(r=>`<option value="${esc(r.id)}">${esc(r.name)} · ${esc(r.month)} · account …${esc(r.account_id.slice(-4))} · r${r.revision}${r.current?' · current':' · historical'}${r.evidence==='fixture'?' · fictional':''}</option>`).join(''):'<option value="">No billing snapshots yet</option>';
