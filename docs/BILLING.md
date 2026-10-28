@@ -1,9 +1,8 @@
 # Bedrock billing reconciliation
 
-This feature is in **0.5.0 source development**, requiring **schema 4**. The
-existing AWS test workspaces have been
-[upgraded and verified](VERIFICATION-HOSTED-BILLING.md). The published v0.4.0
-archive uses schema 3 and does not include it; v0.5.0 has not been published.
+Included in [**v0.5.0**](RELEASE-0.5.0.md), requiring **schema 4**. The existing
+AWS test workspaces have been [upgraded and verified](VERIFICATION-HOSTED-BILLING.md).
+The v0.4.0 archive uses schema 3 and does not include billing reconciliation.
 
 An administrator imports a complete monthly Bedrock billing snapshot, links
 comparable charge groups to captured application sources, and inspects the

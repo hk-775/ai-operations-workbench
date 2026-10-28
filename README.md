@@ -21,18 +21,18 @@ You can explore and regrade that recording without an API key or new model charg
 
 **[Watch the public demo](https://hk-775.github.io/ai-operations-workbench/)**
 · [Explore the narrated architecture](https://hk-775.github.io/ai-operations-workbench/architecture.html)
-· **[Download v0.4.0](https://github.com/hk-775/ai-operations-workbench/releases/tag/v0.4.0)**
+· **[Download v0.5.0](https://github.com/hk-775/ai-operations-workbench/releases/tag/v0.5.0)**
 · [Methodology](docs/METHODOLOGY.md) · [Architecture](docs/ARCHITECTURE.md)
 · [Production installation and two test deployments](docs/PRODUCTION.md)
 · [Team pilot setup](docs/PILOT.md) · [Roadmap](docs/ROADMAP.md)
 
-**New in v0.4.0:** Amazon Bedrock Converse/ConverseStream application capture,
-durable delivery, and collector health with visible backlog and capture gaps.
-Exact captured-call estimates use a reviewed model/region/mode/date rate; unsupported
-prices remain unknown. Existing installations require an explicit **schema-3
-migration**. See the [release and upgrade notes](docs/RELEASE-0.4.0.md),
-[Bedrock setup guide](docs/BEDROCK.md), and
-[release verification](docs/VERIFICATION-0.4.0.md).
+**New in v0.5.0:** Bedrock billing reconciliation with complete monthly CSV
+snapshots, declared source/model comparisons, immutable revisions, and JSON
+export. Inspect precise differences, unassigned charges, and credits without
+converting unknown costs to zero. Existing installations require an explicit
+**schema-4 migration**. See the [release and upgrade notes](docs/RELEASE-0.5.0.md),
+[billing guide](docs/BILLING.md), and
+[release verification](docs/VERIFICATION-0.5.0.md).
 The narrated demo and isolated seeded/clean deployment recipes remain included.
 Deployment addresses and credentials belong to each installer and are not published.
 
@@ -89,7 +89,7 @@ uv run --locked uvicorn workbench.app:app --host 127.0.0.1 --port 8767
 If you downloaded a release archive, extract it and start with
 `uv sync --locked --python 3.13` from the extracted directory. No provider
 credentials are needed for replay. The release includes `SHA256SUMS` to verify
-the archive; see [release verification](docs/RELEASE-0.4.0.md#download-and-verify).
+the archive; see [release verification](docs/RELEASE-0.5.0.md#download-and-verify).
 
 Open **http://127.0.0.1:8767/**.
 
@@ -128,17 +128,17 @@ Pilot mode is opt-in (`WORKBENCH_MODE=pilot`); the default local demo retains it
 original behavior. Usage ingestion handles application metadata; quality
 evaluation currently requires a matching saved support-v1 recording.
 
-The **v0.4.0 release** also includes an **Amazon Bedrock application connector**
+The **Amazon Bedrock application connector**, introduced in v0.4.0, remains included
 for boto3 Converse and ConverseStream, with collector health and an offline
 two-step example. Follow the [Bedrock setup guide](docs/BEDROCK.md). Existing
-installations need the explicit schema-3 migration. Earlier release archives
-do not include this connector.
+installations upgrading to v0.5.0 need the explicit schema-4 migration. Archives
+before v0.4.0 do not include this connector.
 
-**In 0.5.0 source development:** [Bedrock billing reconciliation](docs/BILLING.md)
+**Included in v0.5.0:** [Bedrock billing reconciliation](docs/BILLING.md)
 adds administrator CSV import, snapshot history, declared source/model comparisons,
 unassigned charges, and evidence export. Try **Billing reconciliation → Load
 fictional billing example** in an authenticated workspace. This requires an
-explicit **schema-4 migration** and is not in the v0.4.0 download.
+explicit **schema-4 migration**; the v0.4.0 archive does not contain billing reconciliation.
 The existing seeded and clean AWS test workspaces have completed the
 [hosted schema-4 acceptance](docs/VERIFICATION-HOSTED-BILLING.md).
 
@@ -148,7 +148,7 @@ The existing seeded and clean AWS test workspaces have completed the
 |---|---|
 | Usage connection | AxonLLM and Amazon Bedrock Converse/ConverseStream metadata capture; durable outboxes, authenticated source-scoped delivery, and collector heartbeats; bundled recordings and compatible JSON import |
 | Ledger | PostgreSQL in pilot mode; transactional source-scoped application-event deduplication and Decimal API estimates. Original demo uses SQLite |
-| Billing reconciliation (0.5.0 source) | Complete Legacy CUR/CUR 2.0 CSV snapshots; explicit account/source/model mappings, exact charge differences, unassigned fees/credits, immutable revision history, and JSON export |
+| Billing reconciliation | Complete Legacy CUR/CUR 2.0 CSV snapshots; explicit account/source/model mappings, exact charge differences, unassigned fees/credits, immutable revision history, and JSON export |
 | Team access | Company OIDC/MFA or local test accounts; explicit administrator, analyst, viewer roles; revocable sessions and source tokens |
 | Operations | Administrator health dashboard, source backlog/stale-collector warnings, private Prometheus metrics, alert rules, structured request logs, and scheduled retention |
 | Scale | SQL totals, UTC time windows, paginated tasks and calls; historical prices and unknown costs preserved |
@@ -289,8 +289,8 @@ evaluation results, and saved reviews in PostgreSQL.
 - [Authenticated team pilot and operations guide](docs/PILOT.md)
 - [MIT-0 license](LICENSE)
 - [Contributing](CONTRIBUTING.md), [support](SUPPORT.md), and [security reporting](SECURITY.md)
-- [v0.4.0 release notes and download verification](docs/RELEASE-0.4.0.md)
-- [v0.4.0 validation results](docs/VERIFICATION-0.4.0.md)
+- [v0.5.0 release notes and download verification](docs/RELEASE-0.5.0.md)
+- [v0.5.0 validation results](docs/VERIFICATION-0.5.0.md)
 
-AxonLLM and Ostiari are pinned to immutable Git revisions in `pyproject.toml` and
+AxonLLM, Ostiari, and AxonLLM Ledger are pinned to immutable Git revisions in `pyproject.toml` and
 `uv.lock`. They remain separate projects; this app does not patch their source.
