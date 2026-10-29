@@ -28,6 +28,13 @@ The [authenticated pilot](#authenticated-team-pilot) and
 [self-hosted production profile](#self-hosted-production-profile) are documented
 separately. Team mode is explicitly selected with `WORKBENCH_MODE=pilot`.
 
+Version 0.8.0's [coding-tool collectors](CODING-TOOL-CONNECTORS.md) run on the
+operator's collector host and feed the existing authenticated ingestion boundary.
+Codex JSONL, Claude Code OTLP JSON, and Cursor Admin API metadata share the durable
+outbox and scoped source-token delivery. Raw prompts, responses and vendor keys
+do not enter Workbench. These adapters add no AWS services to the topology below.
+The original narrated support workflow remains a support example.
+
 ![Implemented local replay architecture](architecture/workbench.svg)
 
 [Edit in draw.io](architecture/workbench.drawio) · [Download PNG](architecture/workbench.png)

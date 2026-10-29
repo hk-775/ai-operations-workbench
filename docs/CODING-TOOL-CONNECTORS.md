@@ -1,7 +1,7 @@
 # Codex, Cursor and Claude Code usage
 
-The source checkout adds three core coding-tool connectors. They are not in the
-previously published v0.7.0 archive. Each uses an existing scoped Workbench source
+Version 0.8.0 adds three core coding-tool connectors, included in the source archive.
+Each uses an existing scoped Workbench source
 token, a private durable outbox, retryable delivery, and collector heartbeats.
 The browser does not log in to your vendor account or start model calls.
 

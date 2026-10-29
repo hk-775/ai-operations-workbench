@@ -14,6 +14,11 @@
 !data/coding/example-recording.json
 !data/coding/example-result.json
 !data/coding/calibration-result.json
+!data/coding-tools/
+!data/coding-tools/README.md
+!data/coding-tools/codex.jsonl
+!data/coding-tools/claude-otel.json
+!data/coding-tools/cursor-usage.json
 !data/billing-sample/
 !data/billing-sample/README.md
 !data/billing-sample/legacy-cur.csv

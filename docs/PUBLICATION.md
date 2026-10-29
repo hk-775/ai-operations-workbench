@@ -1,6 +1,23 @@
 # Publication inventory
 
-## v0.7.0 destination and distribution
+## v0.8.0 destination and distribution
+
+- Public MIT-0 repository: `hk-775/ai-operations-workbench`.
+- Release `v0.8.0`: `ai-operations-workbench-0.8.0.tar.gz` and `SHA256SUMS`.
+- Includes core Codex JSONL, Claude Code OTLP HTTP/JSON and Cursor team Admin API
+  collectors, authored examples, source-scoped delivery and separate cost displays.
+- Schema remains 4. The existing AWS topology is unchanged; collectors run on
+  the operator's host and use the established ingestion boundary.
+- The canonical public player retains the support video, narration, animation
+  and static-only network boundary, with the v0.8.0 download link.
+- Private configuration, customer/vendor exports and operational receipts stay
+  outside the archive. Previous assets remain unchanged; no registry or publisher signature.
+
+See [release instructions](RELEASE-0.8.0.md),
+[verification boundaries](VERIFICATION-0.8.0.md), and
+[connector setup](CODING-TOOL-CONNECTORS.md).
+
+## Historical v0.7.0 destination and distribution
 
 - Public MIT-0 repository: `hk-775/ai-operations-workbench`.
 - Release `v0.7.0`: `ai-operations-workbench-0.7.0.tar.gz` and `SHA256SUMS`.
