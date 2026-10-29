@@ -7,7 +7,11 @@ The [October 26 acceptance report](VERIFICATION-HOSTED-2026-10-26.md) records
 the completed hosted verification and its limits.
 The [October 28 billing acceptance](VERIFICATION-HOSTED-BILLING.md) records the
 existing workspaces' upgrade to 0.5.0 source and schema 4, preserved data, billing
-checks, and fresh backup restoration. The public v0.4.0 archive is unchanged.
+checks, and fresh backup restoration.
+The [October 29 hosted Ledger acceptance](VERIFICATION-HOSTED-LEDGER.md) records
+the subsequent source update, native Ledger totals, billing sample downloads,
+coding previews, and all nine panels in both workspaces. These hosted updates
+preserve the previously published release archives.
 
 The requested test uses **password-only Amazon Cognito SSO, without MFA**.
 `WORKBENCH_HOSTED_TEST=true` makes this exception explicit. Standard production
@@ -107,9 +111,18 @@ node scripts/check_hosted_browser.mjs --state-dir .pilot/hosted
 ```
 
 Use `--show` for an interactive window. It uses the actual window viewport,
-checks all eight views in each workspace, and leaves both workspaces signed in.
-The headless run signs out afterward. Reports and screenshots stay in the
-private state directory.
+checks all nine views in each workspace, and leaves both workspaces signed in.
+The coding view loads saved fictional evidence without executing patches or
+creating workspace records. Wheel and keyboard checks wait for scrolling to
+settle between actions, then verify the footer.
+The headless run signs out afterward. Add `--close` to a visible run to verify
+sign-out and close the browser automatically:
+
+```bash
+node scripts/check_hosted_browser.mjs --state-dir .pilot/hosted --show --ux --close
+```
+
+Reports and screenshots stay in the private state directory.
 
 `host_operations.py backup` creates a private PostgreSQL dump for each workspace,
 uploads it over HTTPS, verifies encrypted object metadata, and stores a SHA256
