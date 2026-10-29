@@ -11,8 +11,13 @@ from .coding import DATA, DockerRunner, dataset, fingerprint, grades, prompt
 
 
 def corpus():
-    return {"schema": "workbench.coding.calibration.v1",
-            "cases": dataset()["cases"] + read_json(DATA / "calibration.json")["cases"]}
+    cases = dataset()["cases"] + read_json(DATA / "calibration.json")["cases"]
+    # Keep the original six-case fixture/recording hash stable. The expanded
+    # calibration makes its string-format acceptance criterion explicit.
+    next(case for case in cases if case["id"] == "decimal-charge")["prompt"] = (
+        "Return the exact Decimal cost as fixed-point text, never scientific notation: "
+        "tokens * USD per million / 1000000. Do not round away small charges.")
+    return {"schema": "workbench.coding.calibration.v1", "cases": cases}
 
 
 def plan(value, *, candidates=3, repetitions=3, seed=20261029):
@@ -43,7 +48,7 @@ def plan(value, *, candidates=3, repetitions=3, seed=20261029):
             "Authored public calibration tasks; repetitions are not independent tasks.",
             "Prompt packets omit references and acceptance tests, which remain public in the repository.",
             "Freeze representative private holdout tasks before a publication-quality comparison.",
-            "The six-task coding recorder and UI keep their existing contract. This larger packet is preparation, not an importable model recording.",
+            "The packet has no model results. Collect with --dataset and --repetitions, then evaluate the version 2 recording before previewing it.",
             "Choose exact models, dated prices, independent holdout, credentials and budget before collection.",
         ],
     }

@@ -17,7 +17,7 @@ function createCoding({api, action, notice, getEpoch}) {
       <p>${fixture?'No model generated these patches. Model tokens, latency and API estimates are fictional teaching values; container test outcomes and test duration were measured.':'Model calls and patch history come from an operator-supplied recording. Checksums establish consistency, not independent authenticity.'}</p>
       <p class="fine">Hardware and electricity: unmeasured. Replay model API cost: $0. End-to-end agent duration is shown only when present in the original recording.</p>
       <label class="field">Required acceptance rate <select id="coding-threshold"><option value="100">100% · all tasks</option><option value="90">90%</option><option value="50">50% · exploratory</option></select></label>
-      <p class="data-note">These controls help inspect this six-task demonstration. ${fixture?'Fixture evidence cannot justify a real model recommendation.':'Run a representative held-out workload and independent review before choosing a production model.'}</p>
+      <p class="data-note">Inspect the frozen tasks, repeated runs and every recorded attempt. ${fixture?'Fixture evidence cannot justify a real model recommendation.':'Run a representative held-out workload and independent review before choosing a production model.'}</p>
       <div id="coding-gates"></div>
       <div class="table-wrap"><table><thead><tr><th>Candidate</th><th>Accepted patches</th><th>Attempts</th><th>All API estimates</th><th>API cost per accepted patch</th></tr></thead><tbody>${r.summary.map(s=>`<tr><td><strong>${esc(s.candidate)}</strong>${!s.complete_cases?'<small>Incomplete case coverage</small>':''}</td><td>${s.accepted}/${s.tasks}<small>${s.failed} failed tasks · ${s.regressions} regressions</small></td><td>${s.attempts}</td><td>${money(s.api_estimate_usd)}</td><td>${money(s.cost_per_accepted_patch_usd)}<small>Includes every attempt and failed task${fixture?' · fictional estimates':''}</small></td></tr>`).join('')}</tbody></table></div>
       <button class="button" id="coding-export">Download this result</button></article>
@@ -45,6 +45,13 @@ function createCoding({api, action, notice, getEpoch}) {
     if(epoch!==getEpoch()||token!==sequence)return;
     report=value;render();
     notice('Loaded saved container test results. No patches or model calls were executed.');
+  });
+  $('coding-calibration').onclick=()=>action(async()=>{
+    const epoch=getEpoch(), token=++sequence;
+    const value=await api('/api/pilot/coding/calibration');
+    if(epoch!==getEpoch()||token!==sequence)return;
+    report=value;render();
+    notice('Loaded the recorded 18-task comparison. Viewing it makes no model calls and does not change company usage.');
   });
   $('coding-upload').onchange=()=>action(async()=>{
     const file=$('coding-upload').files[0];if(!file)return;

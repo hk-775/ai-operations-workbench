@@ -1,0 +1,183 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Private versioned Legacy CUR delivery for Workbench's CSV collector; billing stays in the owning account.",
+  "Metadata": {
+    "AWSToolsMetrics": {
+      "AWSAgentToolkit": "aws-cloudformation@3"
+    }
+  },
+  "Resources": {
+    "BillingBucket": {
+      "Type": "AWS::S3::Bucket",
+      "Properties": {
+        "PublicAccessBlockConfiguration": {
+          "BlockPublicAcls": true,
+          "IgnorePublicAcls": true,
+          "BlockPublicPolicy": true,
+          "RestrictPublicBuckets": true
+        },
+        "BucketEncryption": {
+          "ServerSideEncryptionConfiguration": [
+            {
+              "ServerSideEncryptionByDefault": {
+                "SSEAlgorithm": "AES256"
+              }
+            }
+          ]
+        },
+        "OwnershipControls": {
+          "Rules": [
+            {
+              "ObjectOwnership": "BucketOwnerEnforced"
+            }
+          ]
+        },
+        "VersioningConfiguration": {
+          "Status": "Enabled"
+        }
+      },
+      "Metadata": {
+        "com.aws.cloudformation.Context": {
+          "why": "Retain private billing history independently of report scheduling.",
+          "must": [
+            "Never publish billing objects; encrypt and block all public access."
+          ]
+        }
+      },
+      "DeletionPolicy": "Retain",
+      "UpdateReplacePolicy": "Retain"
+    },
+    "BillingPolicy": {
+      "Type": "AWS::S3::BucketPolicy",
+      "Properties": {
+        "Bucket": {
+          "Ref": "BillingBucket"
+        },
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Deny",
+              "Principal": "*",
+              "Action": "s3:*",
+              "Resource": [
+                {
+                  "Fn::GetAtt": [
+                    "BillingBucket",
+                    "Arn"
+                  ]
+                },
+                {
+                  "Fn::Sub": "${BillingBucket.Arn}/*"
+                }
+              ],
+              "Condition": {
+                "Bool": {
+                  "aws:SecureTransport": "false"
+                }
+              }
+            },
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "billingreports.amazonaws.com"
+              },
+              "Action": [
+                "s3:GetBucketAcl",
+                "s3:GetBucketPolicy"
+              ],
+              "Resource": {
+                "Fn::GetAtt": [
+                  "BillingBucket",
+                  "Arn"
+                ]
+              },
+              "Condition": {
+                "StringEquals": {
+                  "aws:SourceAccount": {
+                    "Ref": "AWS::AccountId"
+                  },
+                  "aws:SourceArn": {
+                    "Fn::Sub": "arn:${AWS::Partition}:cur:us-east-1:${AWS::AccountId}:definition/*"
+                  }
+                }
+              }
+            },
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "billingreports.amazonaws.com"
+              },
+              "Action": "s3:PutObject",
+              "Resource": {
+                "Fn::Sub": "${BillingBucket.Arn}/*"
+              },
+              "Condition": {
+                "StringEquals": {
+                  "aws:SourceAccount": {
+                    "Ref": "AWS::AccountId"
+                  },
+                  "aws:SourceArn": {
+                    "Fn::Sub": "arn:${AWS::Partition}:cur:us-east-1:${AWS::AccountId}:definition/*"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "Metadata": {
+        "com.aws.cloudformation.Context": {
+          "why": "Allow this account's CUR delivery service and require TLS.",
+          "must": [
+            "Keep the documented CUR SourceArn and SourceAccount restrictions."
+          ]
+        }
+      }
+    },
+    "Report": {
+      "Type": "AWS::CUR::ReportDefinition",
+      "Properties": {
+        "ReportName": {
+          "Ref": "AWS::StackName"
+        },
+        "TimeUnit": "HOURLY",
+        "Format": "textORcsv",
+        "Compression": "GZIP",
+        "AdditionalSchemaElements": [],
+        "S3Bucket": {
+          "Ref": "BillingBucket"
+        },
+        "S3Prefix": "exports",
+        "S3Region": {
+          "Ref": "AWS::Region"
+        },
+        "RefreshClosedReports": true,
+        "ReportVersioning": "CREATE_NEW_REPORT"
+      },
+      "Metadata": {
+        "com.aws.cloudformation.Context": {
+          "why": "Use the collector's validated CSV assembly contract; delivery is asynchronous.",
+          "must": [
+            "Do not replace with CUR 2.0 or overwrite mode without a validated adapter."
+          ]
+        }
+      },
+      "DependsOn": "BillingPolicy"
+    }
+  },
+  "Outputs": {
+    "Bucket": {
+      "Value": {
+        "Ref": "BillingBucket"
+      },
+      "Description": "Private export destination"
+    },
+    "ReportName": {
+      "Value": {
+        "Ref": "AWS::StackName"
+      },
+      "Description": "Monthly report prefix component"
+    }
+  }
+}

@@ -16,6 +16,7 @@ WEB_FILES = (
 DIAGRAMS = (
     "workbench.drawio", "workbench.svg", "workbench.png",
     "aws-hosted-test.drawio", "aws-hosted-test.png",
+    "aws-acceptance.drawio", "aws-acceptance.svg", "aws-acceptance.png",
 )
 CSP = (
     "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; "
@@ -88,6 +89,10 @@ def main():
       <a href="architecture/workbench.svg" download>Original local workflow (SVG)</a> ·
       <a href="architecture/workbench.drawio" download>Local workflow source (draw.io)</a>.
       The AWS diagram describes the single-host acceptance test; it is not a high-availability claim.</p>
+      <p>Optional billing and recovery services:
+      <a href="architecture/aws-acceptance.png" download>Acceptance topology (PNG)</a> ·
+      <a href="architecture/aws-acceptance.drawio" download>Acceptance source (draw.io)</a>.
+      These account-owned tools add private billing delivery and disposable recovery checks.</p>
     </section>"""
     architecture = architecture.replace("<!-- public-architecture-downloads -->", downloads, 1)
     (output/"architecture.html").write_text(architecture)

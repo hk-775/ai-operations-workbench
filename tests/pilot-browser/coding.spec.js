@@ -65,3 +65,32 @@ test('sample export download and stopped billing collector explanation',async({p
   await page.getByRole('button',{name:'Sign out',exact:true}).click();
   await expect(page.locator('#billing-collection')).toBeEmpty();
 });
+
+test('expanded recorded comparison previews all repetitions without executing model calls',async({page})=>{
+  const errors=[];
+  page.on('pageerror',error=>errors.push(error.message));
+  await login(page,'viewer');
+  await page.getByRole('button',{name:'Coding evaluations',exact:true}).click();
+  await page.getByRole('button',{name:'Load recorded calibration',exact:true}).click();
+  await expect(page.locator('#coding-result')).toContainText('IMPORTED MODEL RECORDING');
+  await page.getByRole('button',{name:'Clear preview',exact:true}).click();
+  const recording=new URL('../../data/coding/calibration-result.json',import.meta.url);
+  await page.locator('#coding-upload').setInputFiles({
+    name:'calibration-result.json',mimeType:'application/json',buffer:await readFile(recording)
+  });
+  const result=page.locator('#coding-result');
+  await expect(result).toContainText('IMPORTED MODEL RECORDING');
+  await expect(result.locator('tbody tr')).toHaveCount(3);
+  await expect(result.locator('article[data-flow="tasks"]')).toHaveCount(162);
+  await expect(result.locator('tbody tr').filter({hasText:'gpt-4.1-2025-04-14'})).toContainText('51/54');
+  await page.locator('#coding-threshold').selectOption('90');
+  await expect(page.locator('#coding-gates')).toContainText('Meets these demonstration gates');
+  await expect(result).toContainText('Hardware and electricity: unmeasured');
+  const workspace=page.getByRole('region',{name:'Workspace content'});
+  await workspace.focus();await page.keyboard.press('End');
+  await expect(page.locator('.page-footer')).toBeInViewport();
+  expect((await (await page.request.get('/api/pilot/usage')).json()).events).toBe(0);
+  await page.getByRole('button',{name:'Sign out',exact:true}).click();
+  await expect(result).not.toContainText('IMPORTED MODEL RECORDING');
+  expect(errors).toEqual([]);
+});

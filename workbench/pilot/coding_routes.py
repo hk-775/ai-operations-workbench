@@ -10,6 +10,10 @@ def register(app, member):
     def example(actor=Depends(member)):
         return verify_result(read_json(DATA / "example-result.json", 8_000_000))
 
+    @app.get("/api/pilot/coding/calibration")
+    def calibration(actor=Depends(member)):
+        return verify_result(read_json(DATA / "calibration-result.json", 8_000_000))
+
     @app.post("/api/pilot/coding/preview")
     def preview(payload: dict, actor=Depends(member)):
         try:

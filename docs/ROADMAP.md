@@ -42,7 +42,8 @@ Implemented in the source checkout: a reproducible **bug fix plus tests**
 workflow with six separate cases, frozen snapshots, Docker execution, public
 and acceptance tests, recorded final patches, every attempt's API accounting,
 and a read-only result screen. An optional bounded AxonLLM recorder collects
-actual model patches; verification used authored patches and zero paid calls.
+actual model patches. Version 0.7 adds a frozen 18-task dataset, balanced repeated
+collection, version 2 previews, and a [recorded calibration](CODING-CALIBRATION-2026-10-29.md).
 See [coding evaluations](CODING-EVALS.md).
 
 Each task should use an isolated repository snapshot with a known bug, a bounded
@@ -56,7 +57,7 @@ the entire task, including repair attempts and tool steps. Compare:
 
 The coding adapter has its own dataset, contract, artifact format, and integrity
 checks. It preserves the support recording. Representative private held-out
-workloads, repeat model runs, native subscription-tool capture, and customer
+workloads, native subscription-tool capture, and customer
 model recommendations remain future work.
 
 ## 4. Expand connector coverage
@@ -104,9 +105,10 @@ a [downloadable fictional sample](../data/billing-sample/README.md), and
 assemblies in S3. Collection status, failure preservation and alerts are included.
 These additions, native Ledger aggregation and integrity checks are included in the v0.6.0 archive.
 
-Real customer export acceptance and a real scheduled S3 delivery remain pending:
-the configured account had no exports and the supplied sample is explicitly
-fictional. Next validate that private evidence, then expand supported formats,
+Real customer export acceptance and a real scheduled S3 delivery remain pending.
+The optional export has now been provisioned in the selected account, with a
+small real Bedrock sequence captured for comparison; the supplied downloadable
+sample remains explicitly fictional. Next validate the delivered private evidence, then expand supported formats,
 large organization exports and other providers. Imported records are not independently
 authenticated invoices, and aggregate links do not allocate bills to tasks.
 
@@ -129,7 +131,7 @@ should be compared with realized cost and quality after rollout.
 The product can grow around these components without turning AxonLLM or Ostiari
 into an unrelated company-wide dashboard.
 
-## v0.6.0 operational follow-through
+## Historical v0.6.0 operational follow-through
 
 The [reference drill](REFERENCE-ACCEPTANCE.md) now checks concurrent HTTP/replay,
 paced reads, abandoned worker recovery and restoration into a separate PostgreSQL
@@ -142,3 +144,16 @@ an 18-task coding calibration packet with balanced repeated candidate scheduling
 Real billing exports, scheduled S3 delivery, exact live models/budget, and a
 representative private coding holdout remain required. Preparation is not a
 customer acceptance pass or a model leaderboard.
+
+## v0.7.0 acceptance tools
+
+The expanded collector and viewer now run the full frozen schedule and expose
+missing coverage. Recorded calibration results are included with their exact
+inputs, attempts, costs, and limitations. The original underspecified decimal
+prompt was corrected before the full published comparison was rerun.
+
+Optional [AWS procedures](ACCEPTANCE-OPERATIONS.md) provision private billing
+delivery and recover backups on a disposable independent host. Completion
+evidence is recorded in [verification](VERIFICATION-0.7.0.md).
+First billing delivery, independent customer controls, and a confirmed human
+alert recipient remain separate acceptance gates.

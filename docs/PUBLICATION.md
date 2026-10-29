@@ -1,6 +1,25 @@
 # Publication inventory
 
-## v0.6.0 destination and distribution
+## v0.7.0 destination and distribution
+
+- Public MIT-0 repository: `hk-775/ai-operations-workbench`.
+- Release `v0.7.0`: `ai-operations-workbench-0.7.0.tar.gz` and `SHA256SUMS`.
+- Includes the complete repeated coding collector/viewer, public authored
+  calibration inputs and recorded outputs, optional private billing export,
+  and independent-host recovery tools. Schema remains 4.
+- The additional editable draw.io, SVG and PNG topology documents optional
+  account-owned acceptance services. The original hosted topology remains accurate.
+- Actual account receipts, credentials, export objects and private deployment
+  identities remain outside Git and the source archive.
+- The public player retains its original audio/video and animated architecture,
+  with static-only network access and the v0.7.0 download link.
+- Previous releases are preserved. No package/container registry or publisher signature.
+
+See [release instructions](RELEASE-0.7.0.md), [verification](VERIFICATION-0.7.0.md),
+[recorded calibration](CODING-CALIBRATION-2026-10-29.md), and
+[account-owned operations](ACCEPTANCE-OPERATIONS.md).
+
+## Historical v0.6.0 destination and distribution
 
 - Public MIT-0 repository: `hk-775/ai-operations-workbench`.
 - Release `v0.6.0`: `ai-operations-workbench-0.6.0.tar.gz` and `SHA256SUMS`.
@@ -162,6 +181,13 @@ GitHub README images and release screenshots are static platform companions.
 They do not replace the animated workflow in the runnable app.
 
 ## AWS services reference architecture
+
+Version 0.7 adds [optional acceptance topology](architecture/aws-acceptance.png)
+and its [editable source](architecture/aws-acceptance.drawio), generated from
+the billing/recovery templates and existing hosted operations. The shapes,
+SVG and PNG are project-authored; no third-party icon artwork is bundled.
+The static companion is included in the README, architecture guide, Pages
+downloads and source archive. It explicitly excludes an automatic-failover claim.
 
 The main branch's implemented test topology is available as an
 [editable draw.io file](architecture/aws-hosted-test.drawio) and
