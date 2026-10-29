@@ -20,7 +20,7 @@ from .events import (CollectorHealth, CodingToolUsageEvent, SOURCE_SCHEMAS, Usag
                      account, pricebook, recording_events)
 
 metadata = MetaData()
-SCHEMA_VERSION = 5
+SCHEMA_VERSION = 6
 schema = Table("wb_schema", metadata, Column("version", Integer, primary_key=True))
 teams = Table("wb_teams", metadata, Column("id", String(36), primary_key=True),
               Column("name", String(100), nullable=False))
@@ -162,6 +162,40 @@ billing_mappings = Table("wb_billing_mappings", metadata,
     Column("created_at", BigInteger, nullable=False))
 Index("wb_billing_reports_team_time", billing_reports.c.team_id, billing_reports.c.created_at)
 
+# Configuration revisions and offline evaluation evidence are separate from
+# immutable usage/accounting. No workflow can rewrite an ingested event.
+workflows = Table("wb_workflows", metadata,
+    Column("id", String(36), primary_key=True),
+    Column("team_id", ForeignKey("wb_teams.id"), nullable=False),
+    Column("kind", String(30), nullable=False),
+    Column("scope_key", String(64), nullable=False),
+    Column("revision", Integer, nullable=False),
+    Column("active", Boolean, nullable=False),
+    Column("evidence", String(20), nullable=False),
+    Column("created_at", BigInteger, nullable=False),
+    Column("updated_at", BigInteger, nullable=False),
+    UniqueConstraint("team_id", "kind", "scope_key"))
+workflow_revisions = Table("wb_workflow_revisions", metadata,
+    Column("workflow_id", ForeignKey("wb_workflows.id", ondelete="CASCADE"), primary_key=True),
+    Column("revision", Integer, primary_key=True),
+    Column("fingerprint", String(64), nullable=False),
+    Column("summary", Text, nullable=False),
+    Column("payload", Text, nullable=False),
+    Column("created_at", BigInteger, nullable=False))
+workflow_results = Table("wb_workflow_results", metadata,
+    Column("team_id", ForeignKey("wb_teams.id"), primary_key=True),
+    Column("id", String(64), primary_key=True),
+    Column("workflow_id", String(36), nullable=False),
+    Column("revision", Integer, nullable=False),
+    Column("summary", Text, nullable=False),
+    Column("payload", Text, nullable=False),
+    Column("created_at", BigInteger, nullable=False),
+    ForeignKeyConstraint(["workflow_id", "revision"],
+                         ["wb_workflow_revisions.workflow_id", "wb_workflow_revisions.revision"],
+                         ondelete="CASCADE"))
+Index("wb_workflows_team_kind", workflows.c.team_id, workflows.c.kind, workflows.c.updated_at)
+Index("wb_workflow_results_team_time", workflow_results.c.team_id, workflow_results.c.created_at)
+
 
 def uid() -> str:
     return str(uuid.uuid4())
@@ -194,7 +228,7 @@ class Database:
                 db.exec_driver_sql("SELECT pg_advisory_xact_lock(2026102301)")
             schema.create(db, checkfirst=True)
             versions = db.execute(select(schema.c.version)).scalars().all()
-            if versions and versions not in ([1], [2], [3], [4], [SCHEMA_VERSION]):
+            if versions and versions not in ([1], [2], [3], [4], [5], [SCHEMA_VERSION]):
                 raise RuntimeError("Unsupported pilot database schema")
             metadata.create_all(db)
             if versions != [SCHEMA_VERSION]:
@@ -205,7 +239,7 @@ class Database:
                     if "ingest_sequence" not in {c["name"] for c in inspect(db).get_columns(table.name)}:
                         db.exec_driver_sql(
                             f"ALTER TABLE {table.name} ADD COLUMN ingest_sequence BIGINT NOT NULL DEFAULT 0")
-            if versions not in ([2], [3], [4], [SCHEMA_VERSION]):
+            if versions not in ([2], [3], [4], [5], [SCHEMA_VERSION]):
                 # Only copy persisted accounting: repricing would rewrite historical evidence.
                 while True:
                     batch = db.execute(select(events.c.source_id, events.c.event_id, events.c.accounting)

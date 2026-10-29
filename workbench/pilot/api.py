@@ -67,6 +67,8 @@ class Boundary:
                 return await reject(415, "JSON content type required")
             limit = (16_500_000 if scope["path"] in {"/api/pilot/billing/preview", "/api/pilot/billing/imports"}
                      else 8_000_000 if scope["path"] in {"/api/pilot/recordings", "/api/pilot/coding/preview"}
+                     else 2_000_000 if scope["path"].startswith("/api/pilot/custom-evals/")
+                     else 64_000 if scope["path"].startswith("/api/pilot/spend/")
                      else 512_000 if scope["path"] == "/api/pilot/ingest" else 16_000)
             length = headers.get("content-length")
             if length and (not length.isdigit() or int(length) > limit):
@@ -85,6 +87,11 @@ class Boundary:
                             break
             except TimeoutError:
                 return await reject(408, "Request body timed out")
+            if scope["path"].startswith(("/api/pilot/spend/", "/api/pilot/custom-evals/")):
+                try:
+                    strict_json(body.decode("utf-8"))
+                except (ValueError, UnicodeError):
+                    return await reject(422, "Invalid JSON request")
             original_receive, delivered = receive, False
 
             async def buffered():
@@ -168,6 +175,12 @@ def create_pilot_app(settings: Settings | None = None) -> FastAPI:
     async def billing_error(request, exc):
         return JSONResponse({"detail": str(exc)}, status_code=422)
 
+    from .workflows import WorkflowError
+
+    @app.exception_handler(WorkflowError)
+    async def workflow_error(request, exc):
+        return JSONResponse({"detail": str(exc)}, status_code=422)
+
     @app.exception_handler(KeyError)
     async def missing(request, exc):
         return JSONResponse({"detail": "Record not found"}, status_code=404)
@@ -201,6 +214,12 @@ def create_pilot_app(settings: Settings | None = None) -> FastAPI:
     register_billing(app, database, member, admin)
     from .coding_routes import register as register_coding
     register_coding(app, member)
+    from .spend_routes import register as register_spend
+    register_spend(app, database, member, admin)
+    from .custom_routes import register as register_custom
+    register_custom(app, database, member, analyst)
+    from .onboarding_routes import register as register_onboarding
+    register_onboarding(app, database, settings, member)
 
     @app.get("/health/live")
     def live():

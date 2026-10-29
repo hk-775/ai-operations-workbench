@@ -26,12 +26,18 @@ You can explore and regrade that recording without an API key or new model charg
 · [Production installation and two test deployments](docs/PRODUCTION.md)
 · [Team pilot setup](docs/PILOT.md) · [Roadmap](docs/ROADMAP.md)
 
+**Unreleased in this source checkout:** [spend budgets, shared cost allocation,
+custom saved-answer evaluations, and guided connector setup](docs/PRODUCT-WORKFLOWS.md).
+Use the authenticated workspace to try them. This checkout requires **schema 6**;
+the published v0.9.2 download and hosted installations are not updated by these
+source changes. Follow the [schema-6 migration procedure](docs/PRODUCT-WORKFLOWS.md#upgrade-this-development-checkout-to-schema-6).
+
 **New in v0.9.0:** inspect failed evaluation cases, rank tasks by a chosen cost
 basis, download complete routing evidence, and page through calls without
 mixing in later arrivals. It also fixes stranded connector bindings, malformed
 candidate output, and fixture-only recommendations. An explicit **schema-5
 migration** is required when upgrading from v0.8.0 or earlier.
-**v0.9.2** retains Codex cache-write token counts on new captures while preserving
+**Published v0.9.2** retains Codex cache-write token counts on new captures while preserving
 legacy outbox replays. It includes v0.9.1's corrected schema-5 setup guidance.
 See the [current release notes](docs/RELEASE-0.9.2.md),
 [upgrade and API compatibility notes](docs/REVIEW-FIXES.md), and

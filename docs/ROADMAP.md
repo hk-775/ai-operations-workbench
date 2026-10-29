@@ -6,6 +6,19 @@ for a better model choice?**
 The initial demonstration answers that question for a fixed support workflow.
 It does not yet capture every AI tool used by a company.
 
+## Unreleased product workflows
+
+The source checkout now includes [four product workflows](PRODUCT-WORKFLOWS.md):
+monthly budgets and operational warnings, declared shared-cost allocation,
+versioned custom text/JSON checks over saved answers, and source-specific setup
+guides. They use schema 6, explicit roles, immutable revisions and the existing
+retention system. They have not been added to the published v0.9.2 archive.
+
+Further expansion still needs real Claude Code/Cursor account acceptance,
+representative customer evaluation datasets, more billing/pricing formats,
+and an explicitly controlled routing/canary workflow. The new offline checks
+do not activate routes or independently verify model quality and invoice costs.
+
 ## 1. Completed vertical demonstration
 
 - Connect a real saved usage run.
@@ -97,7 +110,8 @@ import complete monthly CSV exports and declare source/model scopes. The screen
 shows precise differences, incomplete comparisons, credits/fees and other
 unassigned charges, revisions, and exportable provenance. A fictional example
 exercises the full flow without model calls. Billing first required schema 4;
-current releases require [schema 5](REVIEW-FIXES.md). This feature is not
+published v0.9.2 requires [schema 5](REVIEW-FIXES.md), while this development
+checkout requires [schema 6](PRODUCT-WORKFLOWS.md). This feature is not
 included in the v0.4.0 release.
 The [historical schema-4 hosted acceptance](VERIFICATION-HOSTED-BILLING.md)
 records the v0.5.0 upgrade, fresh restore checks and isolated fictional billing
@@ -116,9 +130,9 @@ sample remains explicitly fictional. Next validate the delivered private evidenc
 large organization exports and other providers. Imported records are not independently
 authenticated invoices, and aggregate links do not allocate bills to tasks.
 
-Decide how to attribute subscriptions, shared infrastructure, retries, caches,
-human review, and incomplete traces. Unknown values must remain visible instead
-of being converted to zero.
+The unreleased cost-pool workflow adds declared project allocations for subscriptions,
+shared infrastructure and human review. Per-task subscription attribution and
+automatic invoice allocation remain open. Unknown values remain visible.
 
 ## 6. Production evidence and controlled changes
 

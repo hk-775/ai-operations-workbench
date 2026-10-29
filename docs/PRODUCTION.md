@@ -147,7 +147,8 @@ implement application-level encryption of database fields.
 
 Production refuses startup without HTTPS, OIDC, an MFA requirement, monitoring
 credentials, explicit retention periods, and the matching database schema.
-Version 0.9.x uses schema 5; v0.5.0–v0.8.0 use schema 4. The API and worker
+This unreleased checkout uses schema 6; published v0.9.0–v0.9.2 use schema 5,
+and v0.5.0–v0.8.0 use schema 4. The API and worker
 check the schema rather than silently performing an upgrade. Install matching
 images for the app, worker, and maintenance service.
 The v0.3.0 release used schema 2. Version 0.4.0 adds collector
@@ -155,13 +156,14 @@ health in schema 3. Version 0.5.0 adds billing snapshots and declared
 comparisons in schema 4; follow the backup/migrate/restart and rollback instructions
 in [the billing guide](BILLING.md#access-retention-and-upgrade). Billing revisions
 and mappings follow evidence retention. The v0.4.0 download remains schema 3.
-For v0.9.x, follow [the schema-5 upgrade notes](REVIEW-FIXES.md) before
-starting services. Do not mix schema-4 and schema-5 app/worker images.
+For this checkout, follow [the schema-6 upgrade notes](PRODUCT-WORKFLOWS.md#upgrade-this-development-checkout-to-schema-6)
+before starting services. Do not mix application, worker or maintenance versions.
 
 ## Monitor and operate
 
 - **Operations** is administrator-only and shows worker heartbeat, queue age,
-  failed evaluations, unknown-cost coverage, maintenance freshness, and sources
+  failed evaluations, unknown-cost coverage, current-month budget warnings,
+  maintenance freshness, and sources
   with reported backlogs or stale collectors. **Usage sources** shows last-reported
   queue counts; disconnected collectors may have additional unknown backlog.
 - `/metrics` requires the independent monitoring bearer token. Install the generated
@@ -197,6 +199,10 @@ usage by event time, uploaded recording graphs by upload time, and audit entries
 creation time. Recording graphs include their calls, completed jobs, and saved reviews.
 Active queued/running evaluations protect their recordings until they finish.
 Export evidence that must be retained before its configured expiry.
+Custom runs and obsolete workflow revisions use evidence retention too.
+Retained runs protect their suite revisions; active workflow definitions retain
+their current revision as configuration. Archive or void definitions to allow
+them to expire. See [workflow retention](PRODUCT-WORKFLOWS.md#access-storage-and-retention).
 
 Once an operational event cutoff advances, old connector events are rejected
 rather than re-counted after a retry. A connector with an overdue historical outbox

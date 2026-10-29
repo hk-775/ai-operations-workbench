@@ -22,7 +22,7 @@ from workbench.bedrock import capture_converse, capture_converse_stream
 from workbench.connector import Connector, DeliveryError, Outbox, recover_inflight, reserve_call
 from workbench.domain import digest
 from workbench.pilot import auth
-from workbench.pilot.database import collectors, events, facts, schema, teams, uid
+from workbench.pilot.database import SCHEMA_VERSION, collectors, events, facts, schema, teams, uid
 from workbench.pilot.events import (BedrockContext, BedrockUsage, BedrockUsageEvent,
                                     EventBatch, account, event_adapter, pricebook)
 from workbench.pilot.operations import Metrics
@@ -338,7 +338,7 @@ def test_v2_migration_preserves_payload_facts_pricebooks_and_requires_explicit_u
     pilot.db.migrate()
     pilot.db.check_schema()
     with pilot.db.engine.connect() as db:
-        assert db.execute(select(schema.c.version)).scalars().all() == [5]
+        assert db.execute(select(schema.c.version)).scalars().all() == [SCHEMA_VERSION]
         assert db.execute(select(events)).mappings().all() == before
         assert db.execute(select(facts)).mappings().all() == before_facts
     assert pilot.db.ingest(pilot.team, identity, [sample()])["duplicate_events"] == 1

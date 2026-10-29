@@ -70,7 +70,13 @@ def snapshot(database, settings, team=None):
     billing_status = statuses(database, team)
     result["failed_billing_collectors"] = sum(c["status"] == "failed" for c in billing_status)
     result["stale_billing_collectors"] = sum(c["stale"] for c in billing_status)
+    from workbench.spend import budget_alert_counts
+    result.update(budget_alert_counts(database, team))
     alerts = []
+    if result["spend_budget_breaches"]:
+        alerts.append({"severity": "warning", "message": "Tracked spending has reached a budget limit. Review Spend planning."})
+    if result["spend_budget_warnings"]:
+        alerts.append({"severity": "warning", "message": "A spend budget has reached its warning threshold or projects an overrun. Review Spend planning."})
     if not result["worker_healthy"]:
         alerts.append({"severity": "critical", "message": "Evaluation worker is unavailable."})
     if result["oldest_queued_seconds"] > 300:
@@ -104,7 +110,8 @@ class Metrics:
                  "observed_calls_24h", "unknown_cost_calls_24h", "maintenance_age_seconds",
                  "observed_coding_tool_records_24h",
                  "stale_usage_sources", "backlog_usage_sources",
-                 "failed_billing_collectors", "stale_billing_collectors")
+                 "failed_billing_collectors", "stale_billing_collectors",
+                 "spend_budget_breaches", "spend_budget_warnings")
         self.gauges = {name: Gauge(f"workbench_{name}", name.replace("_", " "),
                                   registry=self.registry) for name in names}
 

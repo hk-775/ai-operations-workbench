@@ -17,7 +17,7 @@ from workbench.billing import BillingError, BillingMapping, financial, groups, p
 from workbench.pilot import billing
 from workbench.pilot.api import create_pilot_app
 from workbench.pilot.billing_example import example_upload, load_example
-from workbench.pilot.database import (Conflict, billing_bindings, billing_families, billing_mappings,
+from workbench.pilot.database import (Conflict, SCHEMA_VERSION, billing_bindings, billing_families, billing_mappings,
     billing_reports, collectors, events, facts, maintenance, schema, teams, uid)
 from workbench.pilot.maintenance import run_once
 from test_bedrock import event
@@ -306,7 +306,7 @@ def test_schema_three_migration_and_financial_retention(pilot):
             table.drop(db)
     pilot.db.migrate()
     with pilot.db.engine.connect() as db:
-        assert db.execute(select(schema.c.version)).scalars().all() == [5]
+        assert db.execute(select(schema.c.version)).scalars().all() == [SCHEMA_VERSION]
         assert [dict(r) for r in db.execute(select(events)).mappings()] == before
         assert [dict(r) for r in db.execute(select(facts)).mappings()] == before_facts
         assert db.execute(select(collectors)).all() == []

@@ -46,11 +46,14 @@ const billing = createBilling({api, action, notice, isAdmin, getEpoch:()=>genera
     await loadUsage();navigate('tasks');
   }
 });
+const spend=createSpend({api,action,notice,isAdmin,getEpoch:()=>generation,download});
+const customEvaluations=createCustomEvals({api,action,notice,canEdit,getEpoch:()=>generation,download});
+const onboarding=createOnboarding({api,action,notice,getEpoch:()=>generation,download});
 
-async function api(path, body) {
+async function api(path, body, raw=false) {
   const epoch = generation;
   const response = await fetch(path, {credentials:'same-origin', cache:'no-store',
-    ...(body === undefined ? {} : {method:'POST', headers:{'Content-Type':'application/json', 'X-Workbench-CSRF':session?.csrf || ''}, body:JSON.stringify(body)})});
+    ...(body === undefined ? {} : {method:'POST', headers:{'Content-Type':'application/json', 'X-Workbench-CSRF':session?.csrf || ''}, body:raw?body:JSON.stringify(body)})});
   const value = await response.json();
   if (epoch !== generation) throw new Error('Session changed. Retry after signing in.');
   if (!response.ok) {
@@ -74,6 +77,9 @@ function showLogin() {
   billing.reset();
   coding.reset();
   evaluationInspector.reset();
+  spend.reset();
+  customEvaluations.reset();
+  onboarding.reset();
   usage = null; jobRows = []; proposalRows = [];
   for (const id of ['metrics','task-list','sources','jobs','evaluation-result','proposals','users','audit',
                     'recording-select','proposal-job','evidence-counts','cost-note',
@@ -100,6 +106,8 @@ function navigate(next) {
   if (page === 'team') action(loadTeam);
   if (page === 'operations') action(loadOperations);
   if (page === 'billing') action(()=>billing.load());
+  if (page === 'spend') action(()=>spend.load());
+  if (page === 'custom') action(()=>customEvaluations.load());
 }
 function access() {
   document.querySelectorAll('[data-admin]').forEach(el => el.hidden = !isAdmin());
@@ -241,7 +249,7 @@ async function loadSources() {
     ${s.kind!=='recording' && !s.event_count?'<p class="data-note">Waiting for usage. Configure the collector with an active source token to begin sending records.</p>':''}
     <div class="fine">${s.tokens.map(t=>`<p>Connection token ${escape(t.prefix)}… · ${t.revoked?'revoked':`expires ${escape(date(t.expires_at))}`}
       ${isAdmin()&&!t.revoked?`<button class="button small" data-revoke-token="${t.id}" data-source="${s.id}">Revoke token ${escape(t.prefix)}</button>`:''}</p>`).join('')}</div></div>
-    ${isAdmin() && s.kind!=='recording' ? `<div class="row-actions"><button class="button soft" data-token="${s.id}">Issue token</button><button class="button" data-revoke="${s.id}">Revoke all tokens</button></div>` : ''}</article>`).join('') ||
+    ${s.kind!=='recording'?`<div class="row-actions"><button class="button" data-setup-source="${s.id}">Open setup guide</button>${isAdmin()?`<button class="button soft" data-token="${s.id}">Issue token</button><button class="button" data-revoke="${s.id}">Revoke all tokens</button>`:''}</div>`:''}</article>`).join('') ||
       '<p class="notice">No sources connected yet. An administrator can create an AxonLLM or Amazon Bedrock source.</p>';
 }
 function sourceHealth(source) {
@@ -392,6 +400,7 @@ document.addEventListener('click', event=>{
   if (d.page || d.goto) navigate(d.page || d.goto);
   if (d.moreCalls !== undefined) action(()=>moreCalls(button));
   if (d.result) action(()=>showResult(d.result));
+  if (d.setupSource) action(()=>onboarding.open(d.setupSource));
   if (d.cancel) action(async()=>{await api(`/api/pilot/evaluations/${d.cancel}/cancel`,{}); await loadJobs();});
   if (d.token) action(async()=>{const token=await api(`/api/pilot/sources/${d.token}/token`,{}); $('token-value').value=token.token; $('token-panel').hidden=false; await loadSources(); $('token-panel').scrollIntoView();});
   if (d.revoke && confirm('Revoke all tokens for this source? Its connectors will need a new token.')) action(async()=>{await api(`/api/pilot/sources/${d.revoke}/revoke`,{}); $('dismiss-token').click(); await loadSources();});

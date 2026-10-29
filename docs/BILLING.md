@@ -1,7 +1,9 @@
 # Bedrock billing reconciliation
 
 Billing reconciliation first shipped in [v0.5.0](RELEASE-0.5.0.md) with schema 4.
-Current releases require **schema 5**; follow the [upgrade notes](REVIEW-FIXES.md).
+This development checkout requires **schema 6**; follow the
+[upgrade notes](PRODUCT-WORKFLOWS.md#upgrade-this-development-checkout-to-schema-6).
+Published v0.9.2 remains on schema 5.
 The [historical hosted report](VERIFICATION-HOSTED-BILLING.md) records the
 v0.5.0/schema-4 acceptance. The v0.4.0 archive uses schema 3 and does not include
 billing reconciliation.
@@ -199,10 +201,11 @@ expire with financial records. Export needed reconciliation evidence before its
 retention deadline.
 
 Billing's schema-3 → 4 migration added four tables for families, immutable
-snapshots, source account bindings, and comparison mappings. Current releases
-also require schema 5 for stable call pagination. The explicit migration applies
+snapshots, source account bindings, and comparison mappings. Schema 5 added stable
+call pagination; this checkout requires schema 6 for the new product workflows.
+The explicit migration applies
 the necessary upgrades while preserving original payloads, fingerprints and
-accounting facts. See [schema-5 compatibility](REVIEW-FIXES.md).
+accounting facts. See [schema-6 compatibility](PRODUCT-WORKFLOWS.md#upgrade-this-development-checkout-to-schema-6).
 
 1. Stop the app, worker, and maintenance together.
 2. Take and verify a restorable PostgreSQL backup. Preserve the previous images.
@@ -212,9 +215,9 @@ accounting facts. See [schema-5 compatibility](REVIEW-FIXES.md).
 5. Start matching services and verify readiness, login, original usage totals,
    and the billing screen. Loading fictional records is an explicit choice.
 
-Production startup checks schema 5 and does not migrate silently. For rollback,
+Production startup checks schema 6 and does not migrate silently. For rollback,
 stop all writers and restore the pre-upgrade backup with the previous images.
-Do not manually decrement the schema marker or run older images against schema 5.
+Do not manually decrement the schema marker or run older images against schema 6.
 This feature changes neither company authentication requirements nor the
 explicit password-only hosted-test exception.
 

@@ -91,10 +91,12 @@ nonstreaming contract. Source tokens accept their selected connector's schema.
 Version 0.8.0 also supports [Codex, Cursor and Claude Code usage](CODING-TOOL-CONNECTORS.md).
 Native tool amounts remain separate from the server-priced API estimate; usage
 does not establish output quality. These connectors are included from v0.8.0.
-Current releases require **schema 5** for stable call pagination.
+This development checkout requires **schema 6** for the
+[new product workflows](PRODUCT-WORKFLOWS.md). Published v0.9.2 uses schema 5
+for stable call pagination.
 Earlier releases added collector health in schema 3 and
 [Bedrock billing reconciliation](BILLING.md) in schema 4.
-Follow the [backup, migration and cursor compatibility instructions](REVIEW-FIXES.md)
+Follow the [schema-6 backup and migration instructions](PRODUCT-WORKFLOWS.md#upgrade-this-development-checkout-to-schema-6)
 before upgrading.
 
 ## First connector delivery, without model calls
@@ -243,6 +245,7 @@ saved routing reviews, and metadata audit events. The first schema migration is
 idempotent and advisory-lock protected. Schema 3 adds collector health, schema 4
 adds billing snapshots, and v0.9.0 adds stable call snapshots
 in schema 5 while preserving prior payloads, costs and fingerprints.
+Schema 6 adds spend definitions, revision history and custom saved-answer evaluations.
 See [upgrade and cursor compatibility](REVIEW-FIXES.md). An unknown schema version
 refuses startup.
 
