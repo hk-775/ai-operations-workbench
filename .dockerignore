@@ -10,6 +10,7 @@
 !data/model-comparison.json
 !data/coding/
 !data/coding/cases.json
+!data/coding/calibration.json
 !data/coding/example-recording.json
 !data/coding/example-result.json
 !data/billing-sample/

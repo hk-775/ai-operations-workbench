@@ -1,0 +1,57 @@
+{
+  "schema": "workbench.reference-acceptance.v1",
+  "status": "reference_checks_passed",
+  "created_at": "2026-10-29T00:48:50.730569+00:00",
+  "load": {
+    "events": 25000,
+    "tasks": 12500,
+    "concurrent_clients": 4,
+    "ingest_requests": 500,
+    "added_events": 25000,
+    "duplicate_events": 25000,
+    "ingest_seconds": 15.186,
+    "ingest_batch_p95_ms": 203.053,
+    "soak_requested_seconds": 300,
+    "soak_elapsed_seconds": 300.232,
+    "read_requests": 4811,
+    "usage_page_p95_ms": 209.058,
+    "http_errors": 0,
+    "fixture_exclusion": true,
+    "traffic": "Concurrent replay, followed by concurrent reads paced 100 ms per client; synthetic metadata only"
+  },
+  "worker": {
+    "expired_lease_reclaimed": true,
+    "attempts": 2,
+    "completion_audits": 1,
+    "stale_owner_fenced": true
+  },
+  "runtime": {
+    "app_image": "sha256:4c88ec4aae752c704ab94c29420000b33cff59cfc2ca62c15c1fb3ab50ddca6b",
+    "postgres_image": "sha256:461d3010ad127b25e14b8b0d62fab955105b2b37f6f2ca7dd0fb2bbed2e09fbf",
+    "app_cpus": 1.5,
+    "app_memory_mb": 768,
+    "database_cpus": 1,
+    "database_memory_mb": 512
+  },
+  "restore": {
+    "separate_postgres_container": true,
+    "same_docker_host": true,
+    "tables_verified": 24,
+    "table_counts_and_hashes_equal": true,
+    "usage_http_equal": true,
+    "evaluation_available": true,
+    "billing_accounting_equal": true,
+    "backup_sha256": "6dfeea313dce47c1fbc69d443a4ed260d057199a207d567b2e09373f1e2e0dc2",
+    "backup_bytes": 1635445,
+    "drill_seconds": 8.087
+  },
+  "model_calls": 0,
+  "external_api_cost_usd": "0",
+  "hardware_and_electricity_cost_usd": null,
+  "limitations": [
+    "Single Docker host and pilot password login over loopback HTTP; not fresh AWS host, HA, company SSO/TLS or MFA acceptance.",
+    "Synthetic paced reference load; no customer capacity/SLO claim or long-term leak certification.",
+    "Offline evaluation replays saved evidence. Billing uses the fictional example, not customer bills.",
+    "Human alert delivery, real scheduled export delivery and customer traffic acceptance remain pending."
+  ]
+}

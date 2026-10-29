@@ -21,18 +21,18 @@ You can explore and regrade that recording without an API key or new model charg
 
 **[Watch the public demo](https://hk-775.github.io/ai-operations-workbench/)**
 · [Explore the narrated architecture](https://hk-775.github.io/ai-operations-workbench/architecture.html)
-· **[Download v0.5.0](https://github.com/hk-775/ai-operations-workbench/releases/tag/v0.5.0)**
+· **[Download v0.6.0](https://github.com/hk-775/ai-operations-workbench/releases/tag/v0.6.0)**
 · [Methodology](docs/METHODOLOGY.md) · [Architecture](docs/ARCHITECTURE.md)
 · [Production installation and two test deployments](docs/PRODUCTION.md)
 · [Team pilot setup](docs/PILOT.md) · [Roadmap](docs/ROADMAP.md)
 
-**New in v0.5.0:** Bedrock billing reconciliation with complete monthly CSV
-snapshots, declared source/model comparisons, immutable revisions, and JSON
-export. Inspect precise differences, unassigned charges, and credits without
-converting unknown costs to zero. Existing installations require an explicit
-**schema-4 migration**. See the [release and upgrade notes](docs/RELEASE-0.5.0.md),
-[billing guide](docs/BILLING.md), and
-[release verification](docs/VERIFICATION-0.5.0.md).
+**New in v0.6.0:** native AxonLLM Ledger billing aggregation, scheduled versioned
+CUR collection, coding-task evidence, and reproducible reference acceptance.
+Prepare private billing inputs and an 18-task coding calibration packet without
+model calls. Schema remains **4**; no new migration is required from v0.5.0.
+See the [release notes](docs/RELEASE-0.6.0.md),
+[preparation guide](docs/PREPARATION.md), and
+[release verification](docs/VERIFICATION-0.6.0.md).
 The narrated demo and isolated seeded/clean deployment recipes remain included.
 Deployment addresses and credentials belong to each installer and are not published.
 
@@ -89,7 +89,7 @@ uv run --locked uvicorn workbench.app:app --host 127.0.0.1 --port 8767
 If you downloaded a release archive, extract it and start with
 `uv sync --locked --python 3.13` from the extracted directory. No provider
 credentials are needed for replay. The release includes `SHA256SUMS` to verify
-the archive; see [release verification](docs/RELEASE-0.5.0.md#download-and-verify).
+the archive; see [release verification](docs/RELEASE-0.6.0.md#download-and-verify).
 
 Open **http://127.0.0.1:8767/**.
 
@@ -143,7 +143,7 @@ explicit **schema-4 migration**; the v0.4.0 archive does not contain billing rec
 The existing seeded and clean AWS test workspaces have completed the
 [hosted schema-4 acceptance](docs/VERIFICATION-HOSTED-BILLING.md).
 
-**New in the source checkout (not in the v0.5.0 download):**
+**Included in v0.6.0:**
 [billing acceptance checks](docs/BILLING-ACCEPTANCE.md),
 [scheduled versioned CUR collection](docs/BILLING-COLLECTION.md), and
 [coding-task evaluations](docs/CODING-EVALS.md).
@@ -153,6 +153,10 @@ Download the [fictional billing sample files](data/billing-sample/README.md) fro
 the billing screen, or rebuild the ZIP with `scripts/build_billing_sample.py`.
 The sample includes both CSV formats, matching usage, and expected totals.
 Real customer billing acceptance remains pending; authored samples do not establish it.
+Use the [private preparation tools](docs/PREPARATION.md) to collect the missing
+billing inputs and freeze a larger coding calibration schedule. Run the
+[reference acceptance drill](docs/REFERENCE-ACCEPTANCE.md) for concurrent HTTP,
+worker recovery and a separate-container restore before customer acceptance.
 
 ## What is working
 
@@ -160,10 +164,10 @@ Real customer billing acceptance remains pending; authored samples do not establ
 |---|---|
 | Usage connection | AxonLLM and Amazon Bedrock Converse/ConverseStream metadata capture; durable outboxes, authenticated source-scoped delivery, and collector heartbeats; bundled recordings and compatible JSON import |
 | Application event store | PostgreSQL in pilot mode; transactional source-scoped application-event deduplication and Decimal API estimates. Original demo uses SQLite |
-| AxonLLM Ledger billing engine (source) | Schema normalization, account/group cost aggregation and cross-dimension integrity checks; preserves unassigned charges and adjustments through the Workbench adapter |
+| AxonLLM Ledger billing engine | Schema normalization, account/group cost aggregation and cross-dimension integrity checks; preserves unassigned charges and adjustments through the Workbench adapter |
 | Billing reconciliation | Complete Legacy CUR/CUR 2.0 CSV snapshots; explicit account/source/model mappings, exact charge differences, unassigned fees/credits, immutable revision history, and JSON export |
-| Scheduled billing collection (source) | Opt-in operator watcher for complete versioned Legacy CUR CSV/gzip assemblies in S3; bounded reads, hashes, revision checks, replay/refresh, collection health and alerts |
-| Coding evaluations (source) | Six bug-fix tasks, disposable offline containers, saved patches and every attempt, actual test timing, API cost per accepted patch, optional bounded AxonLLM model recording, and read-only result previews |
+| Scheduled billing collection | Opt-in operator watcher for complete versioned Legacy CUR CSV/gzip assemblies in S3; bounded reads, hashes, revision checks, replay/refresh, collection health and alerts |
+| Coding evaluations | Six bug-fix tasks, disposable offline containers, saved patches and every attempt, actual test timing, API cost per accepted patch, optional bounded AxonLLM model recording, and read-only result previews |
 | Team access | Company OIDC/MFA or local test accounts; explicit administrator, analyst, viewer roles; revocable sessions and source tokens |
 | Operations | Administrator health dashboard, source backlog/stale-collector warnings, private Prometheus metrics, alert rules, structured request logs, and scheduled retention |
 | Scale | SQL totals, UTC time windows, paginated tasks and calls; historical prices and unknown costs preserved |
@@ -305,8 +309,8 @@ evaluation results, and saved reviews in PostgreSQL.
 - [Authenticated team pilot and operations guide](docs/PILOT.md)
 - [MIT-0 license](LICENSE)
 - [Contributing](CONTRIBUTING.md), [support](SUPPORT.md), and [security reporting](SECURITY.md)
-- [v0.5.0 release notes and download verification](docs/RELEASE-0.5.0.md)
-- [v0.5.0 validation results](docs/VERIFICATION-0.5.0.md)
+- [v0.6.0 release notes and download verification](docs/RELEASE-0.6.0.md)
+- [v0.6.0 validation results](docs/VERIFICATION-0.6.0.md)
 
 AxonLLM, Ostiari, and AxonLLM Ledger are pinned to immutable Git revisions in `pyproject.toml` and
 `uv.lock`. They remain separate projects; this app does not patch their source.

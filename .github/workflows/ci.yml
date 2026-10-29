@@ -32,6 +32,7 @@ jobs:
       - run: docker pull "$WORKBENCH_CODING_IMAGE"
       - run: uv run --locked pytest tests/test_coding.py::test_real_container_contract_and_execution_limits -q
       - run: uv run --locked python -m workbench.coding evaluate --image "$WORKBENCH_CODING_IMAGE" --output artifacts/coding/ci-result.json
+      - run: uv run --locked python -m workbench.coding_prepare --image "$WORKBENCH_CODING_IMAGE" --output-dir artifacts/coding/calibration
 
   python:
     name: Python ${{ matrix.python }}
@@ -127,6 +128,21 @@ jobs:
           docker compose --env-file .pilot/compose.env -f compose.pilot.yaml up --build --wait
       - name: Verify bootstrap, offline evaluation, and backup restore
         run: python3 scripts/check_pilot_stack.py
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e
+        with:
+          version: "0.10.7"
+          enable-cache: false
+      - name: Verify concurrent HTTP, worker recovery and separate database restore
+        run: |
+          uv sync --locked --python 3.13
+          uv run --locked python scripts/check_reference.py --image ai-operations-workbench:pilot --events 1000 --clients 4 --seconds 15 --output artifacts/reference/ci-check.json
+      - name: Keep reference receipt
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: reference-acceptance
+          path: artifacts/reference/ci-check.json
+          retention-days: 30
       - name: Verify seeded and clean customer deployments
         run: |
           python3 scripts/deploy_instances.py

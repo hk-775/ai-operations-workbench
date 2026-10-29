@@ -1,0 +1,655 @@
+{
+  "schema": "workbench.coding.calibration-additions.v1",
+  "cases": [
+    {
+      "id": "merge-windows",
+      "title": "Merge overlapping time windows",
+      "prompt": "Merge integer [start,end] intervals, including touching intervals. Sort by start. Empty input returns [].",
+      "source": "def solve(x):\n    return sorted(x)\n",
+      "reference": "def solve(x):\n    out=[]\n    for start,end in sorted(x):\n        if out and start <= out[-1][1]:\n            out[-1][1]=max(out[-1][1],end)\n        else:\n            out.append([start,end])\n    return out\n",
+      "public_tests": [
+        {
+          "input": [
+            [
+              1,
+              2
+            ],
+            [
+              4,
+              5
+            ]
+          ],
+          "expected": [
+            [
+              1,
+              2
+            ],
+            [
+              4,
+              5
+            ]
+          ]
+        }
+      ],
+      "acceptance_tests": [
+        {
+          "input": [
+            [
+              3,
+              7
+            ],
+            [
+              1,
+              4
+            ],
+            [
+              7,
+              8
+            ]
+          ],
+          "expected": [
+            [
+              1,
+              8
+            ]
+          ]
+        },
+        {
+          "input": [],
+          "expected": []
+        },
+        {
+          "input": [
+            [
+              1,
+              10
+            ],
+            [
+              2,
+              3
+            ]
+          ],
+          "expected": [
+            [
+              1,
+              10
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "nullable-total",
+      "title": "Preserve incomplete cost totals",
+      "prompt": "Sum Decimal strings to fixed-point text. If any input is null, return null. Empty input returns \"0\".",
+      "source": "def solve(x):\n    return str(sum(float(v) for v in x if v is not None))\n",
+      "reference": "from decimal import Decimal\ndef solve(x):\n    return None if any(v is None for v in x) else format(sum((Decimal(v) for v in x),Decimal(0)),\"f\")\n",
+      "public_tests": [
+        {
+          "input": [
+            "1.5",
+            "2.5"
+          ],
+          "expected": "4.0"
+        }
+      ],
+      "acceptance_tests": [
+        {
+          "input": [
+            "0.000001",
+            "0.000002"
+          ],
+          "expected": "0.000003"
+        },
+        {
+          "input": [
+            "1",
+            null
+          ],
+          "expected": null
+        },
+        {
+          "input": [],
+          "expected": "0"
+        }
+      ]
+    },
+    {
+      "id": "stable-pagination",
+      "title": "Page without losing tied rows",
+      "prompt": "Sort rows by (timestamp,id), then return rows strictly after the optional [timestamp,id] cursor, limited to limit. IDs are unique strings.",
+      "source": "def solve(x):\n    return sorted(x[\"rows\"],key=lambda r:r[\"timestamp\"])[:x[\"limit\"]]\n",
+      "reference": "def solve(x):\n    rows=sorted(x[\"rows\"],key=lambda r:(r[\"timestamp\"],r[\"id\"]))\n    c=x.get(\"cursor\")\n    return [r for r in rows if c is None or (r[\"timestamp\"],r[\"id\"])>tuple(c)][:x[\"limit\"]]\n",
+      "public_tests": [
+        {
+          "input": {
+            "rows": [
+              {
+                "timestamp": 1,
+                "id": "a"
+              }
+            ],
+            "limit": 1
+          },
+          "expected": [
+            {
+              "timestamp": 1,
+              "id": "a"
+            }
+          ]
+        }
+      ],
+      "acceptance_tests": [
+        {
+          "input": {
+            "rows": [
+              {
+                "timestamp": 1,
+                "id": "b"
+              },
+              {
+                "timestamp": 1,
+                "id": "a"
+              },
+              {
+                "timestamp": 2,
+                "id": "c"
+              }
+            ],
+            "cursor": [
+              1,
+              "a"
+            ],
+            "limit": 1
+          },
+          "expected": [
+            {
+              "timestamp": 1,
+              "id": "b"
+            }
+          ]
+        },
+        {
+          "input": {
+            "rows": [],
+            "limit": 2
+          },
+          "expected": []
+        },
+        {
+          "input": {
+            "rows": [
+              {
+                "timestamp": 1,
+                "id": "a"
+              }
+            ],
+            "cursor": [
+              1,
+              "a"
+            ],
+            "limit": 1
+          },
+          "expected": []
+        }
+      ]
+    },
+    {
+      "id": "utc-month",
+      "title": "Assign timestamps to UTC billing months",
+      "prompt": "Parse an ISO 8601 timestamp with Z or an explicit offset. Return its UTC YYYY-MM month.",
+      "source": "def solve(x):\n    return x[:7]\n",
+      "reference": "from datetime import datetime, timezone\ndef solve(x):\n    return datetime.fromisoformat(x.replace(\"Z\",\"+00:00\")).astimezone(timezone.utc).strftime(\"%Y-%m\")\n",
+      "public_tests": [
+        {
+          "input": "2026-10-15T12:00:00Z",
+          "expected": "2026-10"
+        }
+      ],
+      "acceptance_tests": [
+        {
+          "input": "2026-11-01T00:30:00+02:00",
+          "expected": "2026-10"
+        },
+        {
+          "input": "2026-09-30T23:30:00-02:00",
+          "expected": "2026-10"
+        },
+        {
+          "input": "2027-01-01T00:10:00+01:00",
+          "expected": "2026-12"
+        }
+      ]
+    },
+    {
+      "id": "nearest-rank",
+      "title": "Calculate nearest-rank percentiles",
+      "prompt": "For nonempty numbers and percentile p in (0,1], return sorted values at ceil(p*n)-1. Empty input returns null.",
+      "source": "def solve(x):\n    return sorted(x[\"values\"])[int(x[\"p\"]*len(x[\"values\"]))-1]\n",
+      "reference": "import math\ndef solve(x):\n    return sorted(x[\"values\"])[math.ceil(x[\"p\"]*len(x[\"values\"]))-1] if x[\"values\"] else None\n",
+      "public_tests": [
+        {
+          "input": {
+            "values": [
+              1,
+              2,
+              3,
+              4
+            ],
+            "p": 0.5
+          },
+          "expected": 2
+        }
+      ],
+      "acceptance_tests": [
+        {
+          "input": {
+            "values": [
+              30,
+              10,
+              20
+            ],
+            "p": 0.95
+          },
+          "expected": 30
+        },
+        {
+          "input": {
+            "values": [],
+            "p": 0.5
+          },
+          "expected": null
+        },
+        {
+          "input": {
+            "values": [
+              1,
+              2,
+              3
+            ],
+            "p": 0.1
+          },
+          "expected": 1
+        }
+      ]
+    },
+    {
+      "id": "strict-json-bool",
+      "title": "Require explicit approval",
+      "prompt": "Return true only when the approved field is the JSON boolean true. Missing, null, numeric and string values are false.",
+      "source": "def solve(x):\n    return bool(x.get(\"approved\"))\n",
+      "reference": "def solve(x):\n    return x.get(\"approved\") is True\n",
+      "public_tests": [
+        {
+          "input": {
+            "approved": true
+          },
+          "expected": true
+        },
+        {
+          "input": {
+            "approved": false
+          },
+          "expected": false
+        }
+      ],
+      "acceptance_tests": [
+        {
+          "input": {
+            "approved": "false"
+          },
+          "expected": false
+        },
+        {
+          "input": {
+            "approved": 1
+          },
+          "expected": false
+        },
+        {
+          "input": {},
+          "expected": false
+        },
+        {
+          "input": {
+            "approved": null
+          },
+          "expected": false
+        }
+      ]
+    },
+    {
+      "id": "allocation-remainder",
+      "title": "Allocate whole cents exactly",
+      "prompt": "Split a nonnegative integer cents total equally among a positive number of recipients. Give one extra cent to the first remainder recipients.",
+      "source": "def solve(x):\n    return [round(x[\"cents\"]/x[\"recipients\"])]*x[\"recipients\"]\n",
+      "reference": "def solve(x):\n    q,r=divmod(x[\"cents\"],x[\"recipients\"])\n    return [q+(i<r) for i in range(x[\"recipients\"])]\n",
+      "public_tests": [
+        {
+          "input": {
+            "cents": 10,
+            "recipients": 2
+          },
+          "expected": [
+            5,
+            5
+          ]
+        }
+      ],
+      "acceptance_tests": [
+        {
+          "input": {
+            "cents": 10,
+            "recipients": 3
+          },
+          "expected": [
+            4,
+            3,
+            3
+          ]
+        },
+        {
+          "input": {
+            "cents": 2,
+            "recipients": 4
+          },
+          "expected": [
+            1,
+            1,
+            0,
+            0
+          ]
+        },
+        {
+          "input": {
+            "cents": 0,
+            "recipients": 2
+          },
+          "expected": [
+            0,
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "prerequisite-order",
+      "title": "Order tasks with dependencies",
+      "prompt": "Input maps every task to existing prerequisite task names. Return a topological order, choosing lexicographically smallest currently available task each step. Return null for cycles.",
+      "source": "def solve(x):\n    return sorted(x)\n",
+      "reference": "def solve(x):\n    done=[]\n    while len(done)<len(x):\n        ready=sorted(k for k,v in x.items() if k not in done and all(d in done for d in v))\n        if not ready:\n            return None\n        done.append(ready[0])\n    return done\n",
+      "public_tests": [
+        {
+          "input": {
+            "a": [],
+            "b": [
+              "a"
+            ]
+          },
+          "expected": [
+            "a",
+            "b"
+          ]
+        }
+      ],
+      "acceptance_tests": [
+        {
+          "input": {
+            "a": [
+              "b"
+            ],
+            "b": []
+          },
+          "expected": [
+            "b",
+            "a"
+          ]
+        },
+        {
+          "input": {
+            "a": [
+              "b"
+            ],
+            "b": [
+              "a"
+            ]
+          },
+          "expected": null
+        },
+        {
+          "input": {},
+          "expected": []
+        },
+        {
+          "input": {
+            "z": [],
+            "a": [
+              "z"
+            ],
+            "b": []
+          },
+          "expected": [
+            "b",
+            "z",
+            "a"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "lease-fencing",
+      "title": "Reject expired or reassigned work",
+      "prompt": "Return true only if state is running, owner equals expected_owner, and integer lease_until >= now. All fields exist.",
+      "source": "def solve(x):\n    return x[\"owner\"]==x[\"expected_owner\"]\n",
+      "reference": "def solve(x):\n    return x[\"state\"]==\"running\" and x[\"owner\"]==x[\"expected_owner\"] and x[\"lease_until\"]>=x[\"now\"]\n",
+      "public_tests": [
+        {
+          "input": {
+            "state": "running",
+            "owner": "a",
+            "expected_owner": "a",
+            "lease_until": 10,
+            "now": 9
+          },
+          "expected": true
+        }
+      ],
+      "acceptance_tests": [
+        {
+          "input": {
+            "state": "running",
+            "owner": "a",
+            "expected_owner": "a",
+            "lease_until": 10,
+            "now": 11
+          },
+          "expected": false
+        },
+        {
+          "input": {
+            "state": "done",
+            "owner": "a",
+            "expected_owner": "a",
+            "lease_until": 10,
+            "now": 9
+          },
+          "expected": false
+        },
+        {
+          "input": {
+            "state": "running",
+            "owner": "b",
+            "expected_owner": "a",
+            "lease_until": 10,
+            "now": 9
+          },
+          "expected": false
+        },
+        {
+          "input": {
+            "state": "running",
+            "owner": "a",
+            "expected_owner": "a",
+            "lease_until": 10,
+            "now": 10
+          },
+          "expected": true
+        }
+      ]
+    },
+    {
+      "id": "weighted-quality",
+      "title": "Weight quality by evaluated tasks",
+      "prompt": "Input rows have integer passed and total with 0<=passed<=total. Return sum(passed)/sum(total), or null when total is zero.",
+      "source": "def solve(x):\n    return sum(r[\"passed\"]/r[\"total\"] for r in x)/len(x)\n",
+      "reference": "def solve(x):\n    n=sum(r[\"total\"] for r in x)\n    return sum(r[\"passed\"] for r in x)/n if n else None\n",
+      "public_tests": [
+        {
+          "input": [
+            {
+              "passed": 1,
+              "total": 2
+            }
+          ],
+          "expected": 0.5
+        }
+      ],
+      "acceptance_tests": [
+        {
+          "input": [
+            {
+              "passed": 1,
+              "total": 1
+            },
+            {
+              "passed": 0,
+              "total": 9
+            }
+          ],
+          "expected": 0.1
+        },
+        {
+          "input": [],
+          "expected": null
+        },
+        {
+          "input": [
+            {
+              "passed": 0,
+              "total": 0
+            }
+          ],
+          "expected": null
+        }
+      ]
+    },
+    {
+      "id": "negative-adjustments",
+      "title": "Retain billing credits",
+      "prompt": "Group rows by currency and sum signed Decimal amount strings. Return a currency-to-fixed-point-text object, including zero groups.",
+      "source": "def solve(x):\n    return {r[\"currency\"]:r[\"amount\"] for r in x}\n",
+      "reference": "from decimal import Decimal\ndef solve(x):\n    out={}\n    for r in x:\n        c=r[\"currency\"];out[c]=out.get(c,Decimal(0))+Decimal(r[\"amount\"])\n    return {k:format(v,\"f\") for k,v in out.items()}\n",
+      "public_tests": [
+        {
+          "input": [
+            {
+              "currency": "USD",
+              "amount": "2"
+            }
+          ],
+          "expected": {
+            "USD": "2"
+          }
+        }
+      ],
+      "acceptance_tests": [
+        {
+          "input": [
+            {
+              "currency": "USD",
+              "amount": "2"
+            },
+            {
+              "currency": "USD",
+              "amount": "-3"
+            }
+          ],
+          "expected": {
+            "USD": "-1"
+          }
+        },
+        {
+          "input": [],
+          "expected": {}
+        },
+        {
+          "input": [
+            {
+              "currency": "USD",
+              "amount": "2"
+            },
+            {
+              "currency": "EUR",
+              "amount": "1"
+            },
+            {
+              "currency": "USD",
+              "amount": "-2"
+            }
+          ],
+          "expected": {
+            "USD": "0",
+            "EUR": "1"
+          }
+        }
+      ]
+    },
+    {
+      "id": "metadata-allowlist",
+      "title": "Exclude payloads from usage metadata",
+      "prompt": "Return only existing top-level keys event_id, model and latency_ms. Do not include any other fields.",
+      "source": "def solve(x):\n    return {k:v for k,v in x.items() if k!=\"prompt\"}\n",
+      "reference": "def solve(x):\n    return {k:v for k,v in x.items() if k in {\"event_id\",\"model\",\"latency_ms\"}}\n",
+      "public_tests": [
+        {
+          "input": {
+            "event_id": "1",
+            "prompt": "text"
+          },
+          "expected": {
+            "event_id": "1"
+          }
+        }
+      ],
+      "acceptance_tests": [
+        {
+          "input": {
+            "event_id": "1",
+            "response": "private",
+            "authorization": "secret",
+            "model": "m"
+          },
+          "expected": {
+            "event_id": "1",
+            "model": "m"
+          }
+        },
+        {
+          "input": {},
+          "expected": {}
+        },
+        {
+          "input": {
+            "latency_ms": 0,
+            "nested": {
+              "prompt": "private"
+            }
+          },
+          "expected": {
+            "latency_ms": 0
+          }
+        }
+      ]
+    }
+  ]
+}

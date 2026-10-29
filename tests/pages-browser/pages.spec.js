@@ -18,8 +18,8 @@ test('public entry plays bundled media, seeks chapters, loads captions, and link
   await expect(page.getByRole('heading',{level:1})).toHaveText('Follow the cost.Prove the model choice.');
   await expect(page.locator('.disclosure')).toContainText('Fictional support cases');
   await expect(page.locator('#chapters button')).toHaveCount(12);
-  await expect(page.getByRole('link',{name:'Download Workbench v0.5.0'})).toHaveAttribute(
-    'href','https://github.com/hk-775/ai-operations-workbench/releases/tag/v0.5.0');
+  await expect(page.getByRole('link',{name:'Download Workbench v0.6.0'})).toHaveAttribute(
+    'href','https://github.com/hk-775/ai-operations-workbench/releases/tag/v0.6.0');
   const video=page.locator('video'),audio=page.locator('audio');
   await page.locator('#chapters button').first().click();
   await expect.poll(()=>video.evaluate(el=>el.currentTime)).toBeGreaterThan(.15);
@@ -105,7 +105,7 @@ test('every public asset is available and browser policy blocks API and WebSocke
   const manifestResponse=await page.request.get(new URL('site-manifest.json',baseURL).href);
   expect(manifestResponse.ok()).toBe(true);
   const manifest=await manifestResponse.json();
-  expect(manifest.version).toBe('0.5.0');
+  expect(manifest.version).toBe('0.6.0');
   for(const file of Object.keys(manifest.files)) {
     // GitHub consumes this build marker and intentionally does not serve it.
     // Keep checking every actual page, media file, diagram, and metadata asset.

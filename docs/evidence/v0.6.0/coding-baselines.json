@@ -1,0 +1,174 @@
+{
+  "schema": "workbench.coding.calibration-check.v1",
+  "status": "offline_baselines_passed",
+  "dataset_sha256": "b54632ca6b74f2968da7d0340e23ed597efdddef6e135c1e51aa4d98358516a8",
+  "image_id": "sha256:9e136727f903f7d796f2ce264b56b38fac6c6fc2894ef5bb1061ae9e29a33d84",
+  "cases": [
+    {
+      "case_id": "decimal-charge",
+      "tests": 4,
+      "broken_passed": 0,
+      "reference_passed": 4,
+      "broken_status": "completed",
+      "reference_status": "completed",
+      "test_duration_ms": 475.5
+    },
+    {
+      "case_id": "exclusive-window",
+      "tests": 4,
+      "broken_passed": 3,
+      "reference_passed": 4,
+      "broken_status": "completed",
+      "reference_status": "completed",
+      "test_duration_ms": 461.94
+    },
+    {
+      "case_id": "source-deduplication",
+      "tests": 4,
+      "broken_passed": 3,
+      "reference_passed": 4,
+      "broken_status": "completed",
+      "reference_status": "completed",
+      "test_duration_ms": 446.631
+    },
+    {
+      "case_id": "retry-cap",
+      "tests": 4,
+      "broken_passed": 1,
+      "reference_passed": 4,
+      "broken_status": "completed",
+      "reference_status": "completed",
+      "test_duration_ms": 431.227
+    },
+    {
+      "case_id": "qualified-route",
+      "tests": 4,
+      "broken_passed": 1,
+      "reference_passed": 4,
+      "broken_status": "completed",
+      "reference_status": "completed",
+      "test_duration_ms": 448.375
+    },
+    {
+      "case_id": "header-redaction",
+      "tests": 4,
+      "broken_passed": 2,
+      "reference_passed": 4,
+      "broken_status": "completed",
+      "reference_status": "completed",
+      "test_duration_ms": 451.856
+    },
+    {
+      "case_id": "merge-windows",
+      "tests": 4,
+      "broken_passed": 2,
+      "reference_passed": 4,
+      "broken_status": "completed",
+      "reference_status": "completed",
+      "test_duration_ms": 430.714
+    },
+    {
+      "case_id": "nullable-total",
+      "tests": 4,
+      "broken_passed": 2,
+      "reference_passed": 4,
+      "broken_status": "completed",
+      "reference_status": "completed",
+      "test_duration_ms": 421.967
+    },
+    {
+      "case_id": "stable-pagination",
+      "tests": 4,
+      "broken_passed": 3,
+      "reference_passed": 4,
+      "broken_status": "completed",
+      "reference_status": "completed",
+      "test_duration_ms": 530.174
+    },
+    {
+      "case_id": "utc-month",
+      "tests": 4,
+      "broken_passed": 1,
+      "reference_passed": 4,
+      "broken_status": "completed",
+      "reference_status": "completed",
+      "test_duration_ms": 531.573
+    },
+    {
+      "case_id": "nearest-rank",
+      "tests": 4,
+      "broken_passed": 1,
+      "reference_passed": 4,
+      "broken_status": "completed",
+      "reference_status": "completed",
+      "test_duration_ms": 518.734
+    },
+    {
+      "case_id": "strict-json-bool",
+      "tests": 6,
+      "broken_passed": 4,
+      "reference_passed": 6,
+      "broken_status": "completed",
+      "reference_status": "completed",
+      "test_duration_ms": 472.581
+    },
+    {
+      "case_id": "allocation-remainder",
+      "tests": 4,
+      "broken_passed": 2,
+      "reference_passed": 4,
+      "broken_status": "completed",
+      "reference_status": "completed",
+      "test_duration_ms": 526.23
+    },
+    {
+      "case_id": "prerequisite-order",
+      "tests": 5,
+      "broken_passed": 2,
+      "reference_passed": 5,
+      "broken_status": "completed",
+      "reference_status": "completed",
+      "test_duration_ms": 578.501
+    },
+    {
+      "case_id": "lease-fencing",
+      "tests": 5,
+      "broken_passed": 3,
+      "reference_passed": 5,
+      "broken_status": "completed",
+      "reference_status": "completed",
+      "test_duration_ms": 492.098
+    },
+    {
+      "case_id": "weighted-quality",
+      "tests": 4,
+      "broken_passed": 1,
+      "reference_passed": 4,
+      "broken_status": "completed",
+      "reference_status": "completed",
+      "test_duration_ms": 506.681
+    },
+    {
+      "case_id": "negative-adjustments",
+      "tests": 4,
+      "broken_passed": 2,
+      "reference_passed": 4,
+      "broken_status": "completed",
+      "reference_status": "completed",
+      "test_duration_ms": 479.562
+    },
+    {
+      "case_id": "metadata-allowlist",
+      "tests": 4,
+      "broken_passed": 2,
+      "reference_passed": 4,
+      "broken_status": "completed",
+      "reference_status": "completed",
+      "test_duration_ms": 441.615
+    }
+  ],
+  "model_calls": 0,
+  "external_api_cost_usd": "0",
+  "hardware_and_electricity_cost_usd": null,
+  "notice": "Container outcomes for authored patches; no measured model performance."
+}

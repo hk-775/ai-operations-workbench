@@ -11,13 +11,14 @@ Version 0.5.0 adds [manual Bedrock billing reconciliation](BILLING.md)
 with declared aggregate scopes; the published 0.4.0 archive does not include it.
 Native subscription-tool billing connectors, arbitrary
 evaluation plugins, and automatic routing changes are separate product features.
-The source checkout after v0.5.0 adds an opt-in
-[versioned Legacy CUR collector](BILLING-COLLECTION.md), private
-[billing acceptance checks](BILLING-ACCEPTANCE.md), and a separate
-[coding demonstration](CODING-EVALS.md). They retain schema 4. The collector is
-an operator process on a customer host; candidate code executes only in a
-separate disposable Docker environment, never on the web server. The released
-v0.5.0 archive and existing hosted deployments do not include these source changes.
+Version 0.6.0 includes native Ledger aggregation, an opt-in
+[versioned Legacy CUR collector](BILLING-COLLECTION.md), independent billing
+acceptance, and six-task coding evidence. The existing hosted test workspaces
+were upgraded to the Ledger source revision before this release; dated
+[hosted verification](VERIFICATION-HOSTED-LEDGER.md) records that deployment.
+Publication does not upgrade them again. Customer billing and actual scheduled
+S3 delivery remain unverified. See [preparation](PREPARATION.md) and the
+[concurrent reference/recovery drill](REFERENCE-ACCEPTANCE.md).
 
 ## Try the seeded and clean deployments
 
@@ -271,4 +272,4 @@ VEX evidence to the actual scanned image and SBOM.
 
 CI scans all three resulting runtime images for high and critical vulnerabilities.
 Image and dependency pins still require updates as new findings appear. See the
-dated [release verification](VERIFICATION-0.5.0.md) for this release's checks.
+dated [release verification](VERIFICATION-0.6.0.md) for this release's checks.
