@@ -253,11 +253,16 @@ in Usage overview. Inspect the separate amount cards and expand a coding
 activity in Task explorer. No evaluation results or accepted patches are
 inferred from these usage samples.
 
-Current releases require **schema 5**. When upgrading from v0.8.0 or earlier,
-follow the [explicit backup/migration procedure](REVIEW-FIXES.md) before
+This development checkout requires **schema 6**; published v0.9.2 uses schema 5.
+Follow the [explicit backup/migration procedure](PRODUCT-WORKFLOWS.md#upgrade-this-development-checkout-to-schema-6) before
 connecting. Existing payloads, fingerprints, accounting and source tokens are
 preserved. Keep the outbox and its identity during upgrades. Older servers
 reject unsupported source kinds or schema versions.
+
+The authenticated **Usage sources → Open setup guide** screen now prepares
+source-specific commands and separates active tokens, heartbeat/delivery and
+observed records. It does not automatically log in to a vendor account.
+See [guided setup and private token helpers](PRODUCT-WORKFLOWS.md#guided-connection-setup).
 
 ## Contract sources
 

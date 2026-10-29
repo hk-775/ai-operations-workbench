@@ -3,6 +3,13 @@
 Workbench owns the interface, usage ledger, evidence validation, comparison,
 and proposal. Existing projects provide the model routing and governance engines.
 
+The unreleased authenticated workspace also owns [spend planning, declared cost
+allocation, custom saved-answer evaluations and guided connector setup](PRODUCT-WORKFLOWS.md).
+Schema 6 stores their team-scoped definitions, immutable revisions and results.
+They reuse existing accounting and authentication; these checks make no model
+calls and do not apply routing changes. The bundled architecture narration below
+continues to describe the published demonstration.
+
 Open **Interactive architecture** from either dashboard's footer, or open
 `/static/architecture.html` on the running application. The
 [standalone page](../web/architecture.html) also works directly from the downloaded

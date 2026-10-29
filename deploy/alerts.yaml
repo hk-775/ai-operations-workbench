@@ -56,3 +56,17 @@ groups:
         annotations:
           summary: Billing collection failed or stopped reporting
           description: Check the collector host, AWS access and complete versioned export. The last accepted snapshot remains available.
+      - alert: WorkbenchSpendBudgetReached
+        expr: workbench_spend_budget_breaches > 0
+        for: 2m
+        labels: {severity: warning}
+        annotations:
+          summary: Tracked spending has reached a budget limit
+          description: Review Spend planning and its cost basis. Uncaptured or unpriced amounts may increase the total; this alert does not block model calls.
+      - alert: WorkbenchSpendBudgetWarning
+        expr: workbench_spend_budget_warnings > 0
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: A spend budget needs review
+          description: Inspect the warning threshold or captured-pace projection in Spend planning. A projection is not a verified invoice.

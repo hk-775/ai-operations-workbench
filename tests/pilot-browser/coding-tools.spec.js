@@ -51,7 +51,7 @@ test('native tool fixtures use source-scoped CLI delivery and separate honest am
       await expect(source.getByText('Connected',{exact:true})).toBeVisible();
     }
     await page.getByRole('button',{name:'Usage overview',exact:true}).click();
-    await page.locator('[name="project"]').fill('native-browser');
+    await page.locator('#filters [name="project"]').fill('native-browser');
     await page.getByRole('button',{name:'Apply filters',exact:true}).click();
     await expect(page.locator('#usage-guide')).toContainText('No usage matches');
     await page.locator('[name="include_fixtures"]').check();

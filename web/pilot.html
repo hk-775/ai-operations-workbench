@@ -9,7 +9,10 @@
   <script src="/static/billing.js?v=0.5.0" defer></script>
   <script src="/static/coding.js?v=1" defer></script>
   <script src="/static/evaluation.js?v=1" defer></script>
-  <script src="/static/pilot.js?v=0.5.0" defer></script>
+  <script src="/static/spend.js?v=1" defer></script>
+  <script src="/static/custom-evals.js?v=1" defer></script>
+  <script src="/static/onboarding.js?v=1" defer></script>
+  <script src="/static/pilot.js?v=6" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -39,9 +42,11 @@
     <nav aria-label="Workspace">
       <button class="nav-item active" data-page="usage" data-flow="connect">Usage overview</button>
       <button class="nav-item" data-page="billing" data-flow="connect">Billing reconciliation</button>
+      <button class="nav-item" data-page="spend" data-flow="connect">Spend planning</button>
       <button class="nav-item" data-page="tasks" data-flow="tasks">Task explorer</button>
       <button class="nav-item" data-page="evaluations" data-flow="compare">Model evaluations</button>
       <button class="nav-item" data-page="coding" data-flow="compare">Coding evaluations</button>
+      <button class="nav-item" data-page="custom" data-flow="compare">Custom evaluations</button>
       <button class="nav-item" data-page="proposals" data-flow="proposal">Routing review</button>
       <button class="nav-item" data-page="sources" data-flow="connect">Usage sources</button>
       <button class="nav-item" data-page="operations" data-flow="compare" data-admin>Operations</button>
@@ -105,6 +110,57 @@
           <div id="billing-preview" hidden></div>
         </details>
       </section>
+      <section id="page-spend" data-flow="connect" hidden>
+        <div class="page-heading"><p class="eyebrow">SPEND PLANNING</p><h1>Set a budget. Explain the shared costs.</h1><p class="lede">Monitor one cost basis at a time and distribute monthly subscriptions or other shared expenses across projects.</p></div>
+        <article class="panel screen-guide"><h2>Start with the costs you can support.</h2><p><strong>Budgets</strong> compare recorded amounts with a monthly limit. <strong>Allocations</strong> divide a cost pool your administrator enters. API estimates, tool-reported model amounts, and allocated subscriptions remain separate.</p><p class="fine">All periods use UTC calendar months and USD. Alerts flag budgets for review; they do not block model calls. Unknown and uncaptured spending can increase the total.</p><div class="row-actions"><button class="button" id="spend-refresh">Refresh spend planning</button><label class="check"><input type="checkbox" id="spend-fixtures">Include fictional examples</label></div></article>
+        <div class="workflow-section-heading"><h2>Monthly budgets</h2><p class="fine">Inspect a budget or create one for a project and a specific cost basis.</p></div>
+        <details class="panel workflow-editor" id="budget-editor" data-admin>
+          <summary><strong>Create or revise a budget</strong></summary>
+          <form id="budget-form">
+            <div class="billing-form-grid">
+              <label class="field">Budget name<input name="name" required maxlength="100" placeholder="Support API spend"></label>
+              <label class="field">Stable reference<input name="reference" required maxlength="100" pattern="[A-Za-z0-9][A-Za-z0-9._\/\-]*" placeholder="support-api"><small>Keep this reference when revising the same month's budget.</small></label>
+              <label class="field">Budget month (UTC)<input name="month" type="month" required min="2000-01" max="2099-12"></label>
+              <label class="field">Monthly limit (USD)<input name="limit_usd" inputmode="decimal" required placeholder="250.00"></label>
+              <label class="field">Cost basis<select name="cost_basis"><option value="api_estimate_usd">Estimated API spend</option><option value="reported_model_estimate_usd">Tool-reported model amount</option><option value="reported_charge_usd">Cursor-reported usage amount</option><option value="allocated_usd">Allocated monthly cost pools</option></select></label>
+              <label class="field">Warn at this percent<input name="warning_percent" type="number" min="1" max="100" value="80" required></label>
+              <label class="field">Project (optional)<input name="project" maxlength="100" placeholder="All projects"></label>
+              <label class="field">Source (optional)<select name="source_id" id="budget-source"><option value="">All compatible sources</option></select></label>
+            </div>
+            <label class="check billing-confirm"><input name="coverage_confirmed" type="checkbox"><span>I confirm this scope has complete capture and pricing so far, or all relevant monthly cost pools have been entered. This declaration enables a projection when the other checks pass.</span></label>
+            <label class="check"><input name="fixture" type="checkbox">This budget is a fictional example</label>
+            <p id="budget-edit-note" class="fine">Only an administrator can save or revise a budget. Earlier revisions follow your evidence-retention policy.</p>
+            <div class="row-actions"><button class="button primary" type="submit">Save budget</button><button class="button" type="button" id="budget-new">Start a new budget</button></div>
+          </form>
+        </details>
+        <div id="budget-list"></div>
+        <div class="pagination"><button class="button" id="budget-prev">Previous budgets</button><span id="budget-page"></span><button class="button" id="budget-next">Next budgets</button></div>
+        <div class="workflow-section-heading"><h2>Allocate shared monthly costs</h2><p class="fine">Use a stable reference for each cost pool so corrections replace its current revision rather than adding another charge.</p></div>
+        <details class="panel workflow-editor" id="allocation-editor" data-admin>
+          <summary><strong>Create or revise a cost pool</strong></summary>
+          <form id="allocation-form">
+            <div class="billing-form-grid">
+              <label class="field">Cost pool name<input name="name" required maxlength="100" placeholder="Shared coding subscription"></label>
+              <label class="field">Stable cost pool reference<input name="reference" required maxlength="100" pattern="[A-Za-z0-9][A-Za-z0-9._\/\-]*" placeholder="coding-subscription-line"><small>Reuse the same reference and month when correcting an amount.</small></label>
+              <label class="field">Cost month (UTC)<input name="month" type="month" required min="2000-01" max="2099-12"></label>
+              <label class="field">Total cost pool (USD)<input name="amount_usd" inputmode="decimal" required placeholder="30.00"></label>
+              <label class="field">Cost category<select name="category"><option value="subscription">Subscription</option><option value="infrastructure">Hardware, electricity or infrastructure</option><option value="human_review">Human review</option><option value="other">Other declared cost</option></select></label>
+              <label class="field">Reason for the rule or correction<textarea name="reason" required maxlength="500" placeholder="Divide the monthly charge by purchased seats."></textarea></label>
+            </div>
+            <h3>Project shares</h3><p class="fine">Weights are relative: 2 and 1 divide the pool into two thirds and one third. Rounding preserves the total exactly.</p>
+            <div id="allocation-shares"></div><button type="button" class="button small" id="allocation-add-share">Add project share</button>
+            <label class="check"><input name="fixture" type="checkbox">This cost pool is a fictional example</label>
+            <p class="data-note">This records an administrator-declared allocation. It does not authenticate an invoice or change original call costs.</p>
+            <p id="allocation-edit-note" class="fine"></p>
+            <div class="row-actions"><button type="button" class="button" id="allocation-preview">Preview allocation</button><button class="button primary" type="submit">Save cost pool</button><button type="button" class="button" id="allocation-new">Start a new cost pool</button></div>
+            <div id="allocation-preview-result" aria-live="polite"></div>
+          </form>
+        </details>
+        <article class="panel"><div class="section-head"><div><h2>Allocated cost by project</h2><p class="fine">Current, non-voided cost pools. These amounts are separate from tool-reported model estimates.</p></div><label class="field">Summary month (UTC)<input id="allocation-summary-month" type="month" min="2000-01" max="2099-12"></label></div><div id="allocation-summary"></div></article>
+        <div id="allocation-list"></div>
+        <div class="pagination"><button class="button" id="allocation-prev">Previous cost pools</button><span id="allocation-page"></span><button class="button" id="allocation-next">Next cost pools</button></div>
+        <div id="spend-history"></div>
+      </section>
       <section id="page-tasks" data-flow="tasks" hidden>
         <div class="page-heading"><p class="eyebrow">TASK EXPLORER</p><h1>See the work behind each cost.</h1><p class="lede">A task run groups the model calls used for one piece of work. Open a card to follow the steps and their estimated API cost.</p></div>
         <article class="panel spotlight screen-guide"><h2>One task can need several model calls.</h2><p id="task-guide" class="lede">For example, handling a support request can involve classifying the request, then drafting a reply. Your application groups related calls into a task run.</p><p class="fine">Sort by one cost basis at a time. Unknown amounts appear last; partial amounts are subtotals. The filters on Usage overview also apply here.</p>
@@ -148,6 +204,26 @@
         </article>
         <div id="coding-result"><p class="notice">Load the demonstration or preview a result produced by the coding runner.</p></div>
       </section>
+      <section id="page-custom" data-flow="compare" hidden>
+        <div class="page-heading"><p class="eyebrow">CUSTOM EVALUATIONS</p><h1>Check the answers your company needs.</h1><p class="lede">Define reusable cases, import saved model answers, and compare results against the same version of your checks.</p></div>
+        <article class="panel screen-guide"><h2>Cases → saved answers → evidence.</h2><p>Create cases with literal text or JSON checks. Download an answer template, fill it with outputs from your existing workflow, then evaluate it here. Missing cases and failed attempts remain visible.</p><p class="fine">This runs bounded checks over saved evidence. It does not call models or execute uploaded code. Costs and timings are supplied with the answers; they are not independently verified.</p><div class="row-actions"><button class="button" id="custom-example" data-analyst>Try fictional cases</button><button class="button" id="custom-refresh">Refresh evaluations</button><label class="check"><input id="custom-fixtures" type="checkbox">Include fictional suites</label></div></article>
+        <details class="panel workflow-editor" id="custom-editor" data-analyst>
+          <summary><strong>Create or revise an evaluation suite</strong></summary>
+          <form id="custom-suite-form">
+            <div class="billing-form-grid"><label class="field">Suite name<input name="name" required maxlength="100" placeholder="Support routing checks"></label><label class="field">Stable suite reference<input name="reference" required maxlength="100" pattern="[A-Za-z0-9][A-Za-z0-9._\/\-]*" placeholder="support-routing"></label><label class="field wide-field">What does this suite check?<textarea name="description" maxlength="1000"></textarea></label></div>
+            <div id="custom-case-editor"></div>
+            <div class="row-actions"><button type="button" class="button" id="custom-add-case">Add case</button><label class="button">Import a suite definition<input id="custom-suite-upload" type="file" accept=".json,application/json" hidden></label></div>
+            <label class="check"><input name="fixture" type="checkbox">This suite is a fictional example</label>
+            <p id="custom-edit-note" class="fine">A saved revision freezes the cases and checks used by each run. Up to 100 cases and 10 checks per case are supported.</p>
+            <div class="row-actions"><button class="button primary" type="submit">Save suite</button><button class="button" type="button" id="custom-new">Start a new suite</button></div>
+          </form>
+        </details>
+        <div id="custom-suites"></div><div class="pagination"><button class="button" id="custom-suites-prev">Previous suites</button><span id="custom-suites-page"></span><button class="button" id="custom-suites-next">Next suites</button></div>
+        <article class="panel" data-analyst><h2>Evaluate saved answers</h2><p class="data-note">Download a template from the suite you want to use. Supply the model roster and one answer per model and case. Monetary amounts, when supplied, must cover the whole case including failed attempts. Templates begin as fictional evidence; mark real supplied outputs as imported.</p><label class="button primary">Choose saved answers<input id="custom-run-upload" type="file" accept=".json,application/json" hidden></label><p class="fine">JSON files up to 2 MB; up to 10 models and 1,000 answers per run. The result is saved in your company workspace.</p></article>
+        <div class="workflow-section-heading"><h2>Saved evaluation runs</h2><p class="fine">Inspect case failures or compare two runs with the same suite revision, evaluator, model roster and cost basis.</p></div>
+        <div id="custom-runs"></div><div class="pagination"><button class="button" id="custom-runs-prev">Previous runs</button><span id="custom-runs-page"></span><button class="button" id="custom-runs-next">Next runs</button></div>
+        <div id="custom-result"></div>
+      </section>
       <section id="page-sources" data-flow="connect" hidden>
         <div class="page-heading"><p class="eyebrow">USAGE SOURCES</p><h1>Connect the application you want to understand.</h1><p class="lede">A source identifies where usage comes from, such as your support application. Each application gets its own connection token and call history.</p></div>
         <article class="panel screen-guide"><h2>Choose how to bring usage into Workbench.</h2><p><strong>Explore first:</strong> load the saved comparison in Model evaluations. It appears here as a recorded source.</p><p><strong>Connect an application:</strong> choose AxonLLM or Amazon Bedrock, create a source and connection token, then add its capture wrapper to your application and run the delivery process.</p><p class="fine">Creating a source alone does not start collecting calls. Prompt text and model responses stay out of the usage ledger. Choose one capture wrapper per call to avoid counting the same call in two sources.</p><button class="button" data-goto="evaluations">Explore the recorded example</button>
@@ -173,6 +249,13 @@
         <button class="button" id="refresh-sources">Refresh connection health</button>
         <article id="token-panel" class="panel" hidden><h2>Save this ingestion token</h2><p class="data-note">Shown once. Store it in a private token file on the application host. It expires in 30 days; rotate before expiry.</p><label class="field">Ingestion token<textarea id="token-value" readonly spellcheck="false"></textarea></label><button id="dismiss-token" class="button">I have saved the token</button></article>
         <div id="sources"></div>
+        <article class="panel screen-guide" id="onboarding-panel" hidden>
+          <div class="section-head"><div><p class="eyebrow">CONNECTION SETUP</p><h2 id="onboarding-title"></h2></div><button class="button" id="onboarding-close">Close setup guide</button></div>
+          <p>Follow this source's setup steps on the machine that runs your application or coding tool. The checks below separate token readiness, delivery health, and received records.</p>
+          <div class="controls"><label class="field">Project for this collector<input id="onboarding-project" maxlength="100" value="engineering"></label><button class="button" id="onboarding-refresh">Refresh setup checks</button><button class="button" id="onboarding-download">Download setup instructions</button></div>
+          <div id="onboarding-steps"></div><p id="onboarding-limit" class="data-note"></p><div id="onboarding-commands"></div>
+          <p class="fine">Keep token files and outboxes together in a private directory. The guide contains paths and commands, never the connection token itself.</p>
+        </article>
         <details class="panel help-details"><summary>Developer connection instructions</summary><p>Use Workbench’s capture_completion adapter to save call metadata to a durable outbox. A separate delivery process sends it with the connection token. Retrying delivery of the same event does not count it twice.</p><p>Follow the connector setup in <a href="https://github.com/hk-775/ai-operations-workbench/blob/main/docs/PILOT.md" target="_blank" rel="noopener noreferrer">the application connection guide</a>. Tokens are shown once and expire after 30 days; store them privately and replace them before expiry.</p></details>
       </section>
       <section id="page-operations" data-flow="compare" hidden>

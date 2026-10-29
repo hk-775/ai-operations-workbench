@@ -9,7 +9,8 @@ from datetime import datetime, timezone
 from sqlalchemy import delete, func, insert, select, tuple_, update
 
 from .database import (audits, billing_families, billing_reports, events, jobs, login_failures, maintenance, oidc_states,
-                       proposals, recordings, sessions, sources, teams, tokens, workers)
+                       proposals, recordings, sessions, sources, teams, tokens, workers,
+                       workflows, workflow_revisions, workflow_results)
 
 
 def save(db, identity, payload, now):
@@ -69,6 +70,26 @@ def run_once(database, settings, *, dry_run=False, now=None):
             .limit(10_000)).scalars().all() if settings.audit_retention_days else []
         report.update(eligible_recordings=len(old_recordings), eligible_billing_reports=len(old_billing),
                       eligible_audit_events=len(old_audits))
+        evidence_before = now - settings.evidence_retention_days * 86400
+        old_runs = db.execute(select(workflow_results.c.team_id, workflow_results.c.id).where(
+            workflow_results.c.created_at < evidence_before).order_by(workflow_results.c.created_at)
+            .limit(20)).all() if settings.evidence_retention_days else []
+        # Active definitions are configuration. Their current revision remains,
+        # as do any revisions referenced by still-retained evaluation runs.
+        old_definitions = db.execute(select(workflows.c.team_id, workflows.c.id).where(
+            workflows.c.active.is_(False), workflows.c.updated_at < evidence_before,
+            ~select(workflow_results.c.id).where(workflow_results.c.workflow_id == workflows.c.id).exists())
+            .limit(20)).all() if settings.evidence_retention_days else []
+        old_revisions = db.execute(select(workflow_revisions.c.workflow_id, workflow_revisions.c.revision).where(
+            workflow_revisions.c.created_at < evidence_before,
+            ~select(workflows.c.id).where(workflows.c.id == workflow_revisions.c.workflow_id,
+                workflows.c.revision == workflow_revisions.c.revision).exists(),
+            ~select(workflow_results.c.id).where(workflow_results.c.workflow_id == workflow_revisions.c.workflow_id,
+                workflow_results.c.revision == workflow_revisions.c.revision).exists())
+            .limit(100)).all() if settings.evidence_retention_days else []
+        report.update(eligible_custom_runs=len(old_runs), eligible_workflows=len(old_definitions),
+                      eligible_workflow_revisions=len(old_revisions),
+                      deleted_custom_runs=0, deleted_workflows=0, deleted_workflow_revisions=0)
         if dry_run:
             return report
         if settings.retention_days:
@@ -108,7 +129,19 @@ def run_once(database, settings, *, dry_run=False, now=None):
             database.audit(db, record["team_id"], "maintenance", "retention.billing_deleted", record["id"])
         report["deleted_billing_reports"] = len(old_billing)
         report["deleted_audit_events"] = len(old_audits)
-        report["more_evidence_or_audit"] = len(old_recordings) == 20 or len(old_billing) == 20 or len(old_audits) == 10_000
+        for owner, identity in old_runs:
+            db.execute(delete(workflow_results).where(workflow_results.c.team_id == owner, workflow_results.c.id == identity))
+            database.audit(db, owner, "maintenance", "retention.custom_run_deleted", identity)
+        for identity, revision in old_revisions:
+            db.execute(delete(workflow_revisions).where(workflow_revisions.c.workflow_id == identity,
+                                                        workflow_revisions.c.revision == revision))
+        for owner, identity in old_definitions:
+            db.execute(delete(workflows).where(workflows.c.team_id == owner, workflows.c.id == identity))
+            database.audit(db, owner, "maintenance", "retention.workflow_deleted", identity)
+        report.update(deleted_custom_runs=len(old_runs), deleted_workflows=len(old_definitions),
+                      deleted_workflow_revisions=len(old_revisions))
+        report["more_evidence_or_audit"] = (len(old_recordings) == 20 or len(old_billing) == 20 or len(old_audits) == 10_000
+            or len(old_runs) > 0 or len(old_definitions) == 20 or len(old_revisions) == 100)
         save(db, "last_run", report, now)
         if report["deleted_events"]:
             for team in db.execute(select(teams.c.id)).scalars():

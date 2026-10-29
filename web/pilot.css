@@ -1,4 +1,26 @@
 [hidden]{display:none!important}
+.workflow-section-heading{margin:28px 0 18px}
+.workflow-section-heading p{margin-top:8px}
+.workflow-editor>summary{font-size:15px;cursor:pointer}
+.workflow-editor form{margin-top:22px}
+.workflow-editor .row-actions{margin:18px 0}
+.workflow-editor .wide-field{grid-column:1/-1}
+.workflow-editor,#custom-result,#spend-history,#onboarding-panel{scroll-margin-top:96px}
+.workflow-share{display:grid;grid-template-columns:minmax(0,2fr) minmax(90px,1fr) auto;gap:12px;align-items:end;margin:14px 0}
+.workflow-rule{border:1px solid var(--accent-line);border-radius:10px;padding:16px;margin:14px 0;background:var(--accent-soft)}
+.workflow-rule .billing-form-grid{margin:12px 0}
+.workflow-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.workflow-card-head h2{overflow-wrap:anywhere}
+.workflow-measures{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin:20px 0}
+.workflow-measures strong{display:block;font-size:22px;overflow-wrap:anywhere}
+.workflow-measures small{display:block;font-size:11px;color:#57534e}
+.workflow-code{white-space:pre-wrap;overflow-wrap:anywhere;max-height:320px;overflow:auto;padding:16px;border:1px solid var(--accent-line);border-radius:10px;background:var(--accent-soft);font-size:12px}
+.workflow-case{margin:16px 0}.workflow-case summary{font-weight:600;cursor:pointer}
+.workflow-case pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:300px;overflow:auto}
+.workflow-step-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:20px 0}
+.workflow-step-list>div{padding:16px;border:1px solid var(--accent-line);border-radius:10px;background:var(--accent-soft)}
+.workflow-step-list h3{margin-bottom:8px}
+@media(max-width:720px){.workflow-measures,.workflow-step-list{grid-template-columns:1fr}.workflow-share{grid-template-columns:1fr}.workflow-editor .wide-field{grid-column:auto}}
 .login-layout{min-height:100vh;display:grid;grid-template-columns:1.15fr 1fr}
 .login-story{padding:56px;background:linear-gradient(135deg,#fafaf9,#ffffff 55%,#f5f3ff);color:var(--text);display:flex;flex-direction:column;justify-content:space-between;gap:70px}
 .login-story .brand{color:var(--chrome-text)}

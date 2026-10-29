@@ -65,7 +65,7 @@ test('call pages retain their snapshot while new and backdated usage arrives',as
     }
   };
   await ingest(Array.from({length:205},(_,i)=>event('call-'+String(i).padStart(3,'0'))));
-  await page.locator('[name="project"]').fill('call-snapshot-regression');
+  await page.locator('#filters [name="project"]').fill('call-snapshot-regression');
   await page.locator('[name="include_fixtures"]').check();
   await page.getByRole('button',{name:'Apply filters',exact:true}).click();
   await page.getByRole('button',{name:'Task explorer',exact:true}).click();
