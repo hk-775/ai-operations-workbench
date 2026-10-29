@@ -12,7 +12,7 @@ are outside its coverage. It does not prove answer quality.
 
 ## Upgrade an existing Workbench installation
 
-Use the [current release](RELEASE-0.9.1.md), which includes this connector and
+Use the [current release](RELEASE-0.9.2.md), which includes this connector and
 billing reconciliation. Current releases require **database schema 5**.
 Stop capture, delivery, API, worker and maintenance,
 take and verify your normal database backup, then run the explicit migration
