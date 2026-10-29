@@ -59,6 +59,10 @@ Cursor's categories are retained as vendor-defined. Missing cache categories
 are not replaced by zero. A coding-tool record does not prove one API attempt,
 complete session coverage, an accepted patch, or output quality.
 
+Codex streams can also report `cache_write_input_tokens`. Current collectors retain
+it separately as cache-write tokens, including an explicit zero. Input totals are
+preserved as reported; cache categories are not added to the input total or repriced.
+
 ## Common setup and delivery
 
 1. In **Usage sources**, create a Codex, Claude Code or Cursor source.
@@ -108,6 +112,25 @@ turn durations are unmeasured. Do not use it as a per-request latency benchmark.
 An unfinished turn at end of input is recorded as interrupted with unknown usage
 and cost. Malformed input stops capture, preserving already queued completed
 turns. Replaying different content under an existing event identity is rejected.
+
+### Upgrading Codex collectors
+
+Stop capture and delivery, back up the complete outbox, and restart both processes
+from the same current collector version. Keep the existing outbox and source.
+The collector adds local normalization-version metadata without changing original
+payloads, fingerprints, delivery acknowledgments or accounting.
+
+New Codex events retain reported cache-write counts. Replays of events saved by
+v0.9.1 or earlier preserve their original normalization, including previously
+unknown cache writes. Historical facts are not silently backfilled. New events
+in an existing outbox use the current normalization; a changed retained field is
+still rejected on replay. Missing and explicitly zero counts remain different.
+
+Older collectors cannot reliably replay records created with the new
+normalization. Rollback requires the matching backed-up outbox and collector,
+with capture/delivery stopped. Do not create another production source or outbox
+to replay the same historical usage: that can duplicate records. PostgreSQL schema
+remains 5; the existing usage schema already supports cache-write metadata.
 
 ## Claude Code: native telemetry
 

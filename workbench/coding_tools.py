@@ -98,6 +98,12 @@ class NativeOutbox:
             db.execute("""CREATE TABLE IF NOT EXISTS native_windows
                        (start_ms INTEGER NOT NULL, end_ms INTEGER NOT NULL,
                         fingerprint TEXT NOT NULL, PRIMARY KEY(start_ms,end_ms))""")
+            db.execute("""CREATE TABLE IF NOT EXISTS native_codex_formats
+                       (event_id TEXT PRIMARY KEY REFERENCES outbox(id),
+                        version INTEGER NOT NULL)""")
+            if db.execute("""SELECT 1 FROM native_codex_formats
+                          WHERE version NOT IN (1,2) LIMIT 1""").fetchone():
+                raise NativeInputError("This outbox needs a compatible Codex collector version")
             previous = db.execute("SELECT tool,project,evidence FROM native_binding WHERE singleton=1").fetchone()
             if previous and (previous["tool"], previous["project"], previous["evidence"]) != (tool, project, evidence):
                 raise NativeInputError("Use a separate outbox for another tool, project or evidence mode")
@@ -121,6 +127,22 @@ class NativeOutbox:
             occurred_at=timestamp, status=status, usage=usage, evidence=self.evidence,
             usage_basis="tool_reported" if usage is not None else "unknown",
             attempt_coverage="unknown", latency_ms=latency, coding_tool=context)
+
+    def codex_format(self, identity):
+        """Replay each saved event with its original token normalization.
+
+        Collectors through v0.9.1 did not retain Codex cache-write tokens.
+        Their existing rows have no format pin and must keep their fingerprints.
+        New rows use format 2, including an explicitly reported cache-write zero.
+        """
+        event_id = self.opaque("event", *identity)
+        with self.outbox.connect() as db:
+            row = db.execute("SELECT version FROM native_codex_formats WHERE event_id=?",
+                             (event_id,)).fetchone()
+            if row:
+                return row["version"]
+            legacy = db.execute("SELECT 1 FROM outbox WHERE id=?", (event_id,)).fetchone()
+            return 1 if legacy else 2
 
     def save(self, events, *, window=None):
         """An entire OTLP batch / Cursor window commits or none of it does."""
@@ -146,6 +168,8 @@ class NativeOutbox:
                 if not previous:
                     db.execute("INSERT INTO outbox(id,fingerprint,payload) VALUES(?,?,?)",
                                (identity, hash_, payload))
+                    if self.tool == "codex":
+                        db.execute("INSERT INTO native_codex_formats VALUES (?,2)", (identity,))
                     added += 1
             if window:
                 db.execute("INSERT OR IGNORE INTO native_windows VALUES(?,?,?)", (*window, fingerprint))
@@ -165,11 +189,14 @@ def codex_events(lines, native, *, capture_id, started_at, model):
     def event(status, tokens=None):
         usage = None
         if tokens is not None:
+            version = native.codex_format((capture_id, turn))
             usage = CodingToolUsage(
                 input_tokens=integer(tokens["input_tokens"]),
                 output_tokens=integer(tokens["output_tokens"]),
                 cache_read_tokens=integer(tokens["cached_input_tokens"])
                     if "cached_input_tokens" in tokens else None,
+                cache_write_tokens=integer(tokens["cache_write_input_tokens"])
+                    if version >= 2 and "cache_write_input_tokens" in tokens else None,
                 reasoning_output_tokens=integer(tokens["reasoning_output_tokens"])
                     if "reasoning_output_tokens" in tokens else None,
                 input_semantics="includes_cache_read")

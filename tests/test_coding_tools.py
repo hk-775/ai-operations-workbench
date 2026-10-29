@@ -101,6 +101,65 @@ def test_codex_turns_cache_semantics_privacy_interruption_and_replay(tmp_path):
         NativeOutbox(tmp_path / "codex.db", "codex", "project", evidence="fixture")
 
 
+@pytest.mark.parametrize("writes", [0, 15])
+def test_codex_reported_cache_writes_survive_capture_restart_and_replay(tmp_path, writes):
+    path = tmp_path / "codex-writes.db"
+    native = NativeOutbox(path, "codex", "project")
+    wire = codex_wire()
+    wire[-1]["usage"]["cache_write_input_tokens"] = writes
+    event = codex(native, wire)[0]
+    assert event.usage.cache_write_tokens == writes
+    assert event.usage.input_tokens == 100 and event.usage.cache_read_tokens == 80
+    assert native.save([event]) == {"added": 1, "duplicates": 0}
+    restarted = NativeOutbox(path, "codex", "project")
+    assert restarted.save(codex(restarted, wire)) == {"added": 0, "duplicates": 1}
+    changed = copy.deepcopy(wire)
+    changed[-1]["usage"]["cache_write_input_tokens"] = writes + 1
+    with pytest.raises(NativeInputError, match="changed"):
+        restarted.save(codex(restarted, changed))
+    invalid = copy.deepcopy(wire)
+    invalid[-1]["usage"]["cache_write_input_tokens"] = -1
+    with pytest.raises(NativeInputError):
+        codex(restarted, invalid)
+
+
+def test_codex_legacy_replay_preserves_facts_and_new_captures_keep_cache_writes(tmp_path):
+    path = tmp_path / "legacy-codex.db"
+    native = NativeOutbox(path, "codex", "project")
+    legacy = codex(native)[0]
+    assert legacy.usage.cache_write_tokens is None
+    native.save([legacy])
+    with native.outbox.connect() as db:
+        # Reproduce the v0.9.1 outbox shape and its already-saved normalization.
+        db.execute("DROP TABLE native_codex_formats")
+        before = tuple(db.execute("SELECT id,fingerprint,payload FROM outbox").fetchone())
+    upgraded = NativeOutbox(path, "codex", "project")
+    wire = codex_wire()
+    wire[-1]["usage"]["cache_write_input_tokens"] = 15
+    replay = codex(upgraded, wire)[0]
+    assert replay.model_dump() == legacy.model_dump()
+    assert upgraded.save([replay]) == {"added": 0, "duplicates": 1}
+    with upgraded.outbox.connect() as db:
+        assert tuple(db.execute("SELECT id,fingerprint,payload FROM outbox").fetchone()) == before
+    new = list(codex_events((json.dumps(row).encode() for row in wire), upgraded,
+        capture_id="next-invocation", started_at=STAMP, model="configured-codex-model"))[0]
+    assert new.usage.cache_write_tokens == 15
+    assert upgraded.save([new]) == {"added": 1, "duplicates": 0}
+    with upgraded.outbox.connect() as db:
+        db.execute("UPDATE native_codex_formats SET version=999 WHERE event_id=?", (new.event_id,))
+    with pytest.raises(NativeInputError, match="compatible"):
+        NativeOutbox(path, "codex", "project")
+
+
+def test_codex_new_capture_missing_cache_writes_cannot_replay_as_reported_zero(tmp_path):
+    native = NativeOutbox(tmp_path / "missing-writes.db", "codex", "project")
+    native.save(codex(native))
+    changed = codex_wire()
+    changed[-1]["usage"]["cache_write_input_tokens"] = 0
+    with pytest.raises(NativeInputError, match="changed"):
+        native.save(codex(native, changed))
+
+
 def test_claude_metadata_only_otlp_retry_identity_and_cost_basis(tmp_path):
     native = NativeOutbox(tmp_path / "claude.db", "claude_code", "project")
     events = claude_events(claude_wire(), native)

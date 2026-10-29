@@ -1,6 +1,20 @@
 # Publication inventory
 
-## v0.9.1 destination and distribution
+## v0.9.2 destination and distribution
+
+- Public MIT-0 repository: `hk-775/ai-operations-workbench`.
+- Release `v0.9.2`: `ai-operations-workbench-0.9.2.tar.gz` and `SHA256SUMS`.
+- New Codex captures retain optional cache-write token counts. Local outbox
+  normalization metadata preserves legacy replay and rejects changed retained facts.
+- PostgreSQL schema remains 5; dependency pins and AWS topology are unchanged.
+- Canonical download links point to v0.9.2. Existing narrated media, editable
+  diagrams, prior archives and historical verification reports are preserved.
+- Private vendor captures, account details and acceptance receipts are excluded.
+  Each operator must validate their own account and capture configuration.
+
+See [release and outbox upgrade instructions](RELEASE-0.9.2.md).
+
+## Historical v0.9.1 destination and distribution
 
 - Public MIT-0 repository: `hk-775/ai-operations-workbench`.
 - Release `v0.9.1`: `ai-operations-workbench-0.9.1.tar.gz` and `SHA256SUMS`.
