@@ -2,7 +2,10 @@
 
 Verified on 2026-10-28 against the existing pinned Ledger revision
 `d773dafda758755100104123c58c3a658e5866e2`. These source changes expand the
-normalization-only integration in v0.5.0. They do not update the AWS hosted apps.
+normalization-only integration in v0.5.0. The AWS apps had not been updated at
+the time of these implementation checks. The subsequent
+[October 29 hosted acceptance](VERIFICATION-HOSTED-LEDGER.md) records their
+deployment and verification.
 
 ## Implemented boundary
 

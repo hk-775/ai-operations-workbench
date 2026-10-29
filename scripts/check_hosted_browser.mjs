@@ -8,10 +8,27 @@ let credentials;
 try {credentials=JSON.parse(fs.readFileSync(root+'/logins.json','utf8'));}
 catch {throw new Error('Unable to read the private logins.json configuration');}
 const show=process.argv.includes('--show');
+const closeAfter=!show || process.argv.includes('--close');
 const ux=process.argv.includes('--ux');
 const capture=async(target,path)=>{
  if(!process.argv.includes('--no-screenshots')) await target.screenshot({path});
 };
+// Native scrolling can still be finishing when its destination first becomes
+// visible. Let it settle before sending an opposite keyboard scroll.
+const settle=async content=>content.evaluate(el=>new Promise((resolve,reject)=>{
+ let previous=el.scrollTop, since=performance.now(), frame;
+ const deadline=setTimeout(()=>{
+  cancelAnimationFrame(frame);
+  reject(new Error('Workspace scrolling did not settle'));
+ },5000);
+ function check() {
+  const now=performance.now();
+  if(el.scrollTop!==previous) {previous=el.scrollTop;since=now;}
+  if(now-since>=350) {clearTimeout(deadline);resolve();}
+  else frame=requestAnimationFrame(check);
+ }
+ frame=requestAnimationFrame(check);
+}));
 const browser=await chromium.launch({headless:!show});
 const reports={};
 let phase='start';
@@ -58,7 +75,7 @@ try {
   const operations=await get('/api/pilot/operations');
   assert.equal(operations.status,'healthy');
   phase=label+' navigation';
-  const pages=['usage','billing','tasks','evaluations','proposals','sources','operations','team'];
+  const pages=['usage','billing','tasks','evaluations','coding','proposals','sources','operations','team'];
   const scrolling=[];
   for (const name of pages) {
    phase=label+' navigation '+name;
@@ -71,6 +88,11 @@ try {
    if(name==='proposals') await page.locator('#proposals > *').first().waitFor({state:'visible'});
    if(name==='team') await page.locator('#audit table').waitFor({state:'visible'});
    if(name==='operations') await page.locator('#operations-metrics .metric').first().waitFor({state:'visible'});
+   if(name==='coding') {
+    await page.getByRole('button',{name:'Load coding demonstration',exact:true}).click();
+    await page.locator('#coding-result').getByText('AUTHORED MODEL EXAMPLE',{exact:true}).waitFor({state:'visible'});
+    assert.equal(await page.locator('#coding-result tbody tr').count(),3);
+   }
    if(ux) {
     fs.mkdirSync(root+'/screenshots/ux',{recursive:true});
     if(name==='usage') {
@@ -104,6 +126,7 @@ try {
    }
    const content=page.locator('.content');
    await content.focus();
+   await settle(content);
    if(show) {
     await page.bringToFront();
     await content.hover();
@@ -119,28 +142,45 @@ try {
    }
    const result=await content.evaluate(e=>({bottom:e.scrollTop+e.clientHeight>=e.scrollHeight-3,overflow:e.scrollHeight>e.clientHeight+3}));
    assert.ok(result.bottom,label+' '+name+' scroll');
-   scrolling.push({page:name,...result});
+   await settle(content);
+   phase=label+' keyboard Home '+name;
+   await content.focus();
+   await page.keyboard.press('Home');
+   await page.waitForFunction(()=>document.querySelector('.content').scrollTop<=1);
+   await settle(content);
+   phase=label+' keyboard End '+name;
+   await page.keyboard.press('End');
+   await page.waitForFunction(()=>{const e=document.querySelector('.content');return e.scrollTop+e.clientHeight>=e.scrollHeight-3;},{},{timeout:5000});
+   const footer=await page.locator('.page-footer').boundingBox();
+   const height=await page.evaluate(()=>innerHeight);
+   assert.ok(footer && footer.y>=0 && footer.y+footer.height<=height+3,label+' '+name+' footer');
+   await settle(content);
+   scrolling.push({page:name,...result,wheel:show?'passed':'not run',keyboard:'passed',footer:'visible'});
   }
   await page.locator('button[data-page="usage"]').click();
   fs.mkdirSync(root+'/screenshots',{recursive:true});
   await capture(page,root+'/screenshots/'+label+'-hosted.png');
   reports[label]={sso:'real Cognito browser flow passed',mfa:'disabled as requested',events:usage.events,tasks:usage.task_count,api_estimate_usd:usage.api_estimate_usd,operations:operations.status,usability:ux?'task context, overview colors, evaluation guidance, and empty actions passed':'not requested',scrolling};
-  if(!show) {
+  if(closeAfter) {
    phase=label+' logout';
    const signedOut=page.waitForResponse(r=>r.url()===login.url+'/api/auth/logout' && r.request().method()==='POST');
    await page.locator('#logout').click();
    await (await signedOut).finished();
    await page.locator('#login-view').waitFor({state:'visible'});
    assert.equal((await get('/api/auth/session')).user,null);
+   assert.equal(await page.locator('#billing-report').innerText(),'');
+   assert.equal(await page.locator('#billing-collection').innerText(),'');
+   assert.ok(!(await page.locator('#coding-result').innerText()).includes('AUTHORED MODEL EXAMPLE'));
+   reports[label].logout='passed; billing and coding content cleared';
    await context.close();
   }
  }
  fs.writeFileSync(root+'/browser-report.json',JSON.stringify({checked_at:new Date().toISOString(),mode:show?'interactive native viewport':'headless 1440x900',reports},null,2),{mode:0o600});
  fs.rmSync(root+'/browser-failure.txt',{force:true});
  console.log(JSON.stringify(reports,null,2));
- if(show) await new Promise(resolve=>browser.once('disconnected',resolve));
+ if(!closeAfter) await new Promise(resolve=>browser.once('disconnected',resolve));
 } catch(error) {
  console.error('Hosted browser verification failed during '+phase+': '+error.name);
  fs.writeFileSync(root+'/browser-failure.txt',phase+'\n'+error.message,{mode:0o600});
  process.exitCode=1;
-} finally {if(!show || process.exitCode) await browser.close();}
+} finally {if(closeAfter || process.exitCode) await browser.close();}
