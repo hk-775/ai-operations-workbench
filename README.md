@@ -21,18 +21,22 @@ You can explore and regrade that recording without an API key or new model charg
 
 **[Watch the public demo](https://hk-775.github.io/ai-operations-workbench/)**
 · [Explore the narrated architecture](https://hk-775.github.io/ai-operations-workbench/architecture.html)
-· **[Download v0.8.0](https://github.com/hk-775/ai-operations-workbench/releases/tag/v0.8.0)**
+· **[Download v0.9.0](https://github.com/hk-775/ai-operations-workbench/releases/tag/v0.9.0)**
 · [Methodology](docs/METHODOLOGY.md) · [Architecture](docs/ARCHITECTURE.md)
 · [Production installation and two test deployments](docs/PRODUCTION.md)
 · [Team pilot setup](docs/PILOT.md) · [Roadmap](docs/ROADMAP.md)
 
-**New in v0.8.0:** [Codex, Cursor and Claude Code usage connectors](docs/CODING-TOOL-CONNECTORS.md)
-with metadata-only capture, durable delivery, replay checks, and separate
-tool-reported amounts. Operations distinguishes coding-tool records from API
-pricing failures. Schema remains **4**; no new migration is required from
-v0.5.0, v0.6.0 or v0.7.0.
-See the [release notes](docs/RELEASE-0.8.0.md) and
-[release verification](docs/VERIFICATION-0.8.0.md).
+**New in v0.9.0:** inspect failed evaluation cases, rank tasks by a chosen cost
+basis, download complete routing evidence, and page through calls without
+mixing in later arrivals. It also fixes stranded connector bindings, malformed
+candidate output, and fixture-only recommendations. An explicit **schema-5
+migration** is required when upgrading from v0.8.0 or earlier.
+See the [release notes](docs/RELEASE-0.9.0.md),
+[upgrade and API compatibility notes](docs/REVIEW-FIXES.md), and
+[release verification](docs/VERIFICATION-0.9.0.md).
+[Codex, Cursor and Claude Code connectors](docs/CODING-TOOL-CONNECTORS.md)
+retain metadata-only capture, durable delivery, replay checks, and separate
+tool-reported amounts.
 The narrated demo and isolated seeded/clean deployment recipes remain included.
 Deployment addresses and credentials belong to each installer and are not published.
 
@@ -94,7 +98,7 @@ uv run --locked uvicorn workbench.app:app --host 127.0.0.1 --port 8767
 If you downloaded a release archive, extract it and start with
 `uv sync --locked --python 3.13` from the extracted directory. No provider
 credentials are needed for replay. The release includes `SHA256SUMS` to verify
-the archive; see [release verification](docs/RELEASE-0.8.0.md#download-and-verify).
+the archive; see [release verification](docs/RELEASE-0.9.0.md#download-and-verify).
 
 Open **http://127.0.0.1:8767/**.
 
@@ -208,12 +212,12 @@ SaaS tenant management; arbitrary workload evaluators; or production routing cha
 is bounded to a single team. Coding remains a separate demonstration workload,
 not a representative model leaderboard.
 
-**Unreleased review fixes after v0.8.0:** this checkout requires schema 5.
+**v0.9.0 review fixes:** this release requires schema 5.
 It adds stable call snapshots, cost-basis ranking, failed-case inspection, complete
 routing evidence bundles, guarded outbox repair, and stronger candidate-output
 validation. Fixture answers cannot produce a measured recommendation or savings.
 Read the [upgrade and API compatibility notes](docs/REVIEW-FIXES.md) before deploying
-this checkout. Published v0.8.0 artifacts retain their original schema and evidence.
+this release. Earlier release artifacts retain their original schema and evidence.
 
 ## See the decision
 
@@ -339,8 +343,8 @@ evaluation results, and saved reviews in PostgreSQL.
 - [Authenticated team pilot and operations guide](docs/PILOT.md)
 - [MIT-0 license](LICENSE)
 - [Contributing](CONTRIBUTING.md), [support](SUPPORT.md), and [security reporting](SECURITY.md)
-- [v0.8.0 release notes and download verification](docs/RELEASE-0.8.0.md)
-- [v0.8.0 validation results](docs/VERIFICATION-0.8.0.md)
+- [v0.9.0 release notes and download verification](docs/RELEASE-0.9.0.md)
+- [v0.9.0 validation results](docs/VERIFICATION-0.9.0.md)
 
 AxonLLM, Ostiari, and AxonLLM Ledger are pinned to immutable Git revisions in `pyproject.toml` and
 `uv.lock`. They remain separate projects; this app does not patch their source.

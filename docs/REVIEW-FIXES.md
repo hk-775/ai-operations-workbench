@@ -1,7 +1,9 @@
-# Unreleased review fixes after v0.8.0
+# Review fixes in v0.9.0
 
 These changes address the eight findings in the October 29, 2026 code and feature
-review. They are not a hosted deployment or a new published release.
+review and are included in v0.9.0. See the [release instructions](RELEASE-0.9.0.md)
+for the downloadable archive. Installation-specific acceptance records are
+private and are not included in the source distribution.
 
 ## Upgrade: schema 5
 
@@ -127,4 +129,5 @@ current connector capabilities are described in the README and connector guide.
 - Downloaded routing evidence passed offline integrity verification. Changed
   source files passed secret scanning. Historical checksummed data was unchanged.
 
-Verification made no paid model calls. Hosted deployments were not changed.
+These local checks made no paid model calls. They do not establish live
+vendor-account acceptance or a customer's deployment outcome.
