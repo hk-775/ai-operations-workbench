@@ -32,10 +32,14 @@ def snapshot(database, settings, team=None):
         if team:
             where.append(events.c.team_id == team)
         joined = events.join(facts, and_(events.c.source_id == facts.c.source_id,
-                                        events.c.event_id == facts.c.event_id))
-        captured = db.execute(select(func.count()).select_from(joined).where(*where)).scalar_one()
+                                        events.c.event_id == facts.c.event_id)).join(
+                                            sources, sources.c.id == events.c.source_id)
+        api_where = [*where, sources.c.kind.in_(("axonllm", "bedrock"))]
+        captured = db.execute(select(func.count()).select_from(joined).where(*api_where)).scalar_one()
         unknown = db.execute(select(func.count()).select_from(joined).where(
-            *where, facts.c.api_nanodollars.is_(None))).scalar_one()
+            *api_where, facts.c.api_nanodollars.is_(None))).scalar_one()
+        coding_records = db.execute(select(func.count()).select_from(joined).where(
+            *where, sources.c.kind.in_(("codex", "cursor", "claude_code")))).scalar_one()
         latest = db.execute(select(func.max(events.c.received_at)).where(
             *([events.c.team_id == team] if team else []), events.c.evidence == "observed")).scalar_one()
         upkeep = db.execute(select(maintenance).where(maintenance.c.id == "last_run")).mappings().first()
@@ -51,6 +55,7 @@ def snapshot(database, settings, team=None):
               "jobs": counts, "failed_jobs_24h": failed,
               "oldest_queued_seconds": 0 if oldest is None else max(0, now - oldest),
               "observed_calls_24h": captured, "unknown_cost_calls_24h": unknown,
+              "observed_coding_tool_records_24h": coding_records,
               "last_observed_received_at": latest, "retention_days": settings.retention_days,
               "evidence_retention_days": settings.evidence_retention_days,
               "audit_retention_days": settings.audit_retention_days,
@@ -73,7 +78,7 @@ def snapshot(database, settings, team=None):
     if failed:
         alerts.append({"severity": "warning", "message": f"{failed} evaluations failed in the last 24 hours."})
     if captured and unknown / captured > .05:
-        alerts.append({"severity": "warning", "message": "More than 5% of observed calls have unknown costs."})
+        alerts.append({"severity": "warning", "message": "More than 5% of observed API calls have unknown costs."})
     if stale_sources:
         alerts.append({"severity": "warning", "message": f"{stale_sources} usage sources have stopped reporting collector health. Check Usage sources."})
     if backlog_sources:
@@ -97,6 +102,7 @@ class Metrics:
                                   registry=self.registry)
         names = ("worker_healthy", "oldest_queued_seconds", "failed_jobs_24h",
                  "observed_calls_24h", "unknown_cost_calls_24h", "maintenance_age_seconds",
+                 "observed_coding_tool_records_24h",
                  "stale_usage_sources", "backlog_usage_sources",
                  "failed_billing_collectors", "stale_billing_collectors")
         self.gauges = {name: Gauge(f"workbench_{name}", name.replace("_", " "),

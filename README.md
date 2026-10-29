@@ -36,6 +36,11 @@ See the [release notes](docs/RELEASE-0.7.0.md),
 The narrated demo and isolated seeded/clean deployment recipes remain included.
 Deployment addresses and credentials belong to each installer and are not published.
 
+**In the source checkout:** [Codex, Cursor and Claude Code usage connectors](docs/CODING-TOOL-CONNECTORS.md)
+add metadata-only collection, scoped delivery and separate tool-reported amounts.
+They are not included in the v0.7.0 download. Use the documented native interfaces;
+vendor access and capture setup remain explicit.
+
 **Watch or listen:** visit the [public player](https://hk-775.github.io/ai-operations-workbench/),
 open **Narrated demo** in either dashboard footer, or
 `/static/demo.html` on the running app. The [standalone player](web/demo.html)

@@ -5,10 +5,38 @@ import json
 from datetime import datetime, timezone
 from decimal import Decimal
 
-from sqlalchemy import and_, case, func, select
+from sqlalchemy import BigInteger, JSON, and_, case, cast, func, select
 
 from workbench.domain import cases, money
 from .database import events, facts, recordings
+
+
+def json_text(database, column, key):
+    if database.engine.dialect.name == "postgresql":
+        return cast(column, JSON).op("->>")(key)
+    return func.json_extract(column, "$." + key)
+
+
+def reported_totals(database):
+    """All new monetary fields are normalized to nine-place Decimal text on ingest."""
+    expressions = []
+    for name in ("reported_model_estimate_usd", "reported_charge_usd"):
+        value = json_text(database, events.c.accounting, name)
+        nanos = cast(func.replace(value, ".", ""), BigInteger)
+        expressions.extend((func.sum(nanos).label(name + "_nanos"),
+                            func.count(value).label(name + "_records")))
+    tool = json_text(database, events.c.payload, "schema_version") == "coding-tool.usage.v1"
+    expressions.append(func.coalesce(func.sum(case((tool, 1), else_=0)), 0).label("coding_tool_records"))
+    return expressions
+
+
+def reported_values(row):
+    result = {"coding_tool_records": row["coding_tool_records"]}
+    for name in ("reported_model_estimate_usd", "reported_charge_usd"):
+        count = row[name + "_records"]
+        result[name] = None if not count else money(Decimal(row[name + "_nanos"]) / 1_000_000_000)
+        result[name + "_records"] = count
+    return result
 
 
 def timestamp(value):
@@ -56,15 +84,16 @@ def usage(database, team, project=None, source_id=None, include_fixtures=False, 
     amount = func.coalesce(func.sum(facts.c.api_nanodollars), 0).label("nanos")
     unknown = func.coalesce(func.sum(case((facts.c.api_nanodollars.is_(None), 1), else_=0)), 0).label("unknown")
     uncovered = func.coalesce(func.sum(case((facts.c.attempt_complete.is_(False), 1), else_=0)), 0).label("uncovered")
+    reported = reported_totals(database)
     task_query = select(events.c.source_id, events.c.task_id,
         func.max(events.c.project).label("project"), func.max(events.c.occurred_at).label("occurred_at"),
-        amount, unknown, uncovered, func.count().label("calls")).select_from(joined).where(*where).group_by(
+        amount, unknown, uncovered, *reported, func.count().label("calls")).select_from(joined).where(*where).group_by(
             events.c.source_id, events.c.task_id)
     with database.engine.connect() as db:
         if database.engine.dialect.name == "postgresql":
             db = db.execution_options(isolation_level="REPEATABLE READ")
         with db.begin():
-            totals = db.execute(select(amount, unknown, uncovered, func.count().label("events"))
+            totals = db.execute(select(amount, unknown, uncovered, *reported, func.count().label("events"))
                                 .select_from(joined).where(*where)).mappings().one()
             count = db.execute(select(func.count()).select_from(task_query.subquery())).scalar_one()
             evidence = dict(db.execute(select(events.c.evidence, func.count()).where(*where)
@@ -94,9 +123,11 @@ def usage(database, team, project=None, source_id=None, include_fixtures=False, 
                     "project": row["project"], "occurred_at": row["occurred_at"], "calls": calls,
                     "context": context,
                     "api_estimate_usd": money(Decimal(row["nanos"]) / 1_000_000_000),
+                    **reported_values(row),
                     "call_count": row["calls"], "unknown_cost_calls": row["unknown"],
                     "uncovered_attempt_calls": row["uncovered"], "calls_has_more": row["calls"] > len(calls)})
     return {"api_estimate_usd": money(Decimal(totals["nanos"]) / 1_000_000_000),
+            **reported_values(totals),
             "events": totals["events"], "tasks": tasks, "task_count": count,
             "unknown_cost_calls": totals["unknown"], "uncovered_attempt_calls": totals["uncovered"],
             "evidence_counts": evidence, "page": page, "page_size": page_size,

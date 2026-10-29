@@ -1,0 +1,4 @@
+{"type":"thread.started","thread_id":"sample-thread"}
+{"type":"turn.started"}
+{"type":"item.completed","item":{"text":"PRIVATE_PROMPT_RESPONSE_EMAIL_SENTINEL","command":"PRIVATE_PROMPT_RESPONSE_EMAIL_SENTINEL"}}
+{"type":"turn.completed","usage":{"input_tokens":100,"output_tokens":12,"cached_input_tokens":80,"reasoning_output_tokens":2}}

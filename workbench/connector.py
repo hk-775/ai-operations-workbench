@@ -1,6 +1,7 @@
 """Application metadata capture with a durable, replayable local outbox.
 
-No prompts, responses, provider credentials, or client-supplied prices are sent.
+No prompts, responses or provider credentials are sent. API prices are determined
+by Workbench; native tool-reported amounts use a separate, explicit cost basis.
 Call IDs belong to the application; provider response IDs are correlation only.
 """
 from __future__ import annotations
@@ -97,6 +98,13 @@ class Outbox:
             if not existing:
                 db.execute("INSERT INTO source_binding VALUES (1, ?)", (source_id,))
 
+    def native_tool(self):
+        with self.connect() as db:
+            if not db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='native_binding'").fetchone():
+                return None
+            row = db.execute("SELECT tool FROM native_binding WHERE singleton=1").fetchone()
+            return row["tool"] if row else None
+
     def batch(self):
         with self.connect() as db:
             return [dict(row) for row in db.execute(
@@ -168,6 +176,9 @@ class Connector:
                 source_id = identity.json()["source_id"]
                 if not isinstance(source_id, str) or len(source_id) != 36:
                     raise ValueError("Invalid source identity")
+                tool = self.outbox.native_tool()
+                if tool and identity.json().get("kind") != tool:
+                    raise DeliveryError("Choose a source token for this native coding tool")
                 self.outbox.bind_source(source_id)
             except (httpx.HTTPError, ValueError, KeyError, TypeError):
                 raise DeliveryError("Cannot verify ingestion source; events remain in the outbox") from None

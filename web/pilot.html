@@ -153,7 +153,18 @@
             <p>Captures instrumented Converse and ConverseStream calls only. It does not import AWS account history or invoices. Token usage is separate from output quality. The initial reviewed rate covers uncached Nova Micro in us-east-1 at standard on-demand pricing; unsupported prices stay unknown.</p>
           </details>
         </article>
-        <form id="source-form" class="panel controls" data-admin><label class="field">Source name<input name="name" placeholder="Support application" required maxlength="100"></label><label class="field">Connector<select name="kind" id="source-kind"><option value="axonllm">AxonLLM</option><option value="bedrock">Amazon Bedrock</option></select></label><button id="create-source" class="button primary">Create AxonLLM source</button></form>
+        <article class="panel screen-guide">
+          <h2>Connect your coding tools.</h2>
+          <p>Collect usage metadata without retaining prompts, responses, code, tool arguments, or user email addresses.</p>
+          <ol class="screen-steps">
+            <li><strong>Codex</strong><span>Read the documented <code>codex exec --json</code> stream. Each record summarizes a turn. API cost and subscription allocation remain unknown.</span></li>
+            <li><strong>Claude Code</strong><span>Send OTLP HTTP/JSON logs to the private local receiver. It keeps API usage, duration, and tool-reported model estimates.</span></li>
+            <li><strong>Cursor</strong><span>Read a complete reporting window from the team Admin API or its JSON export. Data is delayed; vendor usage amounts are kept separate from model amounts.</span></li>
+          </ol>
+          <p>Create one source and private outbox per tool and workspace. Issue a source token, configure native capture, then run the existing delivery process. Cursor needs an administrator API key; Workbench never asks for your coding-tool login password.</p>
+          <p class="fine">Setup commands, sample inputs, privacy controls and replay limits: <code>docs/CODING-TOOL-CONNECTORS.md</code> in the source checkout. Creating a source alone does not connect an account.</p>
+        </article>
+        <form id="source-form" class="panel controls" data-admin><label class="field">Source name<input name="name" placeholder="Support application" required maxlength="100"></label><label class="field">Connector<select name="kind" id="source-kind"><option value="axonllm">AxonLLM</option><option value="bedrock">Amazon Bedrock</option><option value="codex">Codex</option><option value="cursor">Cursor</option><option value="claude_code">Claude Code</option></select></label><button id="create-source" class="button primary">Create AxonLLM source</button></form>
         <p class="fine">Connected means the delivery process reported within three minutes. It does not prove that every application call is instrumented. Queue counts are the last report; a stale report can hide a growing backlog.</p>
         <button class="button" id="refresh-sources">Refresh connection health</button>
         <article id="token-panel" class="panel" hidden><h2>Save this ingestion token</h2><p class="data-note">Shown once. Store it in a private token file on the application host. It expires in 30 days; rotate before expiry.</p><label class="field">Ingestion token<textarea id="token-value" readonly spellcheck="false"></textarea></label><button id="dismiss-token" class="button">I have saved the token</button></article>

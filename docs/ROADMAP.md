@@ -82,9 +82,12 @@ remain unknown. This is not AWS invoice ingestion. See [Bedrock](BEDROCK.md).
 An explicit schema-3 migration is required when upgrading an earlier installation.
 See the [release and verification notes](RELEASE-0.4.0.md).
 
-Add the remaining Codex, Cursor and Claude Code sources only after
-validating what their supported exports and APIs actually expose. Product names
-in the roadmap do not imply working integrations.
+The source checkout now adds [coding-tool usage connectors](CODING-TOOL-CONNECTORS.md):
+Codex's documented CLI JSONL turns, Claude Code OTLP HTTP/JSON API events, and
+Cursor's team Admin API reporting windows. Each has scoped delivery, metadata
+filtering, replay checks and separate tool/vendor amount displays. They are not
+in the v0.7.0 download. These contracts do not cover every desktop/individual
+account, automatically connect a vendor account, or allocate subscriptions.
 
 ## 5. Reconcile the bill and attribute outcomes
 
