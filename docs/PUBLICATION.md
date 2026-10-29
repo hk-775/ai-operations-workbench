@@ -1,6 +1,27 @@
 # Publication inventory
 
-## v0.8.0 destination and distribution
+## v0.9.0 destination and distribution
+
+- Public MIT-0 repository: `hk-775/ai-operations-workbench`.
+- Release `v0.9.0`: `ai-operations-workbench-0.9.0.tar.gz` and `SHA256SUMS`.
+- Includes all eight review fixes, complete evidence downloads and the existing
+  coding-tool collectors. An explicit schema-5 migration is required.
+- Call pagination now uses cursors. Nonzero offsets are rejected; integrators
+  must follow the documented replacement.
+- The canonical player links to v0.9.0 and retains its narrated media,
+  animated circles, pause/reduced-motion behavior and static network boundary.
+- Existing editable AWS diagrams remain accurate: this release changes
+  application behavior and schema, not the optional deployment topology.
+- Customer/vendor inputs, credentials and installation-specific acceptance
+  receipts remain private. No live-account acceptance is inferred from fixtures.
+- Previous release assets are preserved. SHA-256 verifies artifact bytes;
+  no publisher signature or package/container registry is introduced.
+
+See [release instructions](RELEASE-0.9.0.md),
+[upgrade notes](REVIEW-FIXES.md), and
+[verification boundaries](VERIFICATION-0.9.0.md).
+
+## Historical v0.8.0 destination and distribution
 
 - Public MIT-0 repository: `hk-775/ai-operations-workbench`.
 - Release `v0.8.0`: `ai-operations-workbench-0.8.0.tar.gz` and `SHA256SUMS`.
