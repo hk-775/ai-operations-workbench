@@ -240,8 +240,10 @@ Invoice reconciliation and cost-enforcement budgets remain separate features.
 PostgreSQL stores team accounts, revocable sessions, sources/token hashes, immutable
 usage events and pricebooks, original recordings, leased jobs, evaluation results,
 saved routing reviews, and metadata audit events. The first schema migration is
-idempotent and advisory-lock protected. Schema 3 adds collector health while
-preserving prior payloads, costs and fingerprints. An unknown schema version
+idempotent and advisory-lock protected. Schema 3 adds collector health, schema 4
+adds billing snapshots, and the unreleased review fixes add stable call snapshots
+in schema 5 while preserving prior payloads, costs and fingerprints.
+See [upgrade and cursor compatibility](REVIEW-FIXES.md). An unknown schema version
 refuses startup.
 
 Queueing is serialized per team and deduplicated by recording plus evaluator

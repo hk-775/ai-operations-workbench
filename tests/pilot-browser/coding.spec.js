@@ -81,7 +81,14 @@ test('expanded recorded comparison previews all repetitions without executing mo
   const result=page.locator('#coding-result');
   await expect(result).toContainText('IMPORTED MODEL RECORDING');
   await expect(result.locator('tbody tr')).toHaveCount(3);
-  await expect(result.locator('article[data-flow="tasks"]')).toHaveCount(162);
+  await expect(result.locator('article[data-flow="tasks"]')).toHaveCount(12)
+  await expect(page.locator('#coding-task-count')).toContainText('162 matching patches');
+  await page.getByRole('button',{name:'Next patches',exact:true}).click();
+  await expect(page.locator('#coding-task-count')).toContainText('Page 2');
+  await page.locator('#coding-candidate').selectOption('gpt-4.1-2025-04-14');
+  await expect(page.locator('#coding-task-count')).toContainText('54 matching patches');
+  await page.locator('#coding-outcome').selectOption('failed');
+  await expect(page.locator('#coding-task-count')).toContainText('3 matching patches');
   await expect(result.locator('tbody tr').filter({hasText:'gpt-4.1-2025-04-14'})).toContainText('51/54');
   await page.locator('#coding-threshold').selectOption('90');
   await expect(page.locator('#coding-gates')).toContainText('Meets these demonstration gates');

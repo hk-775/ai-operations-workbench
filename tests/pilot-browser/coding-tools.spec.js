@@ -62,6 +62,12 @@ test('native tool fixtures use source-scoped CLI delivery and separate honest am
     await expect(page.locator('#evidence-counts')).toContainText('4 records');
     await page.screenshot({path:'artifacts/screenshots/native-tool-amounts.png',fullPage:false});
     await page.getByRole('button',{name:'Task explorer',exact:true}).click();
+    await page.getByRole('combobox',{name:'Rank tasks by'}).selectOption('reported_model_estimate_usd');
+    await expect(page.locator('.task-summary-cost').first()).toContainText('$0.324501000');
+    await expect(page.locator('.task-summary-cost').first()).toContainText('Tool-reported model amount');
+    await page.getByRole('combobox',{name:'Rank tasks by'}).selectOption('reported_charge_usd');
+    await expect(page.locator('.task-summary-cost').first()).toContainText('$0.213623200');
+    await expect(page.locator('.task-summary-cost').first()).toContainText('Cursor-reported usage amount');
     const tasks=page.locator('.task-card');
     for(const task of await tasks.all()) await task.locator(':scope > summary').click();
     await expect(page.locator('#task-list')).toContainText('configured label');

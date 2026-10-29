@@ -198,11 +198,22 @@ The original hosted deployment remains a single-host test environment.
 | Review | Adjustable criteria and portable evidence export; no deployment |
 | Interface | Guided team screens with named recorded tasks, per-call costs, and expandable technical details. White navigation, stone backgrounds, violet buttons, sky overview cards matching the selected menu, and yellow/violet/teal workflow accents; desktop and mobile; small moving circles with pause and reduced-motion support |
 
-**Not yet implemented:** native Codex, Cursor or Claude Code connectors;
-automatic account-wide/all-format Bedrock billing collection; subscription invoice reconciliation; multi-company
+**Available coding-tool connectors:** Codex JSON streams, Claude Code OTLP logs,
+and Cursor usage exports/Admin API collection. See [connector setup and limits](docs/CODING-TOOL-CONNECTORS.md).
+These capture usage metadata; coding quality is measured separately.
+
+**Not yet implemented:** automatic account-wide/all-format Bedrock billing collection;
+subscription invoice reconciliation; multi-company
 SaaS tenant management; arbitrary workload evaluators; or production routing changes. The pilot
 is bounded to a single team. Coding remains a separate demonstration workload,
-not a representative model leaderboard or native coding-tool connector.
+not a representative model leaderboard.
+
+**Unreleased review fixes after v0.8.0:** this checkout requires schema 5.
+It adds stable call snapshots, cost-basis ranking, failed-case inspection, complete
+routing evidence bundles, guarded outbox repair, and stronger candidate-output
+validation. Fixture answers cannot produce a measured recommendation or savings.
+Read the [upgrade and API compatibility notes](docs/REVIEW-FIXES.md) before deploying
+this checkout. Published v0.8.0 artifacts retain their original schema and evidence.
 
 ## See the decision
 

@@ -1,14 +1,71 @@
 """Exact SQL totals with bounded task and call pages; no full-ledger Python load."""
 from __future__ import annotations
 
+import base64
+import binascii
 import json
 from datetime import datetime, timezone
 from decimal import Decimal
 
-from sqlalchemy import BigInteger, JSON, and_, case, cast, func, select
+from sqlalchemy import BigInteger, JSON, and_, case, cast, func, or_, select
 
-from workbench.domain import cases, money
+from workbench.domain import cases, digest, money, strict_json
 from .database import events, facts, recordings
+
+COST_BASES = {"api_estimate_usd", "reported_model_estimate_usd", "reported_charge_usd"}
+
+
+def call_scope(team, source_id, task_id, project=None, include_fixtures=False, start=None, end=None):
+    return digest({"team": team, "source": source_id, "task": task_id, "project": project or None,
+                   "fixtures": include_fixtures, "start": timestamp(start), "end": timestamp(end)})
+
+
+def next_cursor(calls, sequence, scope, has_more):
+    if not has_more or not calls:
+        return None
+    last = calls[-1]
+    payload = {"v": 1, "sequence": sequence, "scope": scope,
+               "time": last["occurred_at"], "event": last["event_id"]}
+    return base64.urlsafe_b64encode(json.dumps(payload, separators=(",", ":")).encode()).decode()
+
+
+def cursor_values(value, scope):
+    try:
+        if not isinstance(value, str) or not 1 <= len(value) <= 2048:
+            raise ValueError
+        item = strict_json(base64.b64decode(value, altchars=b"-_", validate=True).decode())
+        if (not isinstance(item, dict) or set(item) != {"v", "sequence", "scope", "time", "event"}
+                or type(item["v"]) is not int or item["v"] != 1
+                or item["scope"] != scope or type(item["sequence"]) is not int
+                or not 0 <= item["sequence"] < 2**63 or not isinstance(item["time"], str)
+                or len(item["time"]) > 50 or timestamp(item["time"]) != item["time"]
+                or not isinstance(item["event"], str) or not 1 <= len(item["event"]) <= 160):
+            raise ValueError
+        return item
+    except (ValueError, TypeError, KeyError, UnicodeError, binascii.Error, OverflowError, RecursionError):
+        raise ValueError("Invalid call cursor; refresh this task") from None
+
+
+def call_page(database, team, source_id, task_id, *, project=None, include_fixtures=False,
+              start=None, end=None, cursor=None):
+    where = conditions(team, project, source_id, include_fixtures, task_id, start, end)
+    scope = call_scope(team, source_id, task_id, project, include_fixtures, start, end)
+    boundary = cursor_values(cursor, scope) if cursor is not None else None
+    with database.engine.connect() as db:
+        if db.dialect.name == "postgresql":
+            db = db.execution_options(isolation_level="REPEATABLE READ")
+        with db.begin():
+            sequence = boundary["sequence"] if boundary else db.execute(
+                select(func.coalesce(func.max(events.c.ingest_sequence), 0)).where(*where)).scalar_one()
+            where.append(events.c.ingest_sequence <= sequence)
+            if boundary:
+                where.append(or_(events.c.occurred_at < boundary["time"], and_(
+                    events.c.occurred_at == boundary["time"], events.c.event_id > boundary["event"])))
+            rows = call_rows(db, where, limit=101)
+    return {"calls": rows[:100], "has_more": len(rows) > 100,
+            "next_cursor": next_cursor(rows[:100], sequence, scope, len(rows) > 100),
+            "snapshot_sequence": sequence,
+            "snapshot_note": "Calls captured after this view opened appear after refresh. Retention can remove expired calls."}
 
 
 def json_text(database, column, key):
@@ -75,9 +132,11 @@ def call_rows(db, where, limit=100, offset=0):
 
 
 def usage(database, team, project=None, source_id=None, include_fixtures=False, task_id=None,
-          start=None, end=None, page=0, page_size=50):
+          start=None, end=None, page=0, page_size=50, cost_basis="api_estimate_usd"):
     if not 0 <= page <= 100_000 or not 1 <= page_size <= 100:
         raise ValueError("Invalid page")
+    if cost_basis not in COST_BASES:
+        raise ValueError("Invalid cost basis")
     where = conditions(team, project, source_id, include_fixtures, task_id, start, end)
     joined = events.join(facts, and_(events.c.source_id == facts.c.source_id,
                                     events.c.event_id == facts.c.event_id))
@@ -87,7 +146,8 @@ def usage(database, team, project=None, source_id=None, include_fixtures=False, 
     reported = reported_totals(database)
     task_query = select(events.c.source_id, events.c.task_id,
         func.max(events.c.project).label("project"), func.max(events.c.occurred_at).label("occurred_at"),
-        amount, unknown, uncovered, *reported, func.count().label("calls")).select_from(joined).where(*where).group_by(
+        amount, unknown, uncovered, *reported, func.count().label("calls"),
+        func.max(events.c.ingest_sequence).label("sequence")).select_from(joined).where(*where).group_by(
             events.c.source_id, events.c.task_id)
     with database.engine.connect() as db:
         if database.engine.dialect.name == "postgresql":
@@ -98,7 +158,12 @@ def usage(database, team, project=None, source_id=None, include_fixtures=False, 
             count = db.execute(select(func.count()).select_from(task_query.subquery())).scalar_one()
             evidence = dict(db.execute(select(events.c.evidence, func.count()).where(*where)
                                        .group_by(events.c.evidence)).all())
-            selected = db.execute(task_query.order_by(amount.desc(), events.c.source_id, events.c.task_id)
+            if cost_basis == "api_estimate_usd":
+                rank = func.sum(facts.c.api_nanodollars)
+            else:
+                value = json_text(database, events.c.accounting, cost_basis)
+                rank = func.sum(cast(func.replace(value, ".", ""), BigInteger))
+            selected = db.execute(task_query.order_by(rank.desc().nulls_last(), events.c.source_id, events.c.task_id)
                                   .limit(page_size).offset(page * page_size)).mappings().all()
             # Only validated, team-owned recordings can use the authored support
             # titles. An application's arbitrary case_id is not a support case.
@@ -125,12 +190,16 @@ def usage(database, team, project=None, source_id=None, include_fixtures=False, 
                     "api_estimate_usd": money(Decimal(row["nanos"]) / 1_000_000_000),
                     **reported_values(row),
                     "call_count": row["calls"], "unknown_cost_calls": row["unknown"],
-                    "uncovered_attempt_calls": row["uncovered"], "calls_has_more": row["calls"] > len(calls)})
+                    "uncovered_attempt_calls": row["uncovered"], "calls_has_more": row["calls"] > len(calls),
+                    "calls_cursor": next_cursor(calls, row["sequence"], call_scope(
+                        team, row["source_id"], row["task_id"], project, include_fixtures, start, end),
+                        row["calls"] > len(calls)),
+                    "cost_basis": cost_basis})
     return {"api_estimate_usd": money(Decimal(totals["nanos"]) / 1_000_000_000),
             **reported_values(totals),
             "events": totals["events"], "tasks": tasks, "task_count": count,
             "unknown_cost_calls": totals["unknown"], "uncovered_attempt_calls": totals["uncovered"],
             "evidence_counts": evidence, "page": page, "page_size": page_size,
             "has_more": (page + 1) * page_size < count, "start": start, "end": end,
-            "invoice_usd": None, "hardware_electricity_usd": None,
+            "invoice_usd": None, "hardware_electricity_usd": None, "cost_basis": cost_basis,
             "cost_note": "Captured-call estimate for this time window. Billing reconciliation compares separately imported charges; invoice costs are not allocated to individual tasks."}

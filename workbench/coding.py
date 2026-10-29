@@ -26,6 +26,7 @@ from .billing_acceptance import read_json, write_private
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "data/coding"
 MAX_OUTPUT = 100_000
+MAX_OUTPUT_DEPTH = 64
 WRAPPER = """import importlib.util,json,sys
 spec=importlib.util.spec_from_file_location('candidate','/task/solution.py')
 module=importlib.util.module_from_spec(spec)
@@ -303,20 +304,50 @@ class DockerRunner:
         values = None
         if status == "completed":
             try:
-                values = json.loads(output)
-                if not isinstance(values, list) or len(values) != len(inputs):
-                    raise ValueError
-            except (ValueError, UnicodeError):
+                values = candidate_values(output, len(inputs))
+            except (ValueError, UnicodeError, RecursionError, OverflowError):
                 status = "invalid_output"
         return {"status": status, "values": values, "duration_ms": round((time.monotonic() - started) * 1000, 3)}
+
+
+def candidate_values(output, count):
+    def invalid_constant(_):
+        raise ValueError("Nonfinite candidate output")
+    def unique_keys(items):
+        result = {}
+        for key, value in items:
+            if key in result:
+                raise ValueError("Duplicate candidate output field")
+            result[key] = value
+        return result
+    values = json.loads(output, parse_constant=invalid_constant, object_pairs_hook=unique_keys)
+    if not isinstance(values, list) or len(values) != count:
+        raise ValueError("Candidate output count differs")
+    pending = [(values, 0)]
+    while pending:
+        value, depth = pending.pop()
+        if depth > MAX_OUTPUT_DEPTH or isinstance(value, float) and not math.isfinite(value):
+            raise ValueError("Unsupported candidate output")
+        if isinstance(value, (dict, list)):
+            pending.extend((child, depth + 1) for child in
+                           (value.values() if isinstance(value, dict) else value))
+    return values
 
 
 def grades(run, tests):
     if run["status"] != "completed":
         return [False] * len(tests)
-    return [isinstance(actual, dict) and set(actual) == {"value"} and
-            fingerprint(actual["value"]) == fingerprint(test["expected"])
-            for actual, test in zip(run["values"], tests)]
+    # Expected values belong to the trusted, validated dataset. Candidate
+    # serialization failures must not terminate the remaining benchmark.
+    expected = [fingerprint(test["expected"]) for test in tests]
+    result = []
+    for actual, target in zip(run["values"], expected):
+        try:
+            result.append(isinstance(actual, dict) and set(actual) == {"value"} and
+                          fingerprint(actual["value"]) == target)
+        except (ValueError, RecursionError, OverflowError):
+            result.append(False)
+    return result
 
 
 def evaluate(value, runner):
@@ -396,7 +427,7 @@ def evaluate(value, runner):
             "Imported model recordings are operator-supplied, not independently authenticated.",
             "Cost per accepted patch includes every submitted attempt, including failed tasks. Missing costs remain unknown.",
             "Replay measures test execution, not end-to-end model/agent duration. Hardware, electricity and human review costs are unmeasured.",
-            "No native Codex, Cursor or Claude Code connector and no production routing activation.",
+            "Native coding-tool usage connectors are separate from this coding evaluation; usage alone does not establish code quality. No production routing activation.",
         ],
     }
     report["summary"] = summarize(report)

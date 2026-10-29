@@ -96,10 +96,26 @@ def strict_json(text: str) -> dict:
                 raise ValueError("duplicate JSON key")
             result[key] = value
         return result
-    obj = json.loads(text, object_pairs_hook=pairs,
-                     parse_constant=lambda _: (_ for _ in ()).throw(ValueError("non-finite JSON")))
+    def number(raw):
+        value = float(raw)
+        if not math.isfinite(value):
+            raise ValueError("non-finite JSON")
+        return value
+    try:
+        obj = json.loads(text, object_pairs_hook=pairs, parse_float=number,
+                         parse_constant=lambda _: (_ for _ in ()).throw(ValueError("non-finite JSON")))
+    except RecursionError:
+        raise ValueError("JSON nesting limit exceeded") from None
     if not isinstance(obj, dict):
         raise ValueError("expected a JSON object")
+    pending = [(obj, 0)]
+    while pending:
+        value, depth = pending.pop()
+        if depth > 64:
+            raise ValueError("JSON nesting limit exceeded")
+        if isinstance(value, (dict, list)):
+            pending.extend((child, depth + 1) for child in
+                           (value.values() if isinstance(value, dict) else value))
     return obj
 
 

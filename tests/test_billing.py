@@ -306,7 +306,7 @@ def test_schema_three_migration_and_financial_retention(pilot):
             table.drop(db)
     pilot.db.migrate()
     with pilot.db.engine.connect() as db:
-        assert db.execute(select(schema.c.version)).scalars().all() == [4]
+        assert db.execute(select(schema.c.version)).scalars().all() == [5]
         assert [dict(r) for r in db.execute(select(events)).mappings()] == before
         assert [dict(r) for r in db.execute(select(facts)).mappings()] == before_facts
         assert db.execute(select(collectors)).all() == []

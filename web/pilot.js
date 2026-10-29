@@ -17,7 +17,10 @@ const tokenDetails = call => !call.usage ? 'Tokens unknown' : call.coding_tool ?
   call.schema_version==='bedrock.usage.v1' ?
   `${call.usage.input_tokens} input / ${call.usage.output_tokens} output / ${call.usage.cache_read_input_tokens} cache read / ${call.usage.cache_write_input_tokens} cache write tokens (AWS categories)` :
   `${call.usage.prompt_tokens} input / ${call.usage.completion_tokens} output / ${call.usage.cached_tokens} cached tokens`;
-const taskAmount = task => task.call_count > 0 && task.unknown_cost_calls === task.call_count ? 'Unknown' : amount(task.api_estimate_usd);
+const costLabels={api_estimate_usd:'Estimated API cost',reported_model_estimate_usd:'Tool-reported model amount',reported_charge_usd:'Cursor-reported usage amount'};
+const taskKnown=task=>task.cost_basis==='api_estimate_usd' ? task.call_count-task.unknown_cost_calls : task[task.cost_basis+'_records'];
+const taskAmount=task=>taskKnown(task)?amount(task[task.cost_basis]):'Unknown';
+const taskCostLabel=task=>`${costLabels[task.cost_basis]}${taskKnown(task)>0 && taskKnown(task)<task.call_count?' · partial subtotal':''}`;
 const exclusionName = value => ({
   'Contract pass rate below threshold':'Too few tickets passed all checks',
   'Task p95 exceeds the latency limit':'Recorded response time exceeds your limit',
@@ -30,6 +33,7 @@ let taskPage = 0, loginMethods = {local:true,company:false}, usageRequest = 0;
 const canEdit = () => session?.user && session.user.role !== 'viewer';
 const isAdmin = () => session?.user?.role === 'admin';
 const coding = createCoding({api, action, notice, getEpoch:()=>generation});
+const evaluationInspector=createEvaluationInspector({api,getEpoch:()=>generation,download});
 const billing = createBilling({api, action, notice, isAdmin, getEpoch:()=>generation,
   onExample:()=>Promise.all([loadUsage(),loadSources()]),
   onTasks:async scope=>{
@@ -69,6 +73,7 @@ function showLogin() {
   session = null; generation++;
   billing.reset();
   coding.reset();
+  evaluationInspector.reset();
   usage = null; jobRows = []; proposalRows = [];
   for (const id of ['metrics','task-list','sources','jobs','evaluation-result','proposals','users','audit',
                     'recording-select','proposal-job','evidence-counts','cost-note',
@@ -116,7 +121,7 @@ function metric(label, value, note, flow) {
 }
 function usageGuide() {
   if (!usage.events) {
-    const filtered = [...new URLSearchParams(filters)].some(([key,value])=>value && !(key==='include_fixtures' && value==='false'));
+    const filtered = [...new URLSearchParams(filters)].some(([key,value])=>key!=='cost_basis' && value && !(key==='include_fixtures' && value==='false'));
     return `<h2>${filtered?'No usage matches these filters.':'Start with an example or connect your application.'}</h2>
       <p>${filtered?'Change or clear the overview filters to see more task runs.':'The recorded example lets you explore task costs and model quality. Connecting an application lets you collect your own usage.'}</p>
       <div class="row-actions">${filtered?'<button class="button" data-reset-filters>Clear filters</button>':''}
@@ -159,7 +164,7 @@ function taskBody(task,index) {
       <p class="fine">${escape(modelName(call.model))}${call.coding_tool?.model_basis==='configured'?' (configured label; response model is not attested)':''} · ${escape(timing(call.latency_ms))} · ${escape(evidenceName(call.evidence))}</p>
       ${call.unknown_reason?`<p class="data-note">${escape(call.unknown_reason)}</p>`:''}
     </li>`).join('')}</ol>
-    <div class="task-total"><span>${task.unknown_cost_calls?'Known API subtotal':'Total estimated API cost'}<small>${task.call_count} captured ${task.coding_tool_records?'usage records':'model calls'}${task.unknown_cost_calls?` · ${task.unknown_cost_calls} with unknown API cost`:''}${task.uncovered_attempt_calls?` · ${task.uncovered_attempt_calls} with incomplete attempt capture`:''}</small></span><strong>${escape(taskAmount(task))}</strong></div>
+    <div class="task-total"><span>${escape(taskCostLabel(task))}<small>${task.call_count} captured ${task.coding_tool_records?'usage records':'model calls'} · ${taskKnown(task)} of ${task.call_count} have this amount${task.uncovered_attempt_calls?` · ${task.uncovered_attempt_calls} with incomplete attempt capture`:''}</small></span><strong>${escape(taskAmount(task))}</strong></div>
     ${nativeAmounts(task)}
     <p class="fine">${task.coding_tool_records?'Completed turns and reported usage do not establish accepted code changes. Use Coding evaluations with a frozen task dataset to test quality.':'“Call completed” means the API returned a response. Model evaluations checks whether the answer was correct.'}</p>
     <details class="help-details technical-details"><summary>Tokens, timings, and capture details</summary>
@@ -178,6 +183,7 @@ async function loadUsage() {
   const result = await api(`/api/pilot/usage?${params}`);
   if (epoch !== generation || request !== usageRequest) return;
   usage = result;
+  $('task-cost-basis').value=usage.cost_basis;
   $('metrics').innerHTML = metric('Estimated API spend', usage.events && usage.unknown_cost_calls===usage.events?'Unknown':amount(usage.api_estimate_usd), 'Known captured costs · USD · not an invoice','connect') +
     metric('Task runs', usage.task_count, `${usage.events} ${usage.coding_tool_records?'usage records':'model calls'} grouped into these runs`,'connect') +
     metric(usage.coding_tool_records?'Records without an API estimate':'Calls without a price', usage.unknown_cost_calls,
@@ -199,23 +205,27 @@ async function loadUsage() {
     'For example, handling a support request can involve classifying the request, then drafting a reply. Your application groups related calls into a task run.';
   $('task-list').innerHTML = tasks.map((task,index) => `<details class="panel task-card">
     <summary><span class="task-summary-main"><strong>${escape(task.context?.title || `${task.coding_tool_records?'Coding activity':'Task run'} · ${task.task_id.slice(0,24)}`)}</strong><small>${escape([...new Set(task.calls.map(c=>modelName(c.model)))].join(', '))} · ${task.call_count} ${task.coding_tool_records?'usage records':'model calls'}${task.context?` · Example ${escape(task.context.case_id)}`:''}</small></span>
-      <span class="task-summary-cost"><strong>${escape(taskAmount(task))}</strong><small>${task.unknown_cost_calls?'known costs only':'estimated API cost'}</small><span class="expand-cue">View steps <span aria-hidden="true">⌄</span></span></span></summary>
+      <span class="task-summary-cost"><strong>${escape(taskAmount(task))}</strong><small>${escape(taskCostLabel(task))}</small><span class="expand-cue">View steps <span aria-hidden="true">⌄</span></span></span></summary>
     <div class="task-body">${taskBody(task,index)}</div></details>`).join('') ||
       '<article class="panel"><h2>No task runs in this view yet.</h2><p class="data-note">Load saved answers in Model evaluations, connect an application in Usage sources, or change your overview filters.</p><div class="row-actions"><button class="button" data-goto="evaluations">Explore the recorded example</button><button class="button" data-goto="usage">Check usage filters</button></div></article>';
-  $('tasks-page').textContent = usage.task_count ? `Page ${usage.page+1} · ${usage.task_count} task runs · highest known cost first` : 'No task runs';
+  $('tasks-page').textContent = usage.task_count ? `Page ${usage.page+1} · ${usage.task_count} task runs · highest ${costLabels[usage.cost_basis].toLowerCase()} first` : 'No task runs';
   $('tasks-previous').disabled = taskPage === 0;
   $('tasks-next').disabled = !usage.has_more;
 }
 async function moreCalls(button) {
+  const request=usageRequest;
   const task = usage.tasks[Number(button.dataset.moreCalls)];
   const params = new URLSearchParams(filters);
   params.set('source_id',task.source_id); params.set('task_id',task.task_id);
-  params.set('offset',String(task.calls.length));
+  params.set('cursor',task.calls_cursor);
   button.disabled = true;
   try {
     const result = await api(`/api/pilot/calls?${params}`);
-    task.calls.push(...result.calls);
+    if(request!==usageRequest)return;
+    const seen=new Set(task.calls.map(c=>c.event_id));
+    task.calls.push(...result.calls.filter(c=>!seen.has(c.event_id)));
     task.calls_has_more=result.has_more;
+    task.calls_cursor=result.next_cursor;
     button.closest('.task-body').innerHTML=taskBody(task,Number(button.dataset.moreCalls));
   } finally { button.disabled=false; }
 }
@@ -277,24 +287,18 @@ async function loadJobs() {
     'Complete an evaluation in Model evaluations first. This enables the review form below.';
 }
 async function showResult(id) {
-  const job = await api(`/api/pilot/evaluations/${id}`);
-  const result = job.analysis;
-  $('evaluation-result').innerHTML = `<article class="panel"><div class="section-head"><div><h2>How the models performed</h2><p>${result.total_calls} saved calls · ${escape(amount(result.total_cost_usd))} estimated API cost · ${result.mode==='fixture'?'Synthetic test data':'Recorded model answers'}</p></div><button class="button soft" id="export-result">Export results</button></div>
-    <div class="table-wrap"><table><thead><tr><th>Model</th><th>Tickets passed</th><th>Critical failures</th><th>Response time, p95</th><th>Cost per passing ticket</th></tr></thead><tbody>${result.models.map(m=>`<tr><td>${escape(modelName(m.model))}</td><td>${m.passed}/${m.evaluated}</td><td>${m.critical_failures}</td><td>${m.p95_ms===null?'Unknown':`${escape(m.p95_ms)} ms`}</td><td>${escape(amount(m.cost_per_pass_usd))}</td></tr>`).join('')}</tbody></table></div>
-    <dl class="result-guide"><div><dt>Tickets passed</dt><dd>A ticket passes only when all its decision and action-boundary checks pass.</dd></div><div><dt>Critical failures</dt><dd>Failures on critical cases, such as identity or policy restrictions. Any critical failure excludes a model from a recommendation.</dd></div><div><dt>Response time, p95</dt><dd>95% of the recorded task runs finished within this time.</dd></div><div><dt>Cost per passing ticket</dt><dd>Total model cost divided by tickets passed, including money spent on failed tickets.</dd></div></dl>
-    <p class="data-note">These checks replay saved answers. They do not measure current model speed or quality on other tasks. Export results to inspect individual tickets and checks.</p><button class="button primary" data-goto="proposals">Review routing criteria</button></article>`;
-  $('export-result').onclick = () => download(`evaluation-${id}.json`, job);
-  $('evaluation-result').scrollIntoView({block:'start'});
+  await evaluationInspector.show(id);
 }
 async function loadProposals() {
   const result = await api('/api/pilot/proposals');
   proposalRows = result.proposals;
   $('proposals').innerHTML = proposalRows.map(p=>`<article class="panel"><div class="section-head"><div><p class="eyebrow">SAVED ROUTING REVIEW</p><h2>${p.recommended_model?escape(p.recommended_model):p.status==='fixture_only'?'Fixture evidence only':'No model qualifies'}</h2></div>${badge('Not applied','warn')}</div>
-    <p class="data-note">${p.recommended_model?'This candidate meets the saved requirements. Review the supporting cases before changing your application.':'Every candidate failed at least one requirement. Inspect the reasons below and address the failing cases before changing your model.'}</p><p class="proposal-copy">Required: ${p.min_pass_rate*100}% tickets passed · Zero critical failures · p95 within ${p.max_p95_ms} ms · ${p.monthly_tasks} task runs per month assumed</p>
+    <p class="data-note">${p.status==='fixture_only'?'These answers, usage and timings are synthetic. They cannot justify a measured recommendation or savings.':p.recommended_model?'This candidate meets the saved requirements. Review the supporting cases before changing your application.':'Every candidate failed at least one requirement. Inspect the reasons below and address the failing cases before changing your model.'}</p><p class="proposal-copy">Required: ${p.min_pass_rate*100}% tickets passed · Zero critical failures · p95 within ${p.max_p95_ms} ms · ${p.monthly_tasks} task runs per month assumed</p>
     <div class="table-wrap"><table><thead><tr><th>Model</th><th>Decision</th><th>Why</th></tr></thead><tbody>${p.candidates.map(c=>`<tr><td>${escape(modelName(c.model))}</td><td>${badge(c.eligible?'Meets requirements':'Excluded',c.eligible?'good':'warn')}</td><td>${escape(c.exclusions.map(exclusionName).join('; ') || 'Meets the selected checks')}</td></tr>`).join('')}</tbody></table></div>
     <p class="proposal-copy">Projected monthly API savings: <strong>${p.projected_monthly_api_savings_usd===null?'Unavailable':escape(amount(p.projected_monthly_api_savings_usd))}</strong>${p.projected_monthly_api_savings_usd===null?'<br><span class="fine">A qualifying model and complete comparison costs are required to calculate savings.</span>':''}</p>
     <details class="help-details"><summary>Scope, assumptions, and saved evidence</summary><p>${escape(p.scope)}</p><ul class="limitations">${p.limitations.map(l=>`<li>${escape(l)}</li>`).join('')}</ul><p class="fine">Recording ${p.recording_id.slice(0,16)} · evaluator ${p.evaluation_revision.slice(0,16)}</p></details>
-    <button class="button soft" data-export-proposal="${p.id}">Export routing review</button></article>`).join('') || '<p class="notice">No saved reviews yet. Choose a completed evaluation and your requirements above, then save the recommendation.</p>';
+    <div class="row-actions"><button class="button soft" data-export-proposal="${p.id}">Export routing review</button><button class="button" data-export-evidence="${p.id}">Download evidence bundle</button><button class="button" data-review-cases="${p.job_id}">Inspect supporting cases</button></div>
+    <p class="fine">The evidence bundle includes saved requests, model answers, assessments and integrity checksums. Share only with authorized reviewers. The routing review export contains the summary only.</p></article>`).join('') || '<p class="notice">No saved reviews yet. Choose a completed evaluation and your requirements above, then save the recommendation.</p>';
 }
 async function loadTeam() {
   const [members, audit] = await Promise.all([api('/api/pilot/users'), api('/api/pilot/audit')]);
@@ -347,12 +351,18 @@ $('motion').onclick = ()=>{
 };
 submit('filters', async data=>{
   const params = new URLSearchParams({project:data.get('project'),source_id:data.get('source_id'),include_fixtures:String(data.has('include_fixtures'))});
+  params.set('cost_basis',$('task-cost-basis').value);
   for (const key of ['start','end']) if (data.get(key)) params.set(key,`${data.get(key)}T00:00:00Z`);
   filters=params.toString(); taskPage=0;
   await loadUsage();
 });
 $('tasks-previous').onclick = ()=>action(async()=>{taskPage=Math.max(0,taskPage-1); await loadUsage(); navigate('tasks');});
 $('tasks-next').onclick = ()=>action(async()=>{taskPage++; await loadUsage(); navigate('tasks');});
+$('task-cost-basis').onchange=()=>action(async()=>{
+  const params=new URLSearchParams(filters);params.set('cost_basis',$('task-cost-basis').value);
+  filters=params.toString();taskPage=0;await loadUsage();
+});
+$('refresh-tasks').onclick=()=>action(loadUsage);
 $('refresh-operations').onclick = ()=>action(loadOperations);
 submit('source-form', async data=>{await api('/api/pilot/sources',{name:data.get('name'),kind:data.get('kind')}); $('source-form').reset(); $('create-source').textContent='Create AxonLLM source'; await loadSources(); notice('Source created. Issue a token and configure capture on the application or coding-tool host.');});
 $('source-kind').onchange=()=>{$('create-source').textContent=`Create ${sourceNames[$('source-kind').value]} source`;};
@@ -389,6 +399,16 @@ document.addEventListener('click', event=>{
   if (d.retireCollector && confirm('Retire this collector? Check its host and undelivered outbox first.')) action(async()=>{await api(`/api/pilot/sources/${d.source}/collectors/${d.retireCollector}/retire`,{}); await loadSources();});
   if (d.disable && confirm('Disable this account and revoke its active sessions?')) action(async()=>{await api(`/api/pilot/users/${d.disable}/disable`,{}); await loadTeam();});
   if (d.exportProposal) download('routing-review.json',proposalRows.find(p=>p.id===d.exportProposal));
+  if (d.reviewCases) {navigate('evaluations');action(()=>showResult(d.reviewCases));}
+  if (d.exportEvidence) action(async()=>{
+    const epoch=generation;
+    const response=await fetch(`/api/pilot/proposals/${encodeURIComponent(d.exportEvidence)}/export`,{credentials:'same-origin',cache:'no-store'});
+    if(!response.ok)throw new Error('Evidence export failed. Refresh and check that the saved evidence is still available.');
+    const blob=await response.blob();
+    if(epoch!==generation)return;
+    const url=URL.createObjectURL(blob), link=document.createElement('a');
+    link.href=url;link.download='routing-evidence.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  });
 });
 setInterval(()=>{ if (session && page==='evaluations' && !document.hidden) action(loadJobs); },3000);
 setInterval(()=>{ if (session?.user && page==='usage' && !document.hidden) action(loadUsage); },10000);

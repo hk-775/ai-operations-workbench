@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="/static/pilot.css?v=2e9bfb4e25a1">
   <script src="/static/billing.js?v=0.5.0" defer></script>
   <script src="/static/coding.js?v=1" defer></script>
+  <script src="/static/evaluation.js?v=1" defer></script>
   <script src="/static/pilot.js?v=0.5.0" defer></script>
 </head>
 <body>
@@ -106,7 +107,10 @@
       </section>
       <section id="page-tasks" data-flow="tasks" hidden>
         <div class="page-heading"><p class="eyebrow">TASK EXPLORER</p><h1>See the work behind each cost.</h1><p class="lede">A task run groups the model calls used for one piece of work. Open a card to follow the steps and their estimated API cost.</p></div>
-        <article class="panel spotlight screen-guide"><h2>One task can need several model calls.</h2><p id="task-guide" class="lede">For example, handling a support request can involve classifying the request, then drafting a reply. Your application groups related calls into a task run.</p><p class="fine">Sorted by known cost, highest first. The filters on Usage overview also apply here. Missing calls and unknown prices are not included in the subtotal.</p><button class="button" data-goto="usage">Change usage filters</button></article>
+        <article class="panel spotlight screen-guide"><h2>One task can need several model calls.</h2><p id="task-guide" class="lede">For example, handling a support request can involve classifying the request, then drafting a reply. Your application groups related calls into a task run.</p><p class="fine">Sort by one cost basis at a time. Unknown amounts appear last; partial amounts are subtotals. The filters on Usage overview also apply here.</p>
+          <label class="field">Rank tasks by<select id="task-cost-basis"><option value="api_estimate_usd">Estimated API cost</option><option value="reported_model_estimate_usd">Tool-reported model amount</option><option value="reported_charge_usd">Cursor-reported usage amount</option></select></label>
+          <div class="row-actions"><button class="button" data-goto="usage">Change usage filters</button><button class="button" id="refresh-tasks">Refresh tasks and calls</button></div>
+          <p class="fine">Call lists keep the snapshot from when you opened this view. Refresh to include newly captured calls. Retention may remove expired calls.</p></article>
         <div id="task-list"></div>
         <div class="pagination" aria-label="Task pages"><button id="tasks-previous" class="button" disabled>Previous tasks</button><span id="tasks-page" class="fine" aria-live="polite"></span><button id="tasks-next" class="button" disabled>Next tasks</button></div>
       </section>
