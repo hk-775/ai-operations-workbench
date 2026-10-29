@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, field_validator, model_validator
@@ -106,8 +106,105 @@ class BedrockUsageEvent(UsageEvent):
         return self
 
 
-Event = UsageEvent | BedrockUsageEvent
+class CodingToolUsage(BaseModel):
+    """Native token categories are retained instead of repriced as API usage."""
+    model_config = ConfigDict(extra="forbid", strict=True)
+    input_tokens: int = Field(ge=0, le=100_000_000)
+    output_tokens: int = Field(ge=0, le=100_000_000)
+    cache_read_tokens: int | None = Field(default=None, ge=0, le=100_000_000)
+    cache_write_tokens: int | None = Field(default=None, ge=0, le=100_000_000)
+    reasoning_output_tokens: int | None = Field(default=None, ge=0, le=100_000_000)
+    input_semantics: Literal["includes_cache_read", "excludes_cache", "vendor_defined"]
+
+    @model_validator(mode="after")
+    def categories(self):
+        if self.input_semantics == "includes_cache_read" and (
+                self.cache_read_tokens or 0) > self.input_tokens:
+            raise ValueError("Cached input exceeds total input")
+        if (self.reasoning_output_tokens or 0) > self.output_tokens:
+            raise ValueError("Reasoning output exceeds total output")
+        return self
+
+
+class CodingToolContext(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    tool: Literal["codex", "cursor", "claude_code"]
+    transport: Literal["codex_jsonl", "otel_logs", "cursor_admin"]
+    record_kind: Literal["turn", "api_response", "api_error", "vendor_usage"]
+    task_scope: Literal["turn", "prompt", "session", "event"]
+    timestamp_basis: Literal["source", "capture_start"] = "source"
+    model_basis: Literal["reported", "configured"] = "reported"
+    session_id: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
+    actor_id: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
+    # These are imported assertions, never independently authenticated invoices.
+    reported_model_estimate_usd: str | None = Field(default=None, max_length=80)
+    reported_charge_usd: str | None = Field(default=None, max_length=80)
+    billing_category: Literal["included", "usage_based", "unknown"] = "unknown"
+
+    @field_validator("reported_model_estimate_usd", "reported_charge_usd")
+    @classmethod
+    def amount(cls, value):
+        if value is None:
+            return None
+        try:
+            number = Decimal(value)
+        except InvalidOperation:
+            raise ValueError("Invalid reported USD") from None
+        if (not number.is_finite() or not 0 <= number <= 1_000_000
+                or number != number.quantize(Decimal("0.000000001"))):
+            raise ValueError("Reported USD must be nonnegative with at most nine decimal places")
+        return money(number)
+
+
+class CodingToolUsageEvent(UsageEvent):
+    schema_version: Literal["coding-tool.usage.v1"] = "coding-tool.usage.v1"
+    provider: Literal["codex", "cursor", "claude_code"]
+    status: Literal["success", "error", "interrupted", "unknown"]
+    usage_basis: Literal["tool_reported", "unknown"] = "unknown"
+    usage: CodingToolUsage | None = None
+    latency_ms: float | None = Field(default=None, ge=0, le=86_400_000, allow_inf_nan=False)
+    coding_tool: CodingToolContext
+
+    @model_validator(mode="after")
+    def native_contract(self):
+        expected = {"codex": "codex_jsonl", "cursor": "cursor_admin", "claude_code": "otel_logs"}
+        if self.provider != self.coding_tool.tool or self.coding_tool.transport != expected[self.provider]:
+            raise ValueError("Coding tool and transport do not match")
+        if self.recording_id is not None or self.case_id is not None or self.provider_response_id is not None:
+            raise ValueError("Native tool metadata cannot impersonate support recordings")
+        if self.attempt_coverage != "unknown":
+            raise ValueError("Native metadata does not establish complete API attempt capture")
+        if self.provider != "cursor" and self.coding_tool.reported_charge_usd is not None:
+            raise ValueError("This connector does not report vendor charges")
+        if self.provider == "codex" and self.coding_tool.reported_model_estimate_usd is not None:
+            raise ValueError("Codex JSON output does not report monetary cost")
+        context = self.coding_tool
+        if self.provider == "codex" and (context.record_kind != "turn" or context.task_scope != "turn"
+                or context.timestamp_basis != "capture_start" or context.model_basis != "configured"
+                or self.latency_ms is not None or self.status == "unknown"):
+            raise ValueError("Codex JSONL describes configured-model turns")
+        if self.provider == "cursor" and (context.record_kind != "vendor_usage"
+                or context.task_scope not in {"session", "event"} or self.status != "unknown"
+                or self.latency_ms is not None):
+            raise ValueError("Cursor usage does not attest call status or duration")
+        if self.provider == "claude_code" and (context.record_kind not in {"api_response", "api_error"}
+                or context.task_scope not in {"session", "prompt"}):
+            raise ValueError("Unsupported Claude Code usage event")
+        if self.provider != "codex" and (context.model_basis != "reported" or context.timestamp_basis != "source"):
+            raise ValueError("Native usage requires source model and timestamp metadata")
+        if self.usage and self.usage.input_semantics != {
+                "codex": "includes_cache_read", "cursor": "vendor_defined", "claude_code": "excludes_cache"}[self.provider]:
+            raise ValueError("Native token categories differ from this tool's contract")
+        if context.record_kind == "api_error" and (self.status != "error" or self.usage is not None
+                or context.reported_model_estimate_usd is not None):
+            raise ValueError("API errors keep unknown usage and costs")
+        return self
+
+
+Event = UsageEvent | BedrockUsageEvent | CodingToolUsageEvent
 event_adapter = TypeAdapter(Event)
+SOURCE_SCHEMAS = {"axonllm": "axon.usage.v1", "bedrock": "bedrock.usage.v1",
+                  **{kind: "coding-tool.usage.v1" for kind in ("codex", "cursor", "claude_code")}}
 
 
 class CollectorHealth(BaseModel):
@@ -143,6 +240,14 @@ def pricebook() -> dict:
 
 def account(event: UsageEvent, book: dict) -> dict:
     """Price only supported reported usage; leave uncovered units explicit."""
+    if isinstance(event, CodingToolUsageEvent):
+        return {
+            "api_estimate_usd": None, "cost_basis": "tool_reported", "pricebook_id": book["id"],
+            "unknown_reason": "Tool usage does not establish an API bill or allocated subscription cost.",
+            "attempt_cost_complete": False, "invoice_usd": None, "hardware_electricity_usd": None,
+            "reported_model_estimate_usd": event.coding_tool.reported_model_estimate_usd,
+            "reported_charge_usd": event.coding_tool.reported_charge_usd,
+        }
     amount = None
     reason = None
     rate = book["snapshot"]["models"].get(event.model)

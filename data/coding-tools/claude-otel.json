@@ -1,0 +1,148 @@
+{
+  "resourceLogs": [
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "user.email",
+            "value": {
+              "stringValue": "PRIVATE_PROMPT_RESPONSE_EMAIL_SENTINEL"
+            }
+          }
+        ]
+      },
+      "scopeLogs": [
+        {
+          "scope": {
+            "name": "claude-code"
+          },
+          "logRecords": [
+            {
+              "timeUnixNano": "1793188800000000000",
+              "body": {
+                "stringValue": "PRIVATE_PROMPT_RESPONSE_EMAIL_SENTINEL"
+              },
+              "attributes": [
+                {
+                  "key": "event.name",
+                  "value": {
+                    "stringValue": "api_request"
+                  }
+                },
+                {
+                  "key": "event.timestamp",
+                  "value": {
+                    "stringValue": "2026-10-28T12:00:00Z"
+                  }
+                },
+                {
+                  "key": "event.sequence",
+                  "value": {
+                    "intValue": "5"
+                  }
+                },
+                {
+                  "key": "session.id",
+                  "value": {
+                    "stringValue": "sample-session"
+                  }
+                },
+                {
+                  "key": "prompt.id",
+                  "value": {
+                    "stringValue": "sample-prompt"
+                  }
+                },
+                {
+                  "key": "model",
+                  "value": {
+                    "stringValue": "sample-claude-model"
+                  }
+                },
+                {
+                  "key": "request_id",
+                  "value": {
+                    "stringValue": "sample-request"
+                  }
+                },
+                {
+                  "key": "input_tokens",
+                  "value": {
+                    "intValue": "100"
+                  }
+                },
+                {
+                  "key": "output_tokens",
+                  "value": {
+                    "intValue": "20"
+                  }
+                },
+                {
+                  "key": "cache_read_tokens",
+                  "value": {
+                    "intValue": "200"
+                  }
+                },
+                {
+                  "key": "cache_creation_tokens",
+                  "value": {
+                    "intValue": "300"
+                  }
+                },
+                {
+                  "key": "cost_usd_micros",
+                  "value": {
+                    "intValue": "324501"
+                  }
+                },
+                {
+                  "key": "duration_ms",
+                  "value": {
+                    "intValue": "125"
+                  }
+                },
+                {
+                  "key": "user.email",
+                  "value": {
+                    "stringValue": "PRIVATE_PROMPT_RESPONSE_EMAIL_SENTINEL"
+                  }
+                },
+                {
+                  "key": "prompt",
+                  "value": {
+                    "stringValue": "PRIVATE_PROMPT_RESPONSE_EMAIL_SENTINEL"
+                  }
+                },
+                {
+                  "key": "error",
+                  "value": {
+                    "stringValue": "PRIVATE_PROMPT_RESPONSE_EMAIL_SENTINEL"
+                  }
+                },
+                {
+                  "key": "tool_parameters",
+                  "value": {
+                    "stringValue": "PRIVATE_PROMPT_RESPONSE_EMAIL_SENTINEL"
+                  }
+                }
+              ]
+            },
+            {
+              "body": {
+                "stringValue": "claude_code.assistant_response"
+              },
+              "attributes": [
+                {
+                  "key": "message",
+                  "value": {
+                    "stringValue": "PRIVATE_PROMPT_RESPONSE_EMAIL_SENTINEL"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

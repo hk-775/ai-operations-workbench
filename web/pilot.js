@@ -9,9 +9,12 @@ const evidenceName = value => ({recorded:'Saved recording',observed:'Captured fr
 const stageName = value => ({triage:'Classify request',draft:'Draft decision and reply'}[value] || readable(value));
 const stageHelp = value => ({triage:'Identify what the customer needs.',draft:'Propose a policy-based decision and a customer reply.'}[value] || 'A model call captured by your application.');
 const coverageName = value => ({single_attempt:'This attempt captured',final_response_only:'Final response only; earlier attempts may be missing',unknown:'Attempt capture is unknown'}[value] || readable(value));
-const usageName = value => ({provider_reported:'Tokens reported by provider',estimated:'Estimated tokens',unknown:'Token usage unknown'}[value] || readable(value));
+const usageName = value => ({provider_reported:'Tokens reported by provider',tool_reported:'Tokens reported by coding tool',estimated:'Estimated tokens',unknown:'Token usage unknown'}[value] || readable(value));
+const sourceNames = {axonllm:'AxonLLM',bedrock:'Amazon Bedrock',codex:'Codex',cursor:'Cursor',claude_code:'Claude Code'};
 const timing = value => value === null || value === undefined ? 'Unmeasured' : `${value} ms`;
-const tokenDetails = call => !call.usage ? 'Tokens unknown' : call.schema_version==='bedrock.usage.v1' ?
+const tokenDetails = call => !call.usage ? 'Tokens unknown' : call.coding_tool ?
+  `${call.usage.input_tokens} input / ${call.usage.output_tokens} output / ${call.usage.cache_read_tokens ?? 'unknown'} cache read / ${call.usage.cache_write_tokens ?? 'unknown'} cache write tokens · ${readable(call.usage.input_semantics)}${call.usage.reasoning_output_tokens===null?'':` · ${call.usage.reasoning_output_tokens} reasoning tokens included in output`}` :
+  call.schema_version==='bedrock.usage.v1' ?
   `${call.usage.input_tokens} input / ${call.usage.output_tokens} output / ${call.usage.cache_read_input_tokens} cache read / ${call.usage.cache_write_input_tokens} cache write tokens (AWS categories)` :
   `${call.usage.prompt_tokens} input / ${call.usage.completion_tokens} output / ${call.usage.cached_tokens} cached tokens`;
 const taskAmount = task => task.call_count > 0 && task.unknown_cost_calls === task.call_count ? 'Unknown' : amount(task.api_estimate_usd);
@@ -121,6 +124,9 @@ function usageGuide() {
       ${canEdit()?'':'<p class="fine">Your viewer role can inspect results. Ask an analyst or administrator to load data or connect an application.</p>'}`;
   }
   const hasSupport = usage.tasks.some(task=>task.context?.kind==='support_comparison');
+  if (usage.coding_tool_records && !hasSupport) return `<h2>Inspect your coding-tool usage.</h2>
+    <p>Tool records can describe a turn, an API response, or delayed vendor usage. Open a coding activity in Task explorer to see its source, token categories, and available amounts.</p>
+    <p class="fine">API estimates, tool-reported model amounts, and Cursor usage amounts have different meanings. Keep them separate. Use Coding evaluations to measure code quality; usage alone cannot establish it.</p>`;
   return `<h2>${hasSupport?'Understand the recorded support example.':'Follow the cost from task to model call.'}</h2>
     <p>${hasSupport?'A task run is one support ticket handled by one model. Testing the same ticket with another model creates another run. The bundled example has 24 tickets × 3 models = 72 runs, with two calls per run.':'A task run groups related model calls from an application. One run can include several steps, models, or attempts.'}</p>
     <p class="fine">${hasSupport?'Recorded calls were saved from an earlier run. Opening these pages and replaying checks makes no new model API calls.':'Open Task explorer to inspect the captured steps. Use Model evaluations when you have saved answers to check for quality.'}</p>`;
@@ -133,29 +139,35 @@ function orderedCalls(task) {
 function callDetail(call) {
   return `<tr><td>${escape(readable(call.stage))}<br>${badge(evidenceName(call.evidence))}</td>
     <td>${escape(call.provider)}<br>${escape(call.model)}</td>
-    <td>${escape(amount(call.api_estimate_usd))}<br><small>${escape(call.unknown_reason || `Saved price reference ${call.pricebook_id.slice(0,12)}`)}</small></td>
+    <td>${escape(amount(call.api_estimate_usd))}<br><small>${escape(call.unknown_reason || `Saved price reference ${call.pricebook_id.slice(0,12)}`)}</small>${nativeAmounts(call)}</td>
     <td>${escape(usageName(call.usage_basis))}<br>${escape(coverageName(call.attempt_coverage))}<br><small>${escape(tokenDetails(call))}</small>${call.bedrock?`<br><small>${escape(call.bedrock.region)} · ${escape(call.bedrock.service_tier)} tier · SDK retries: ${call.bedrock.sdk_retry_count ?? 'unknown'}${call.bedrock.capture_issue?` · ${escape(readable(call.bedrock.capture_issue))}`:''}</small>`:''}</td>
-    <td>${escape(timing(call.latency_ms))}${call.bedrock?`<br><small>Provider: ${escape(timing(call.bedrock.provider_latency_ms))}</small>`:''}</td></tr>`;
+    <td>${escape(timing(call.latency_ms))}${call.bedrock?`<br><small>Provider: ${escape(timing(call.bedrock.provider_latency_ms))}</small>`:''}${call.coding_tool?`<br><small>${call.coding_tool.timestamp_basis==='capture_start'?'Time is the invocation start; turn duration is unmeasured.':'Time reported by the source.'}</small>`:''}</td></tr>`;
+}
+function nativeAmounts(value) {
+  if (!value.coding_tool && !value.coding_tool_records) return '';
+  return `<div class="data-note"><strong>Tool-reported model amount: ${escape(amount(value.reported_model_estimate_usd))}</strong><br>Cursor-reported usage amount: ${escape(amount(value.reported_charge_usd))}<br><small>Different cost bases; do not add them together. Neither allocates a subscription or authenticates an invoice.</small></div>`;
 }
 function taskBody(task,index) {
   const calls=orderedCalls(task);
   return `${task.context?`<div class="task-request"><p class="eyebrow">CUSTOMER REQUEST · AUTHORED EXAMPLE</p><p>${escape(task.context.request)}</p></div>`:
-    '<p class="data-note">This source provides usage details only. A business description for this task is unavailable.</p>'}
-    <ol class="task-steps" aria-label="Captured model calls">${calls.map(call=>`<li>
-      <div class="section-head"><strong>${escape(task.context?stageName(call.stage):readable(call.stage))}</strong>${badge(call.status==='success'?'Call completed':call.status==='error'?'Call failed':'Call interrupted',call.status==='success'?'good':'danger')}</div>
-      <p>${escape(task.context?stageHelp(call.stage):'A model call captured by your application.')}</p>
+    task.coding_tool_records?'<p class="data-note">These are coding-tool usage records. Codex records summarize turns; Claude Code records describe API events; Cursor records describe vendor-reported usage. A session can contain several requests. Usage alone does not establish code quality.</p>':'<p class="data-note">This source provides usage details only. A business description for this task is unavailable.</p>'}
+    <ol class="task-steps" aria-label="${task.coding_tool_records?'Captured coding activity':'Captured model calls'}">${calls.map(call=>`<li>
+      <div class="section-head"><strong>${escape(task.context?stageName(call.stage):readable(call.stage))}</strong>${badge(call.status==='unknown'?'Usage reported':call.status==='success'?(call.coding_tool?.record_kind==='turn'?'Turn completed':'Call completed'):call.status==='error'?'Call failed':'Call interrupted',call.status==='unknown'?'accent':call.status==='success'?'good':'danger')}</div>
+      <p>${escape(task.context?stageHelp(call.stage):call.coding_tool?`${sourceNames[call.coding_tool.tool]} · grouped by ${call.coding_tool.task_scope}`:'A model call captured by your application.')}</p>
       <p class="call-cost">${escape(amount(call.api_estimate_usd))}<small>estimated API cost</small></p>
-      <p class="fine">${escape(modelName(call.model))} · ${escape(timing(call.latency_ms))} · ${escape(evidenceName(call.evidence))}</p>
+      ${nativeAmounts(call)}
+      <p class="fine">${escape(modelName(call.model))}${call.coding_tool?.model_basis==='configured'?' (configured label; response model is not attested)':''} · ${escape(timing(call.latency_ms))} · ${escape(evidenceName(call.evidence))}</p>
       ${call.unknown_reason?`<p class="data-note">${escape(call.unknown_reason)}</p>`:''}
     </li>`).join('')}</ol>
-    <div class="task-total"><span>${task.unknown_cost_calls?'Known API subtotal':'Total estimated API cost'}<small>${task.call_count} captured model calls${task.unknown_cost_calls?` · ${task.unknown_cost_calls} with unknown cost`:''}${task.uncovered_attempt_calls?` · ${task.uncovered_attempt_calls} with incomplete attempt capture`:''}</small></span><strong>${escape(taskAmount(task))}</strong></div>
-    <p class="fine">“Call completed” means the API returned a response. Model evaluations checks whether the answer was correct.</p>
+    <div class="task-total"><span>${task.unknown_cost_calls?'Known API subtotal':'Total estimated API cost'}<small>${task.call_count} captured ${task.coding_tool_records?'usage records':'model calls'}${task.unknown_cost_calls?` · ${task.unknown_cost_calls} with unknown API cost`:''}${task.uncovered_attempt_calls?` · ${task.uncovered_attempt_calls} with incomplete attempt capture`:''}</small></span><strong>${escape(taskAmount(task))}</strong></div>
+    ${nativeAmounts(task)}
+    <p class="fine">${task.coding_tool_records?'Completed turns and reported usage do not establish accepted code changes. Use Coding evaluations with a frozen task dataset to test quality.':'“Call completed” means the API returned a response. Model evaluations checks whether the answer was correct.'}</p>
     <details class="help-details technical-details"><summary>Tokens, timings, and capture details</summary>
-      <p>Tokens are the input and output units used to price a model call. Cached tokens are reused input. Each cost uses the saved model price; missing usage or unsupported prices remain unknown.</p>
-      <div class="table-wrap"><table><thead><tr><th>Step / evidence</th><th>Provider / model version</th><th>API estimate</th><th>Tokens / attempt capture</th><th>Time taken</th></tr></thead><tbody>${calls.map(callDetail).join('')}</tbody></table></div>
+      <p>${task.coding_tool_records?'Native token categories follow each tool’s reporting rules. Tool-reported amounts are retained separately; these records are not repriced as API calls. Missing usage, duration, and amounts remain unknown.':'Tokens are the input and output units used to price a model call. Cached tokens are reused input. Each cost uses the saved model price; missing usage or unsupported prices remain unknown.'}</p>
+      <div class="table-wrap"><table><thead><tr><th>Step / evidence</th><th>Provider or tool / model</th><th>API estimate / reported amounts</th><th>Tokens / attempt capture</th><th>Time taken</th></tr></thead><tbody>${calls.map(callDetail).join('')}</tbody></table></div>
       <p class="fine">Project: ${escape(task.project)}<br>Task reference: ${escape(task.task_id)}</p>
     </details>
-    ${task.calls_has_more?`<p class="fine">Showing ${task.calls.length} of ${task.call_count} captured calls. The subtotal covers all captured calls in the current filters.</p><button class="button" data-more-calls="${index}">Load more calls</button>`:''}
+    ${task.calls_has_more?`<p class="fine">Showing ${task.calls.length} of ${task.call_count} captured records. Subtotals cover every record in the current filters.</p><button class="button" data-more-calls="${index}">Load more calls</button>`:''}
     ${task.context?'<button class="button task-next" data-goto="evaluations">Check saved answer quality</button>':''}`;
 }
 async function loadUsage() {
@@ -167,18 +179,26 @@ async function loadUsage() {
   if (epoch !== generation || request !== usageRequest) return;
   usage = result;
   $('metrics').innerHTML = metric('Estimated API spend', usage.events && usage.unknown_cost_calls===usage.events?'Unknown':amount(usage.api_estimate_usd), 'Known captured costs · USD · not an invoice','connect') +
-    metric('Task runs', usage.task_count, `${usage.events} model calls grouped into these runs`,'connect') +
-    metric('Calls without a price', usage.unknown_cost_calls, 'Missing token usage or supported model pricing','connect') +
-    metric('Calls with incomplete capture', usage.uncovered_attempt_calls, 'Cost or attempt information is missing','connect');
+    metric('Task runs', usage.task_count, `${usage.events} ${usage.coding_tool_records?'usage records':'model calls'} grouped into these runs`,'connect') +
+    metric(usage.coding_tool_records?'Records without an API estimate':'Calls without a price', usage.unknown_cost_calls,
+      usage.coding_tool_records?'Tool amounts are shown separately below':'Missing token usage or supported model pricing','connect') +
+    metric(usage.coding_tool_records?'Records with incomplete capture':'Calls with incomplete capture',
+      usage.uncovered_attempt_calls, 'Cost or attempt information is missing','connect');
+  if (usage.coding_tool_records) $('metrics').innerHTML +=
+    metric('Tool-reported model amount',amount(usage.reported_model_estimate_usd),
+      `${usage.reported_model_estimate_usd_records} of ${usage.coding_tool_records} tool records report a model amount · not an invoice`,'connect') +
+    metric('Cursor-reported usage amount',amount(usage.reported_charge_usd),
+      `${usage.reported_charge_usd_records} records include chargedCents · subscription allocation unknown`,'connect');
   $('usage-guide').innerHTML = usageGuide();
   $('cost-note').textContent = usage.cost_note;
-  $('evidence-counts').textContent = Object.entries(usage.evidence_counts).map(([k,v])=>`${evidenceName(k)}: ${v} calls`).join(' · ') || 'No calls in this view yet.';
+  $('evidence-counts').textContent = Object.entries(usage.evidence_counts).map(([k,v])=>`${evidenceName(k)}: ${v} ${usage.coding_tool_records?'records':'calls'}`).join(' · ') || 'No calls in this view yet.';
   const tasks = usage.tasks;
   $('task-guide').textContent = tasks.some(task=>task.context) ?
     'In this support comparison, each ticket/model pair is a separate run. “Classify request” identifies the customer’s need; “Draft decision and reply” proposes a response. Open a card to see the customer request and both costs.' :
+    usage.coding_tool_records?'Open a coding activity to see its reported usage and amounts. Codex groups turns; Claude Code groups requests by prompt or session; Cursor groups vendor records by conversation when available. Task descriptions and code quality are not collected.':
     'For example, handling a support request can involve classifying the request, then drafting a reply. Your application groups related calls into a task run.';
   $('task-list').innerHTML = tasks.map((task,index) => `<details class="panel task-card">
-    <summary><span class="task-summary-main"><strong>${escape(task.context?.title || `Task run · ${task.task_id.slice(0,24)}`)}</strong><small>${escape([...new Set(task.calls.map(c=>modelName(c.model)))].join(', '))} · ${task.call_count} model calls${task.context?` · Example ${escape(task.context.case_id)}`:''}</small></span>
+    <summary><span class="task-summary-main"><strong>${escape(task.context?.title || `${task.coding_tool_records?'Coding activity':'Task run'} · ${task.task_id.slice(0,24)}`)}</strong><small>${escape([...new Set(task.calls.map(c=>modelName(c.model)))].join(', '))} · ${task.call_count} ${task.coding_tool_records?'usage records':'model calls'}${task.context?` · Example ${escape(task.context.case_id)}`:''}</small></span>
       <span class="task-summary-cost"><strong>${escape(taskAmount(task))}</strong><small>${task.unknown_cost_calls?'known costs only':'estimated API cost'}</small><span class="expand-cue">View steps <span aria-hidden="true">⌄</span></span></span></summary>
     <div class="task-body">${taskBody(task,index)}</div></details>`).join('') ||
       '<article class="panel"><h2>No task runs in this view yet.</h2><p class="data-note">Load saved answers in Model evaluations, connect an application in Usage sources, or change your overview filters.</p><div class="row-actions"><button class="button" data-goto="evaluations">Explore the recorded example</button><button class="button" data-goto="usage">Check usage filters</button></div></article>';
@@ -205,9 +225,10 @@ async function loadSources() {
   $('source-filter').innerHTML = '<option value="">All sources</option>' + result.sources.map(s=>`<option value="${escape(s.id)}">${escape(s.name)}</option>`).join('');
   $('source-filter').value = selected;
   $('sources').innerHTML = result.sources.map(s=>`<article class="panel source-row"><div><h2>${escape(s.kind==='recording'?'Recorded support comparison':s.name)}</h2>
-    <p class="fine">${s.kind==='recording'?'Saved example; not a live connection':s.kind==='bedrock'?'Amazon Bedrock · Converse / ConverseStream':'AxonLLM application connection'} · ${s.event_count} captured calls · Last received: ${escape(date(s.last_received_at))}</p>
+    <p class="fine">${s.kind==='recording'?'Saved example; not a live connection':escape(sourceNames[s.kind] || 'Application')} · ${s.event_count} captured ${['codex','cursor','claude_code'].includes(s.kind)?'usage records':'calls'} · Last received: ${escape(date(s.last_received_at))}</p>
+    ${['codex','cursor','claude_code'].includes(s.kind)?'<p class="data-note">Metadata only. Tool estimates and vendor usage amounts remain separate from API estimates and invoices. Delivery heartbeats do not prove every session was captured.</p>':''}
     ${sourceHealth(s)}
-    ${s.kind!=='recording' && !s.event_count?'<p class="data-note">Waiting for calls. Configure the application connector with an active token to begin sending usage.</p>':''}
+    ${s.kind!=='recording' && !s.event_count?'<p class="data-note">Waiting for usage. Configure the collector with an active source token to begin sending records.</p>':''}
     <div class="fine">${s.tokens.map(t=>`<p>Connection token ${escape(t.prefix)}… · ${t.revoked?'revoked':`expires ${escape(date(t.expires_at))}`}
       ${isAdmin()&&!t.revoked?`<button class="button small" data-revoke-token="${t.id}" data-source="${s.id}">Revoke token ${escape(t.prefix)}</button>`:''}</p>`).join('')}</div></div>
     ${isAdmin() && s.kind!=='recording' ? `<div class="row-actions"><button class="button soft" data-token="${s.id}">Issue token</button><button class="button" data-revoke="${s.id}">Revoke all tokens</button></div>` : ''}</article>`).join('') ||
@@ -291,7 +312,10 @@ async function loadOperations() {
   $('operations-metrics').innerHTML = metric('Evaluation service',state.worker_healthy?'Ready':'Unavailable','Runs your queued checks in the background','connect') +
     metric('Evaluations waiting',state.jobs.queued || 0,`Oldest wait: ${state.oldest_queued_seconds} seconds`,'tasks') +
     metric('Failed evaluations',state.failed_jobs_24h,'Last 24 hours','compare') +
-    metric('Calls without a price',state.unknown_cost_calls_24h,`Out of ${state.observed_calls_24h} new application calls in 24 hours`,'proposal');
+    metric('API calls without a price',state.unknown_cost_calls_24h,`Out of ${state.observed_calls_24h} captured API calls in 24 hours`,'proposal');
+  if (state.observed_coding_tool_records_24h) $('operations-metrics').innerHTML +=
+    metric('Coding-tool records',state.observed_coding_tool_records_24h,
+      'Last 24 hours · tool amounts are separate; unknown subscription allocation is expected','connect');
   $('operations-alerts').innerHTML = state.alerts.length ? state.alerts.map(a=>`<p class="data-note">${badge(a.severity,a.severity==='critical'?'warn':'accent')} ${escape(a.message)}</p>`).join('') : '<p class="data-note">No active operational alerts.</p>';
   $('operations-retention').textContent = `${state.retention_days ? `Usage metadata: ${state.retention_days} days. Evidence, billing snapshots and saved reviews: ${state.evidence_retention_days || 'unlimited'} days. Audit history: ${state.audit_retention_days || 'unlimited'} days.` : 'Scheduled usage retention is not enabled in this local environment.'} ${state.maintenance_age_seconds===null?'Maintenance has not run yet.':`Last maintenance completed ${Math.floor(state.maintenance_age_seconds/60)} minutes ago.`}`;
 }
@@ -330,8 +354,8 @@ submit('filters', async data=>{
 $('tasks-previous').onclick = ()=>action(async()=>{taskPage=Math.max(0,taskPage-1); await loadUsage(); navigate('tasks');});
 $('tasks-next').onclick = ()=>action(async()=>{taskPage++; await loadUsage(); navigate('tasks');});
 $('refresh-operations').onclick = ()=>action(loadOperations);
-submit('source-form', async data=>{await api('/api/pilot/sources',{name:data.get('name'),kind:data.get('kind')}); $('source-form').reset(); $('create-source').textContent='Create AxonLLM source'; await loadSources(); notice('Source created. Issue a token to connect the application.');});
-$('source-kind').onchange=()=>{$('create-source').textContent=$('source-kind').value==='bedrock'?'Create Amazon Bedrock source':'Create AxonLLM source';};
+submit('source-form', async data=>{await api('/api/pilot/sources',{name:data.get('name'),kind:data.get('kind')}); $('source-form').reset(); $('create-source').textContent='Create AxonLLM source'; await loadSources(); notice('Source created. Issue a token and configure capture on the application or coding-tool host.');});
+$('source-kind').onchange=()=>{$('create-source').textContent=`Create ${sourceNames[$('source-kind').value]} source`;};
 $('refresh-sources').onclick=()=>action(loadSources);
 submit('evaluate-form', async()=>{await api('/api/pilot/evaluations',{recording_id:$('recording-select').value}); await loadJobs(); notice('Evaluation queued. You can leave this page; the worker will save its result.');});
 submit('proposal-form', async data=>{

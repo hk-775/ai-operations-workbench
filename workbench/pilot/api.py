@@ -24,7 +24,7 @@ from workbench.evidence import recommend
 from . import auth
 from .config import Settings
 from .database import Conflict, Database, audits, recordings, users, events
-from .events import CollectorHealth, EventBatch
+from .events import CollectorHealth, EventBatch, SOURCE_SCHEMAS
 from .identity import BINDING_COOKIE, CALLBACK, CompanyIdentity, provision
 from .operations import Instrumentation, Metrics, snapshot
 from .queries import call_rows, conditions
@@ -119,7 +119,7 @@ class NewIdentity(Input):
 
 class SourceName(Input):
     name: str = Field(min_length=1, max_length=100, pattern=r".*\S.*")
-    kind: Literal["axonllm", "bedrock"] = "axonllm"
+    kind: Literal["axonllm", "bedrock", "codex", "cursor", "claude_code"] = "axonllm"
 
 
 class Evaluation(Input):
@@ -316,8 +316,9 @@ def create_pilot_app(settings: Settings | None = None) -> FastAPI:
         source = database.token_source(authorization[7:]) if authorization.startswith("Bearer ") else None
         if not source:
             raise HTTPException(401, "Valid ingestion token required")
-        version = "bedrock.usage.v1" if source["kind"] == "bedrock" else "axon.usage.v1"
-        return {"source_id": source["id"], "schema_version": version, "collector_health": True}
+        version = SOURCE_SCHEMAS.get(source["kind"], "axon.usage.v1")
+        return {"source_id": source["id"], "schema_version": version, "collector_health": True,
+                "kind": source["kind"]}
 
     @app.post("/api/pilot/ingest/health")
     def collector_health(payload: CollectorHealth, request: Request):

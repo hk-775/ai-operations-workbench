@@ -1,6 +1,6 @@
 [project]
 name = "ai-operations-workbench"
-version = "0.7.0"
+version = "0.8.0"
 description = "Connect AI usage to task evidence and reviewable routing recommendations."
 requires-python = ">=3.12"
 dependencies = [

@@ -1,0 +1,39 @@
+{
+  "totalUsageEventsCount": 2,
+  "period": {
+    "startDate": 1793145600000,
+    "endDate": 1793231999999
+  },
+  "usageEvents": [
+    {
+      "timestamp": "1793188800000",
+      "userEmail": "PRIVATE_PROMPT_RESPONSE_EMAIL_SENTINEL",
+      "conversationId": "sample-session",
+      "model": "sample-cursor-model",
+      "kind": "Usage-based",
+      "isTokenBasedCall": true,
+      "requestsCosts": 5000,
+      "chargedCents": 21.36232,
+      "cursorTokenFee": 1.18,
+      "tokenUsage": {
+        "inputTokens": 126,
+        "outputTokens": 450,
+        "cacheWriteTokens": 6112,
+        "cacheReadTokens": 11964,
+        "totalCents": 20.18232
+      },
+      "prompt": "PRIVATE_PROMPT_RESPONSE_EMAIL_SENTINEL",
+      "response": "PRIVATE_PROMPT_RESPONSE_EMAIL_SENTINEL"
+    },
+    {
+      "timestamp": "1793188800001",
+      "userEmail": "PRIVATE_PROMPT_RESPONSE_EMAIL_SENTINEL",
+      "model": "sample-cursor-model",
+      "kind": "Included in Business",
+      "isTokenBasedCall": false,
+      "requestsCosts": 9000,
+      "isChargeable": false,
+      "chargedCents": 0
+    }
+  ]
+}

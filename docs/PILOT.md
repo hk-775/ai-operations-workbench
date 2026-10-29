@@ -88,6 +88,9 @@ workload adapter and representative held-out data are future milestones.
 For native boto3 Converse/ConverseStream application capture, follow
 [the Bedrock guide](BEDROCK.md). The AxonLLM wrapper below retains its existing
 nonstreaming contract. Source tokens accept their selected connector's schema.
+Version 0.8.0 also supports [Codex, Cursor and Claude Code usage](CODING-TOOL-CONNECTORS.md).
+Native tool amounts remain separate from the server-priced API estimate; usage
+does not establish output quality. These connectors are included from v0.8.0.
 Version 0.4.0 requires an explicit migration to schema 3 for collector
 health; v0.3.0 deployments use schema 2.
 Version 0.5.0 requires schema 4 for

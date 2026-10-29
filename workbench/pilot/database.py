@@ -16,7 +16,8 @@ from sqlalchemy.exc import IntegrityError
 
 from workbench.domain import digest, evaluation_revision, money
 from workbench.evidence import verify_recording
-from .events import CollectorHealth, UsageEvent, account, pricebook, recording_events
+from .events import (CollectorHealth, CodingToolUsageEvent, SOURCE_SCHEMAS, UsageEvent,
+                     account, pricebook, recording_events)
 
 metadata = MetaData()
 schema = Table("wb_schema", metadata, Column("version", Integer, primary_key=True))
@@ -248,7 +249,7 @@ class Database:
             return db.execute(select(teams.c.id)).first() is not None
 
     def create_source(self, team_id: str, name: str, actor: str, kind="axonllm"):
-        if kind not in {"axonllm", "bedrock"}:
+        if kind not in SOURCE_SCHEMAS:
             raise ValueError("Unsupported application connector")
         identity = uid()
         try:
@@ -270,7 +271,7 @@ class Database:
         with self.engine.begin() as db:
             source = db.execute(select(sources).where(
                 sources.c.id == source_id, sources.c.team_id == team_id).with_for_update()).mappings().first()
-            if not source or source["kind"] not in {"axonllm", "bedrock"}:
+            if not source or source["kind"] not in SOURCE_SCHEMAS:
                 raise KeyError("Source not found")
             db.execute(insert(tokens).values(id=hash_secret(raw), source_id=source_id,
                 prefix=raw[:15], created_at=now, expires_at=now + 30 * 86400, revoked=False))
@@ -291,8 +292,10 @@ class Database:
             sources.c.team_id == team_id).with_for_update()).mappings().first()
         if not source:
             raise KeyError("Source not found")
-        expected = "bedrock.usage.v1" if source["kind"] == "bedrock" else "axon.usage.v1"
-        if any(event.schema_version != expected for event in batch):
+        expected = SOURCE_SCHEMAS.get(source["kind"], "axon.usage.v1")
+        if any(event.schema_version != expected or (
+                isinstance(event, CodingToolUsageEvent) and event.coding_tool.tool != source["kind"])
+                for event in batch):
             raise Conflict("Event schema does not match this source's connector")
         policy = db.execute(select(maintenance.c.payload).where(
             maintenance.c.id == "retention_cutoff")).scalar_one_or_none()
@@ -412,7 +415,7 @@ class Database:
         with self.engine.begin() as db:
             source = db.execute(select(sources).join(tokens, sources.c.id == tokens.c.source_id)
                 .where(tokens.c.id == hash_secret(raw))).mappings().first()
-            if not source or source["kind"] not in {"axonllm", "bedrock"}:
+            if not source or source["kind"] not in SOURCE_SCHEMAS:
                 raise PermissionError("Valid ingestion token required")
             db.execute(select(sources.c.id).where(sources.c.id == source["id"]).with_for_update()).first()
             valid = db.execute(select(tokens.c.id).where(tokens.c.id == hash_secret(raw),
