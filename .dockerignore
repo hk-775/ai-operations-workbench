@@ -13,6 +13,7 @@
 !data/coding/calibration.json
 !data/coding/example-recording.json
 !data/coding/example-result.json
+!data/coding/calibration-result.json
 !data/billing-sample/
 !data/billing-sample/README.md
 !data/billing-sample/legacy-cur.csv
