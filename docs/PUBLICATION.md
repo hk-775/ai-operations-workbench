@@ -1,6 +1,21 @@
 # Publication inventory
 
-## v0.9.0 destination and distribution
+## v0.9.1 destination and distribution
+
+- Public MIT-0 repository: `hk-775/ai-operations-workbench`.
+- Release `v0.9.1`: `ai-operations-workbench-0.9.1.tar.gz` and `SHA256SUMS`.
+- Corrects current connector, billing and pilot setup instructions to require
+  schema 5 and identifies earlier schema-4 reports as historical evidence.
+- Application code, dependency pins, database schema and deployment topology are
+  unchanged from v0.9.0. No additional migration is needed from v0.9.0/schema 5.
+- Canonical download links point to v0.9.1. Existing release archives and
+  historical verification reports are preserved.
+- Customer/vendor inputs, credentials and deployment receipts remain private.
+  Real vendor-account acceptance still requires operator-provided inputs.
+
+See [release instructions and validation scope](RELEASE-0.9.1.md).
+
+## Historical v0.9.0 destination and distribution
 
 - Public MIT-0 repository: `hk-775/ai-operations-workbench`.
 - Release `v0.9.0`: `ai-operations-workbench-0.9.0.tar.gz` and `SHA256SUMS`.

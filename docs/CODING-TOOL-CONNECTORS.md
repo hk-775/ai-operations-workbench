@@ -1,6 +1,7 @@
 # Codex, Cursor and Claude Code usage
 
-Version 0.8.0 adds three core coding-tool connectors, included in the source archive.
+Three core coding-tool connectors first shipped in v0.8.0 and remain included
+in the current source archive.
 Each uses an existing scoped Workbench source
 token, a private durable outbox, retryable delivery, and collector heartbeats.
 The browser does not log in to your vendor account or start model calls.
@@ -229,9 +230,11 @@ in Usage overview. Inspect the separate amount cards and expand a coding
 activity in Task explorer. No evaluation results or accepted patches are
 inferred from these usage samples.
 
-Database schema remains 4. Existing payloads, fingerprints, accounting, source
-tokens and support/Bedrock behavior are preserved. Older servers will reject
-the new source kinds; upgrade before connecting.
+Current releases require **schema 5**. When upgrading from v0.8.0 or earlier,
+follow the [explicit backup/migration procedure](REVIEW-FIXES.md) before
+connecting. Existing payloads, fingerprints, accounting and source tokens are
+preserved. Keep the outbox and its identity during upgrades. Older servers
+reject unsupported source kinds or schema versions.
 
 ## Contract sources
 

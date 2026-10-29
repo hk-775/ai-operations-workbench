@@ -50,8 +50,10 @@ Create `.pilot/billing-collector.json` privately:
 Replace placeholders with the actual team and report scope. `bucket_owner` is
 the bucket-owning account; `account_id` is the usage account. Obtain the team UUID
 from the authenticated `/api/auth/session` response. Use the same private database
-configuration as the application. Schema 4 is required; the collector never
-migrates or initializes a workspace. Production configuration checks remain active.
+configuration as the application. Schema 5 is required; the collector never
+migrates or initializes a workspace. Follow the [upgrade procedure](REVIEW-FIXES.md)
+before starting matching application and collector versions.
+Production configuration checks remain active.
 The optional `profile` selects an AWS SDK profile for local operation; on a host
 prefer its workload role and the SDK credential chain.
 

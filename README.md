@@ -21,7 +21,7 @@ You can explore and regrade that recording without an API key or new model charg
 
 **[Watch the public demo](https://hk-775.github.io/ai-operations-workbench/)**
 · [Explore the narrated architecture](https://hk-775.github.io/ai-operations-workbench/architecture.html)
-· **[Download v0.9.0](https://github.com/hk-775/ai-operations-workbench/releases/tag/v0.9.0)**
+· **[Download v0.9.1](https://github.com/hk-775/ai-operations-workbench/releases/tag/v0.9.1)**
 · [Methodology](docs/METHODOLOGY.md) · [Architecture](docs/ARCHITECTURE.md)
 · [Production installation and two test deployments](docs/PRODUCTION.md)
 · [Team pilot setup](docs/PILOT.md) · [Roadmap](docs/ROADMAP.md)
@@ -31,7 +31,9 @@ basis, download complete routing evidence, and page through calls without
 mixing in later arrivals. It also fixes stranded connector bindings, malformed
 candidate output, and fixture-only recommendations. An explicit **schema-5
 migration** is required when upgrading from v0.8.0 or earlier.
-See the [release notes](docs/RELEASE-0.9.0.md),
+**v0.9.1** corrects outdated schema guidance in the setup guides; application
+behavior and dependencies are unchanged from v0.9.0.
+See the [current release notes](docs/RELEASE-0.9.1.md),
 [upgrade and API compatibility notes](docs/REVIEW-FIXES.md), and
 [release verification](docs/VERIFICATION-0.9.0.md).
 [Codex, Cursor and Claude Code connectors](docs/CODING-TOOL-CONNECTORS.md)
@@ -98,7 +100,7 @@ uv run --locked uvicorn workbench.app:app --host 127.0.0.1 --port 8767
 If you downloaded a release archive, extract it and start with
 `uv sync --locked --python 3.13` from the extracted directory. No provider
 credentials are needed for replay. The release includes `SHA256SUMS` to verify
-the archive; see [release verification](docs/RELEASE-0.9.0.md#download-and-verify).
+the archive; see [download verification](docs/RELEASE-0.9.1.md#download-and-verify).
 
 Open **http://127.0.0.1:8767/**.
 
@@ -343,7 +345,8 @@ evaluation results, and saved reviews in PostgreSQL.
 - [Authenticated team pilot and operations guide](docs/PILOT.md)
 - [MIT-0 license](LICENSE)
 - [Contributing](CONTRIBUTING.md), [support](SUPPORT.md), and [security reporting](SECURITY.md)
-- [v0.9.0 release notes and download verification](docs/RELEASE-0.9.0.md)
+- [v0.9.1 release notes and download verification](docs/RELEASE-0.9.1.md)
+- [v0.9.0 review-fix release notes](docs/RELEASE-0.9.0.md)
 - [v0.9.0 validation results](docs/VERIFICATION-0.9.0.md)
 
 AxonLLM, Ostiari, and AxonLLM Ledger are pinned to immutable Git revisions in `pyproject.toml` and

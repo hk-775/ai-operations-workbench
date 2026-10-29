@@ -91,11 +91,11 @@ nonstreaming contract. Source tokens accept their selected connector's schema.
 Version 0.8.0 also supports [Codex, Cursor and Claude Code usage](CODING-TOOL-CONNECTORS.md).
 Native tool amounts remain separate from the server-priced API estimate; usage
 does not establish output quality. These connectors are included from v0.8.0.
-Version 0.4.0 requires an explicit migration to schema 3 for collector
-health; v0.3.0 deployments use schema 2.
-Version 0.5.0 requires schema 4 for
-[Bedrock billing reconciliation](BILLING.md), including its explicit fictional
-example. Follow the backup and migration instructions before upgrading.
+Current releases require **schema 5** for stable call pagination.
+Earlier releases added collector health in schema 3 and
+[Bedrock billing reconciliation](BILLING.md) in schema 4.
+Follow the [backup, migration and cursor compatibility instructions](REVIEW-FIXES.md)
+before upgrading.
 
 ## First connector delivery, without model calls
 
@@ -241,7 +241,7 @@ PostgreSQL stores team accounts, revocable sessions, sources/token hashes, immut
 usage events and pricebooks, original recordings, leased jobs, evaluation results,
 saved routing reviews, and metadata audit events. The first schema migration is
 idempotent and advisory-lock protected. Schema 3 adds collector health, schema 4
-adds billing snapshots, and the unreleased review fixes add stable call snapshots
+adds billing snapshots, and v0.9.0 adds stable call snapshots
 in schema 5 while preserving prior payloads, costs and fingerprints.
 See [upgrade and cursor compatibility](REVIEW-FIXES.md). An unknown schema version
 refuses startup.

@@ -147,7 +147,7 @@ implement application-level encryption of database fields.
 
 Production refuses startup without HTTPS, OIDC, an MFA requirement, monitoring
 credentials, explicit retention periods, and the matching database schema.
-Version 0.9.0 uses schema 5; v0.5.0–v0.8.0 use schema 4. The API and worker
+Version 0.9.x uses schema 5; v0.5.0–v0.8.0 use schema 4. The API and worker
 check the schema rather than silently performing an upgrade. Install matching
 images for the app, worker, and maintenance service.
 The v0.3.0 release used schema 2. Version 0.4.0 adds collector
@@ -155,7 +155,7 @@ health in schema 3. Version 0.5.0 adds billing snapshots and declared
 comparisons in schema 4; follow the backup/migrate/restart and rollback instructions
 in [the billing guide](BILLING.md#access-retention-and-upgrade). Billing revisions
 and mappings follow evidence retention. The v0.4.0 download remains schema 3.
-For v0.9.0, follow [the schema-5 upgrade notes](REVIEW-FIXES.md) before
+For v0.9.x, follow [the schema-5 upgrade notes](REVIEW-FIXES.md) before
 starting services. Do not mix schema-4 and schema-5 app/worker images.
 
 ## Monitor and operate
