@@ -96,11 +96,12 @@ Ledger schema normalization and Workbench-owned snapshot persistence. Administra
 import complete monthly CSV exports and declare source/model scopes. The screen
 shows precise differences, incomplete comparisons, credits/fees and other
 unassigned charges, revisions, and exportable provenance. A fictional example
-exercises the full flow without model calls. Schema 4 is required; this feature
-is not included in the v0.4.0 release.
-The existing seeded and clean AWS test workspaces have been
-[upgraded and verified on schema 4](VERIFICATION-HOSTED-BILLING.md), including
-fresh restore checks and the isolated fictional billing example.
+exercises the full flow without model calls. Billing first required schema 4;
+current releases require [schema 5](REVIEW-FIXES.md). This feature is not
+included in the v0.4.0 release.
+The [historical schema-4 hosted acceptance](VERIFICATION-HOSTED-BILLING.md)
+records the v0.5.0 upgrade, fresh restore checks and isolated fictional billing
+example. It does not establish the version running in any installation today.
 
 Version 0.6.0 adds [independent billing acceptance checks](BILLING-ACCEPTANCE.md),
 a [downloadable fictional sample](../data/billing-sample/README.md), and
