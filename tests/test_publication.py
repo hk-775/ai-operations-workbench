@@ -28,6 +28,9 @@ def test_documentation_local_links_and_editable_architecture():
     hosted = ElementTree.parse(ROOT / "docs/architecture/aws-hosted-test.drawio")
     assert hosted.getroot().tag == "mxfile"
     assert (ROOT / "docs/architecture/aws-hosted-test.png").read_bytes().startswith(b"\x89PNG\r\n\x1a\n")
+    acceptance = ElementTree.parse(ROOT / "docs/architecture/aws-acceptance.drawio")
+    assert len(acceptance.findall(".//mxCell[@vertex='1']")) == 9
+    assert (ROOT / "docs/architecture/aws-acceptance.png").read_bytes().startswith(b"\x89PNG\r\n\x1a\n")
 
 
 def test_downloaded_source_includes_hosted_deployment_and_excludes_private_state(tmp_path):
@@ -44,6 +47,9 @@ def test_downloaded_source_includes_hosted_deployment_and_excludes_private_state
                  "deploy/aws/configure_host.py", "deploy/aws/hosted-test.json",
                  "deploy/aws/hosted.guard", "docs/architecture/aws-hosted-test.drawio",
                  "docs/architecture/aws-hosted-test.png", "web/architecture.html",
+                 "deploy/aws/billing-export.json", "deploy/aws/recovery-drill.json",
+                 "deploy/aws/recovery_host.py", "docs/architecture/aws-acceptance.drawio",
+                 "docs/architecture/aws-acceptance.png",
                  "web/architecture.css", "web/architecture.js"):
         target = tmp_path / name
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -66,6 +72,9 @@ def test_downloaded_source_includes_hosted_deployment_and_excludes_private_state
         assert "deploy/aws/configure_host.py" in paths
         assert "docs/architecture/aws-hosted-test.drawio" in paths
         assert "docs/architecture/aws-hosted-test.png" in paths
+        assert {"deploy/aws/billing-export.json", "deploy/aws/recovery-drill.json",
+                "deploy/aws/recovery_host.py", "docs/architecture/aws-acceptance.drawio",
+                "docs/architecture/aws-acceptance.png"} <= paths
         assert {"web/architecture.html", "web/architecture.css", "web/architecture.js"} <= paths
         assert set(package.DATA_FILES) <= paths
         assert not any({".pilot", ".state", "__pycache__"} & set(Path(path).parts)
@@ -90,7 +99,8 @@ def test_public_build_excludes_application_and_private_files_and_verifies_media(
     output = tmp_path/"artifacts/pages/ai-operations-workbench"
     paths = {p.relative_to(output).as_posix() for p in output.rglob("*") if p.is_file()}
     assert {"index.html", "demo.html", "architecture.html", "media/workbench-demo.mp4",
-            "architecture/aws-hosted-test.drawio", "architecture/aws-hosted-test.png"} <= paths
+            "architecture/aws-hosted-test.drawio", "architecture/aws-hosted-test.png",
+            "architecture/aws-acceptance.drawio", "architecture/aws-acceptance.png"} <= paths
     assert not {"pilot.html", "pilot.js", "app.js", "media/private.json", ".env",
                 ".pilot/logins.json", "media/narration/private.mp3"} & paths
     assert not any(b"PRIVATE_TEST_SENTINEL" in p.read_bytes() for p in output.rglob("*") if p.is_file())

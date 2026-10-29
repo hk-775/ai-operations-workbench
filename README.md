@@ -21,18 +21,18 @@ You can explore and regrade that recording without an API key or new model charg
 
 **[Watch the public demo](https://hk-775.github.io/ai-operations-workbench/)**
 · [Explore the narrated architecture](https://hk-775.github.io/ai-operations-workbench/architecture.html)
-· **[Download v0.6.0](https://github.com/hk-775/ai-operations-workbench/releases/tag/v0.6.0)**
+· **[Download v0.7.0](https://github.com/hk-775/ai-operations-workbench/releases/tag/v0.7.0)**
 · [Methodology](docs/METHODOLOGY.md) · [Architecture](docs/ARCHITECTURE.md)
 · [Production installation and two test deployments](docs/PRODUCTION.md)
 · [Team pilot setup](docs/PILOT.md) · [Roadmap](docs/ROADMAP.md)
 
-**New in v0.6.0:** native AxonLLM Ledger billing aggregation, scheduled versioned
-CUR collection, coding-task evidence, and reproducible reference acceptance.
-Prepare private billing inputs and an 18-task coding calibration packet without
-model calls. Schema remains **4**; no new migration is required from v0.5.0.
-See the [release notes](docs/RELEASE-0.6.0.md),
-[preparation guide](docs/PREPARATION.md), and
-[release verification](docs/VERIFICATION-0.6.0.md).
+**New in v0.7.0:** repeated coding comparisons with frozen datasets, a
+[recorded 18-task calibration](docs/CODING-CALIBRATION-2026-10-29.md), and optional
+private billing-export and fresh-host recovery tools. Schema remains **4**;
+no new migration is required from v0.5.0 or v0.6.0.
+See the [release notes](docs/RELEASE-0.7.0.md),
+[acceptance operations](docs/ACCEPTANCE-OPERATIONS.md), and
+[release verification](docs/VERIFICATION-0.7.0.md).
 The narrated demo and isolated seeded/clean deployment recipes remain included.
 Deployment addresses and credentials belong to each installer and are not published.
 
@@ -89,7 +89,7 @@ uv run --locked uvicorn workbench.app:app --host 127.0.0.1 --port 8767
 If you downloaded a release archive, extract it and start with
 `uv sync --locked --python 3.13` from the extracted directory. No provider
 credentials are needed for replay. The release includes `SHA256SUMS` to verify
-the archive; see [release verification](docs/RELEASE-0.6.0.md#download-and-verify).
+the archive; see [release verification](docs/RELEASE-0.7.0.md#download-and-verify).
 
 Open **http://127.0.0.1:8767/**.
 
@@ -157,6 +157,20 @@ Use the [private preparation tools](docs/PREPARATION.md) to collect the missing
 billing inputs and freeze a larger coding calibration schedule. Run the
 [reference acceptance drill](docs/REFERENCE-ACCEPTANCE.md) for concurrent HTTP,
 worker recovery and a separate-container restore before customer acceptance.
+
+**Included in v0.7.0:** import and replay a frozen expanded coding dataset with
+complete planned coverage, repeated runs, and bounded model calls.
+The [recorded calibration](docs/CODING-CALIBRATION-2026-10-29.md) includes all
+165 calls and their acceptance checks; it is not a general model ranking.
+[Optional AWS acceptance tools](docs/ACCEPTANCE-OPERATIONS.md) provision a private
+versioned billing export and recover actual backups on independent compute.
+First report delivery, representative customer evidence, and human alert
+acknowledgment remain distinct acceptance steps.
+
+![Optional account-owned AWS billing and recovery services](docs/architecture/aws-acceptance.png)
+
+[Edit the acceptance topology](docs/architecture/aws-acceptance.drawio).
+The original hosted deployment remains a single-host test environment.
 
 ## What is working
 
@@ -309,8 +323,8 @@ evaluation results, and saved reviews in PostgreSQL.
 - [Authenticated team pilot and operations guide](docs/PILOT.md)
 - [MIT-0 license](LICENSE)
 - [Contributing](CONTRIBUTING.md), [support](SUPPORT.md), and [security reporting](SECURITY.md)
-- [v0.6.0 release notes and download verification](docs/RELEASE-0.6.0.md)
-- [v0.6.0 validation results](docs/VERIFICATION-0.6.0.md)
+- [v0.7.0 release notes and download verification](docs/RELEASE-0.7.0.md)
+- [v0.7.0 validation results](docs/VERIFICATION-0.7.0.md)
 
 AxonLLM, Ostiari, and AxonLLM Ledger are pinned to immutable Git revisions in `pyproject.toml` and
 `uv.lock`. They remain separate projects; this app does not patch their source.

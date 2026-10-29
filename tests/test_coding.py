@@ -109,6 +109,10 @@ def test_read_only_result_preview_auth_csrf_and_no_usage_side_effects(pilot):
     document = evaluate(example(), ContractRunner())
     with TestClient(pilot.app, base_url=pilot.settings.public_origin) as client:
         assert client.get("/api/pilot/coding/example").status_code == 401
+        assert client.get("/api/pilot/coding/calibration").status_code == 401
+    calibration = pilot.client.get("/api/pilot/coding/calibration")
+    assert calibration.status_code == 200
+    assert len(calibration.json()["tasks"]) == 162
     assert pilot.client.post("/api/pilot/coding/preview", json=document).status_code == 200
     assert pilot.client.post("/api/pilot/coding/preview", json=document,
                              headers={"X-Workbench-CSRF": ""}).status_code == 403
@@ -118,7 +122,8 @@ def test_read_only_result_preview_auth_csrf_and_no_usage_side_effects(pilot):
     assert pilot.db.usage(pilot.team)["events"] == 0
 
 
-def test_opt_in_model_recorder_uses_same_cases_no_hidden_feedback_and_preserves_failed_cost(tmp_path):
+@pytest.mark.parametrize("failure", ["provider_error", "unexpected_model"])
+def test_opt_in_model_recorder_uses_same_cases_no_hidden_feedback_and_preserves_failed_cost(tmp_path, failure):
     class Encoder:
         def encode(self, value):
             return [0] * len(value)
@@ -136,29 +141,32 @@ def test_opt_in_model_recorder_uses_same_cases_no_hidden_feedback_and_preserves_
             partial = json.loads(output.with_suffix(".partial.json").read_text())
             assert partial["samples"][-1]["attempts"][-1]["calls"][0]["api_estimate_usd"] is None
             self.calls.append(copy.deepcopy(request))
-            if len(self.calls) == 1:
+            if failure == "provider_error":
                 raise RuntimeError("private provider error")
             case = json.loads(request["messages"][1]["content"])
             assert "acceptance_tests" not in case and "reference" not in case
-            original = next(c for c in dataset()["cases"] if c["prompt"] == case["task"])
+            original = next(c for c in dataset()["cases"] if c["source"] == case["files"]["solution.py"])
             return SimpleNamespace(id=f"response-{len(self.calls)}",
-                                   model="unexpected-model" if len(self.calls) == 2 else request["model"], usage=Usage(),
+                                   model="unexpected-model", usage=Usage(),
                                    choices=[{"message": {"content": original["reference"]}}])
     output = tmp_path / "recording.json"
     router = Router()
     result = asyncio.run(collect(output, [MODELS[0]], Decimal("5"), 2, ContractRunner(),
                                  router=router, encoding=Encoder()))
-    assert len(result["samples"]) == 6
+    assert result["schema"] == "workbench.coding.recording.v2"
+    assert len(result["planned_samples"]) == 6
+    assert "fixed-point" in result["dataset"]["cases"][0]["prompt"]
+    assert len(result["samples"]) == 1
     assert result["samples"][0]["attempts"][0]["calls"][0]["api_estimate_usd"] is None
-    assert result["samples"][1]["attempts"][0]["calls"][0]["response_model"] == "unexpected-model"
-    assert result["samples"][1]["attempts"][0]["calls"][0]["api_estimate_usd"] is None
-    assert result["samples"][1]["attempts"][0]["replacement"] == dataset()["cases"][1]["source"]
-    assert len(router.calls) == 6
+    if failure == "unexpected_model":
+        assert result["samples"][0]["attempts"][0]["calls"][0]["response_model"] == "unexpected-model"
+        assert result["samples"][0]["attempts"][0]["replacement"] == dataset()["cases"][0]["source"]
+    assert len(router.calls) == 1
     assert "private provider error" not in output.read_text()
     with pytest.raises(ValueError, match="budget"):
         asyncio.run(collect(tmp_path/"small.json", [MODELS[0]], Decimal("0.000001"), 2, ContractRunner(),
                             router=router, encoding=Encoder()))
-    assert len(router.calls) == 6  # Insufficient budget never dispatches.
+    assert len(router.calls) == 1  # Insufficient budget never dispatches.
 
 
 @pytest.mark.skipif(not os.environ.get("WORKBENCH_CODING_IMAGE"), reason="Explicit Docker sandbox verification")

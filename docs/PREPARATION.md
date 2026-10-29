@@ -79,9 +79,9 @@ denominator; report cost completeness, cost per accepted patch, regressions,
 per-task paired outcomes and uncertainty across distinct tasks. Report human
 review separately. Hardware/electricity stays unmeasured.
 
-The expanded packet is preparatory. The existing
-[six-task recorder and result viewer](CODING-EVALS.md) retain their original
-dataset contract; they cannot import an expanded packet as a recording.
-This release does not claim an extended live collector or real model results.
-For a first paid pilot, the existing bounded six-task collector is available
+The packet itself contains no model results. The
+[recorder and result viewer](CODING-EVALS.md) support its frozen dataset through
+version 2 recordings. Pass `--dataset`, `--repetitions`, and `--seed` to collect
+the full schedule, then replay the recording before importing the result.
+The bounded six-task collector remains available
 after credentials, exact model choice and spending authorization are supplied.

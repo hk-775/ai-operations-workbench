@@ -1,0 +1,29 @@
+let buckets = Resources.*[ Type == "AWS::S3::Bucket" ]
+let servers = Resources.*[ Type == "AWS::EC2::Instance" ]
+let groups = Resources.*[ Type == "AWS::EC2::SecurityGroup" ]
+let reports = Resources.*[ Type == "AWS::CUR::ReportDefinition" ]
+
+rule private_billing when %buckets !empty {
+    %buckets.Properties.PublicAccessBlockConfiguration.BlockPublicAcls == true
+    %buckets.Properties.PublicAccessBlockConfiguration.IgnorePublicAcls == true
+    %buckets.Properties.PublicAccessBlockConfiguration.BlockPublicPolicy == true
+    %buckets.Properties.PublicAccessBlockConfiguration.RestrictPublicBuckets == true
+    %buckets.Properties.BucketEncryption exists
+    %buckets.Properties.VersioningConfiguration.Status == "Enabled"
+    %buckets.DeletionPolicy == "Retain"
+}
+rule versioned_csv when %reports !empty {
+    %reports.Properties.Format == "textORcsv"
+    %reports.Properties.Compression == "GZIP"
+    %reports.Properties.ReportVersioning == "CREATE_NEW_REPORT"
+}
+rule disposable_recovery when %servers !empty {
+    %servers.Properties.MetadataOptions.HttpTokens == "required"
+    %servers.Properties.MetadataOptions.HttpPutResponseHopLimit == 1
+    %servers.Properties.BlockDeviceMappings.*.Ebs.Encrypted == true
+    %servers.Properties.BlockDeviceMappings.*.Ebs.DeleteOnTermination == true
+    %servers.Properties.InstanceInitiatedShutdownBehavior == "terminate"
+    %servers.Properties.CreditSpecification.CPUCredits == "standard"
+    %servers.DeletionPolicy == "Delete"
+    %groups.Properties.SecurityGroupIngress empty
+}

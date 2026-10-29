@@ -67,13 +67,56 @@ This bounds the configured-price plan, not an AWS/OpenAI invoice. Provider error
 without usage keep cost unknown. Every in-flight call is written to an owner-only
 partial recording before dispatch; interrupted recordings are incomplete evidence.
 Output paths cannot overwrite prior recordings.
+New recordings use version 2 even for the six-task run, so corrected prompt wording
+and the complete schedule travel with the evidence. Historical version 1
+recordings and the teaching fixture remain readable. Any provider failure or
+unexpected routed model stops further paid calls.
 
 The existing router uses Chat Completions for its configured non-reasoning
 models. OpenAI's [request and usage reference](https://developers.openai.com/api/reference/resources/chat/subresources/completions/methods/create)
 documents token limits and usage fields; its legacy `max_tokens` parameter is
 not suitable for arbitrary reasoning models. Adding models/providers requires
 reviewing the router contract, rates, usage categories and budget assumptions.
-No paid model calls were made to verify this milestone.
+
+## Run the larger frozen comparison
+
+Prepare and inspect the 18-task packet using [the preparation guide](PREPARATION.md).
+Its reference repairs must pass every test; every broken snapshot must fail at
+least one test. The collector rechecks these baselines before dispatching any
+paid request. Then collect the same task/repetition blocks across all candidates:
+
+```sh
+uv run --locked python -m workbench.coding_collect \
+  --dataset .pilot/coding-calibration/operator-dataset.json \
+  --repetitions 3 --seed 20261029 \
+  --model gpt-4.1-2025-04-14 \
+  --model gpt-4.1-mini-2025-04-14 \
+  --model gpt-4o-mini-2024-07-18 \
+  --budget-usd 5 --max-attempts 2 --allow-model-calls \
+  --image python:3.13-alpine@sha256:bf12ecc0bea3f171d55145dd02c78b5eeb09f30ee2ac9cc2b4c9e4e8f5e30741 \
+  --output .pilot/coding-calibration/model-recording.json
+uv run --locked python -m workbench.coding evaluate \
+  --recording .pilot/coding-calibration/model-recording.json \
+  --image python:3.13-alpine@sha256:bf12ecc0bea3f171d55145dd02c78b5eeb09f30ee2ac9cc2b4c9e4e8f5e30741 \
+  --output .pilot/coding-calibration/model-result.json
+```
+
+The default rates reserve a maximum configured-price envelope of USD 4.4328384
+for this plan. Model availability and pricing still need review before execution.
+These pinned snapshots support comparison with prior Workbench recordings; they
+are not a claim to use the latest models.
+
+The resulting `workbench.coding.recording.v2` embeds the validated dataset and
+the complete planned schedule. Task blocks are shuffled reproducibly and candidate
+positions rotate to distribute order effects. Each candidate must cover the same
+cases and repetitions. If attribution or cost becomes unknown, collection stops;
+missing runs and entirely unrun candidates remain visible as incomplete coverage.
+Preview the evaluated JSON in **Coding evaluations**, including private datasets
+that follow the same bounded Python function contract.
+
+Three repetitions of 18 tasks are **18 distinct tasks**, not 54 independent
+problems. Results establish calibration behavior; a customer routing decision
+still needs representative private tasks and independent review.
 
 ## Contract and accounting
 
@@ -90,7 +133,9 @@ in [the authored recording](../data/coding/example-recording.json). Keep
 stable identity, estimates or unknown costs, latency, final source replacement,
 attempt sequence, and optional original end-to-end duration. Repetitions are
 explicit. This is an artifact interface, not a native Codex/Cursor/Claude Code
-subscription connector.
+subscription connector. Version 2 adds `dataset` and `planned_samples` and
+supports a frozen operator dataset; version 1 retains the installed six-case
+contract. Import never executes code on the web server.
 
 Only `solution.py` can change. Each attempt starts from the frozen case snapshot.
 The last submitted patch determines acceptance; an earlier pass cannot hide a

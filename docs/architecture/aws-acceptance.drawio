@@ -1,0 +1,59 @@
+<?xml version='1.0' encoding='utf-8'?>
+<mxfile host="app.diagrams.net">
+  <diagram name="Optional AWS acceptance topology">
+    <mxGraphModel page="1" pageWidth="1350" pageHeight="780">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="cur-billing" value="delivery" edge="1" parent="1" source="cur" target="billing" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7c3aed;endArrow=block;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="billing-collector" value="read only" edge="1" parent="1" source="billing" target="collector" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7c3aed;endArrow=block;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="host-backups" value="backup" edge="1" parent="1" source="host" target="backups" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7c3aed;endArrow=block;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="backups-restore" value="read only" edge="1" parent="1" source="backups" target="restore" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7c3aed;endArrow=block;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="ssm-restore" value="operate" edge="1" parent="1" source="ssm" target="restore" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7c3aed;endArrow=block;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="host-sns" value="health" edge="1" parent="1" source="host" target="sns" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7c3aed;endArrow=block;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="sns-email" value="confirm" edge="1" parent="1" source="sns" target="email" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7c3aed;endArrow=block;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="cur" value="AWS Cost and Usage Reports&#10;Optional hourly CSV/gzip export" vertex="1" parent="1" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#e0f2fe;strokeColor=#c4b5fd;fontColor=#1c1917;fontSize=17;">
+          <mxGeometry as="geometry" x="70" y="130" width="350" height="100" />
+        </mxCell>
+        <mxCell id="billing" value="Amazon S3 · billing&#10;Private, encrypted, versioned" vertex="1" parent="1" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#e0f2fe;strokeColor=#c4b5fd;fontColor=#1c1917;fontSize=17;">
+          <mxGeometry as="geometry" x="500" y="130" width="350" height="100" />
+        </mxCell>
+        <mxCell id="collector" value="Workbench billing collector&#10;Owner-scoped import + Ledger checks" vertex="1" parent="1" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#ede9fe;strokeColor=#c4b5fd;fontColor=#1c1917;fontSize=17;">
+          <mxGeometry as="geometry" x="930" y="130" width="350" height="100" />
+        </mxCell>
+        <mxCell id="host" value="Existing Amazon EC2 host&#10;Demo + clean workspaces keep serving" vertex="1" parent="1" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#fef9c3;strokeColor=#c4b5fd;fontColor=#1c1917;fontSize=17;">
+          <mxGeometry as="geometry" x="70" y="380" width="350" height="100" />
+        </mxCell>
+        <mxCell id="backups" value="Amazon S3 · backups&#10;Scheduled dumps + private controls" vertex="1" parent="1" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#e0f2fe;strokeColor=#c4b5fd;fontColor=#1c1917;fontSize=17;">
+          <mxGeometry as="geometry" x="500" y="380" width="350" height="100" />
+        </mxCell>
+        <mxCell id="restore" value="Disposable Amazon EC2 host&#10;Fresh disks · no ingress · SSM only" vertex="1" parent="1" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#ede9fe;strokeColor=#c4b5fd;fontColor=#1c1917;fontSize=17;">
+          <mxGeometry as="geometry" x="930" y="380" width="350" height="100" />
+        </mxCell>
+        <mxCell id="ssm" value="AWS Systems Manager&#10;Readiness, table hashes, cleanup" vertex="1" parent="1" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#ccfbf1;strokeColor=#c4b5fd;fontColor=#1c1917;fontSize=17;">
+          <mxGeometry as="geometry" x="930" y="570" width="350" height="100" />
+        </mxCell>
+        <mxCell id="sns" value="Amazon CloudWatch + SNS&#10;Existing alarms and machine receipts" vertex="1" parent="1" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#ede9fe;strokeColor=#c4b5fd;fontColor=#1c1917;fontSize=17;">
+          <mxGeometry as="geometry" x="70" y="570" width="350" height="100" />
+        </mxCell>
+        <mxCell id="email" value="Owner-selected email&#10;Optional · confirmation + human reply" vertex="1" parent="1" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#fafaf9;strokeColor=#c4b5fd;fontColor=#1c1917;fontSize=17;">
+          <mxGeometry as="geometry" x="500" y="570" width="350" height="100" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

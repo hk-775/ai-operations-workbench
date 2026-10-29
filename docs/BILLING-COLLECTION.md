@@ -82,7 +82,10 @@ becomes stale after two intervals. Restart retries the current complete assembly
 Private snapshot exports include S3 keys, ETags, optional version IDs, compressed
 part hashes, and manifest hash. They are provenance, not invoice signatures.
 
-No real AWS export was available during implementation. S3 protocol, changing
+No real AWS export was available during the original implementation. Version 0.7
+adds an [optional private export stack](ACCEPTANCE-OPERATIONS.md), deployed in the
+selected acceptance account. First delivery and real-data validation remain pending.
+S3 protocol, changing
 assemblies, decompression limits, replay, refresh, concurrent writes, and failure
 recovery are checked with authored objects and SDK stubs. Customer-host scheduling
 and real-data acceptance still require the customer's export and access.

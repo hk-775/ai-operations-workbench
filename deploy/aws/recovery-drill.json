@@ -1,0 +1,196 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Disposable SSM-only Workbench recovery host; original backups are read-only and the running host is untouched.",
+  "Metadata": {
+    "AWSToolsMetrics": {
+      "AWSAgentToolkit": "aws-cloudformation@3"
+    }
+  },
+  "Parameters": {
+    "VpcId": {
+      "Type": "AWS::EC2::VPC::Id"
+    },
+    "SubnetId": {
+      "Type": "AWS::EC2::Subnet::Id"
+    },
+    "ImageId": {
+      "Type": "AWS::EC2::Image::Id"
+    },
+    "BackupBucket": {
+      "Type": "String",
+      "AllowedPattern": "[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]"
+    },
+    "DrillPrefix": {
+      "Type": "String",
+      "AllowedPattern": "bootstrap/recovery-[a-z0-9-]+/"
+    }
+  },
+  "Resources": {
+    "RecoveryRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "ec2.amazonaws.com"
+              },
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        },
+        "ManagedPolicyArns": [
+          {
+            "Fn::Sub": "arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore"
+          }
+        ],
+        "Policies": [
+          {
+            "PolicyName": "recovery-objects",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": "s3:GetObject",
+                  "Resource": [
+                    {
+                      "Fn::Sub": "arn:${AWS::Partition}:s3:::${BackupBucket}/backups/*"
+                    },
+                    {
+                      "Fn::Sub": "arn:${AWS::Partition}:s3:::${BackupBucket}/${DrillPrefix}*"
+                    }
+                  ]
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": "s3:PutObject",
+                  "Resource": {
+                    "Fn::Sub": "arn:${AWS::Partition}:s3:::${BackupBucket}/${DrillPrefix}evidence/*"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "Metadata": {
+        "com.aws.cloudformation.Context": {
+          "why": "Read backups and this drill's bootstrap; write receipts only.",
+          "must": [
+            "No backup writes, metrics publishing, billing access or embedded AWS credentials."
+          ]
+        }
+      }
+    },
+    "RecoveryProfile": {
+      "Type": "AWS::IAM::InstanceProfile",
+      "Properties": {
+        "Roles": [
+          {
+            "Ref": "RecoveryRole"
+          }
+        ]
+      },
+      "Metadata": {
+        "com.aws.cloudformation.Context": {
+          "why": "Supply temporary credentials to host automation.",
+          "must": []
+        }
+      }
+    },
+    "RecoverySecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "SSM-only recovery drill; no ingress",
+        "VpcId": {
+          "Ref": "VpcId"
+        },
+        "SecurityGroupIngress": []
+      },
+      "Metadata": {
+        "com.aws.cloudformation.Context": {
+          "why": "Outbound management and dependency downloads; no public listener or SSH.",
+          "must": [
+            "Never reuse or widen the original host security group."
+          ]
+        }
+      }
+    },
+    "RecoveryHost": {
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "ImageId": {
+          "Ref": "ImageId"
+        },
+        "InstanceType": "t3a.large",
+        "SubnetId": {
+          "Ref": "SubnetId"
+        },
+        "SecurityGroupIds": [
+          {
+            "Ref": "RecoverySecurityGroup"
+          }
+        ],
+        "IamInstanceProfile": {
+          "Ref": "RecoveryProfile"
+        },
+        "CreditSpecification": {
+          "CPUCredits": "standard"
+        },
+        "InstanceInitiatedShutdownBehavior": "terminate",
+        "MetadataOptions": {
+          "HttpTokens": "required",
+          "HttpPutResponseHopLimit": 1
+        },
+        "BlockDeviceMappings": [
+          {
+            "DeviceName": "/dev/xvda",
+            "Ebs": {
+              "VolumeSize": 60,
+              "VolumeType": "gp3",
+              "Encrypted": true,
+              "DeleteOnTermination": true
+            }
+          }
+        ],
+        "UserData": {
+          "Fn::Base64": "#!/bin/bash\nset -euo pipefail\n# Terminate the disposable host even if the operator loses its session.\nsystemd-run --unit=workbench-recovery-deadline --on-active=2h /sbin/shutdown -h now\ndnf install -y docker python3\nsystemctl enable --now docker\nuseradd --create-home --groups docker workbench\ninstall -d -m 700 -o workbench -g workbench /opt/workbench\ninstall -d -m 755 /usr/local/lib/docker/cli-plugins\ncd /usr/local/lib/docker/cli-plugins\ncurl --fail --location --retry 3 https://github.com/docker/compose/releases/download/v2.40.3/docker-compose-linux-x86_64 -o docker-compose\nprintf 'dba9d98e1ba5bfe11d88c99b9bd32fc4a0624a30fafe68eea34d61a3e42fd372  docker-compose\\n' | sha256sum --check --status\ncurl --fail --location --retry 3 https://github.com/docker/buildx/releases/download/v0.38.1/buildx-v0.38.1.linux-amd64 -o docker-buildx\nprintf 'e25d5cd675092bb5d1d03632fdc46cdf3fede7b514dc5f023a105e00d3ce5ad4  docker-buildx\\n' | sha256sum --check --status\nchmod 755 docker-compose docker-buildx\ntouch /opt/workbench/bootstrap-ready\nchown workbench:workbench /opt/workbench/bootstrap-ready\n"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": {
+              "Fn::Sub": "${AWS::StackName}-disposable"
+            }
+          },
+          {
+            "Key": "Workload",
+            "Value": "workbench-recovery-drill"
+          }
+        ]
+      },
+      "Metadata": {
+        "com.aws.cloudformation.Context": {
+          "why": "Rebuild on independent compute and disks; automatically terminate after two hours.",
+          "must": [
+            "Restore only into new volumes; no original timers or public DNS changes.",
+            "Retain receipts off-host before deleting the disposable stack."
+          ]
+        }
+      },
+      "DeletionPolicy": "Delete",
+      "UpdateReplacePolicy": "Delete"
+    }
+  },
+  "Outputs": {
+    "InstanceId": {
+      "Value": {
+        "Ref": "RecoveryHost"
+      },
+      "Description": "Disposable SSM target"
+    }
+  }
+}

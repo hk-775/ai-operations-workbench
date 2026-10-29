@@ -41,6 +41,15 @@ added on `main` after the v0.2.0 release.
 ![Implemented AWS hosted test topology](architecture/aws-hosted-test.png)
 
 [Edit the AWS diagram in draw.io](architecture/aws-hosted-test.drawio).
+
+The optional [billing/recovery tools](ACCEPTANCE-OPERATIONS.md) extend acceptance
+without changing the primary hosted topology:
+
+![Optional AWS acceptance services](architecture/aws-acceptance.png)
+
+[Edit the acceptance topology](architecture/aws-acceptance.drawio).
+Billing delivery is asynchronous. Recovery uses a disposable SSM-only host with
+independent disks and read-only backup access; it does not provide automatic failover.
 The topology is defined in `deploy/aws/hosted-test.json` and was exercised by the
 [dated hosted acceptance run](VERIFICATION-HOSTED-2026-10-26.md).
 It shows company-neutral service boundaries; installation identifiers are private.

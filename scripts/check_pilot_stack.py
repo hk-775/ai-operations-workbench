@@ -67,6 +67,10 @@ with tempfile.TemporaryDirectory(prefix="pilot-bootstrap-check-") as directory:
         coding = client.get("/api/pilot/coding/example")
         assert coding.status_code == 200, "Bundled coding evidence is unavailable"
         assert client.post("/api/pilot/coding/preview", json=coding.json()).status_code == 200
+        calibration = client.get("/api/pilot/coding/calibration")
+        assert calibration.status_code == 200, "Bundled recorded calibration is unavailable"
+        assert client.post("/api/pilot/coding/preview", json=calibration.json()).status_code == 200
+        assert client.get("/api/pilot/usage").json()["events"] == 0, "Preview changed workspace usage"
         sample = client.get("/api/pilot/billing/example-files")
         assert sample.status_code == 200, "Bundled billing sample is unavailable"
         with zipfile.ZipFile(io.BytesIO(sample.content)) as bundle:
@@ -84,7 +88,7 @@ with tempfile.TemporaryDirectory(prefix="pilot-bootstrap-check-") as directory:
         summary = client.get("/api/pilot/usage").json()
         assert summary["events"] == 144 and summary["api_estimate_usd"] == "0.088074750"
 print(json.dumps({"bootstrap":"passed","nonsuperuser_role":"passed","container_evaluation":"passed",
-                  "coding_preview":"passed","billing_sample":"passed"}))
+                  "coding_preview":"passed","recorded_calibration":"passed","billing_sample":"passed"}))
 '''
 
 verify = r'''

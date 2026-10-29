@@ -13,6 +13,7 @@ FILES = ("README.md","LICENSE","SECURITY.md","SUPPORT.md","CONTRIBUTING.md","COD
 DIRECTORIES = ("workbench","scripts","config","web","docs","tests",".github")
 DATA_FILES = ("data/cases.json", "data/model-comparison.json",
               "data/coding/cases.json", "data/coding/calibration.json", "data/coding/example-recording.json", "data/coding/example-result.json",
+              "data/coding/calibration-recording.json", "data/coding/calibration-result.json",
               "data/billing-sample/README.md", "data/billing-sample/legacy-cur.csv",
               "data/billing-sample/cur-2.0.csv", "data/billing-sample/matching-usage.json",
               "data/billing-sample/expected-totals.json", "data/billing-sample/sample-check.json")

@@ -16,7 +16,7 @@ import uuid
 from datetime import datetime, timezone
 from decimal import Decimal
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -114,15 +114,62 @@ class Sample(Strict):
 
 
 class Recording(Strict):
-    schema_name: Literal["workbench.coding.recording.v1"] = Field(alias="schema")
+    schema_name: Literal["workbench.coding.recording.v1", "workbench.coding.recording.v2"] = Field(alias="schema")
     mode: Literal["fixture", "recorded"]
     dataset_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
+    case_dataset: dict | None = Field(default=None, alias="dataset")
+    planned_samples: list[dict] | None = Field(default=None, max_length=1000)
     provenance: str = Field(min_length=1, max_length=2000)
-    samples: list[Sample] = Field(min_length=1, max_length=120)
+    samples: list[Sample] = Field(min_length=1, max_length=1000)
+
+
+class TestCase(Strict):
+    input: Any
+    expected: Any
+
+
+class CodingCase(Strict):
+    id: str = Field(pattern=r"^[a-zA-Z0-9_.-]{1,100}$")
+    title: str = Field(min_length=1, max_length=200)
+    prompt: str = Field(min_length=1, max_length=8000)
+    source: str = Field(min_length=1, max_length=32_000)
+    reference: str = Field(min_length=1, max_length=32_000)
+    public_tests: list[TestCase] = Field(min_length=1, max_length=64)
+    acceptance_tests: list[TestCase] = Field(min_length=1, max_length=128)
+
+
+class CodingDataset(Strict):
+    schema_name: Literal["workbench.coding.cases.v1", "workbench.coding.calibration.v1",
+                         "workbench.coding.private.v1"] = Field(alias="schema")
+    cases: list[CodingCase] = Field(min_length=1, max_length=100)
 
 
 def dataset():
     return read_json(DATA / "cases.json")
+
+
+def validate_dataset(value):
+    """Validate data only. References and candidate code are never executed here."""
+    CodingDataset.model_validate(value)
+    identities = [case["id"] for case in value["cases"]]
+    if len(identities) != len(set(identities)):
+        raise ValueError("Duplicate coding task identity")
+    fingerprint(value)  # Reject non-finite numbers and non-JSON test values.
+    if len(json.dumps(value).encode()) > 4_000_000:
+        raise ValueError("Coding dataset exceeds its byte limit")
+    return value
+
+
+def recording_dataset(value):
+    version = value.schema_name if isinstance(value, Recording) else value["schema"]
+    embedded = value.case_dataset if isinstance(value, Recording) else value.get("dataset")
+    if version == "workbench.coding.recording.v1":
+        if embedded is not None:
+            raise ValueError("Version 1 recordings cannot replace the installed dataset")
+        return dataset()
+    if version != "workbench.coding.recording.v2" or embedded is None:
+        raise ValueError("Version 2 recordings require an embedded frozen dataset")
+    return validate_dataset(embedded)
 
 
 def prompt(case):
@@ -134,15 +181,41 @@ def prompt(case):
 
 def verify_recording(value):
     recording = Recording.model_validate(value)
-    cases = dataset()
+    cases = recording_dataset(recording)
     if recording.dataset_sha256 != fingerprint(cases):
         raise ValueError("Recording dataset differs from the installed coding contract")
     known = {case["id"] for case in cases["cases"]}
+    planned = None
+    if recording.schema_name == "workbench.coding.recording.v2":
+        if not recording.planned_samples:
+            raise ValueError("Version 2 recordings require the complete planned schedule")
+        planned = set()
+        for row in recording.planned_samples:
+            if set(row) != {"candidate", "case_id", "repetition"} or (
+                not isinstance(row["candidate"], str) or not 1 <= len(row["candidate"]) <= 100 or
+                not isinstance(row["case_id"], str) or row["case_id"] not in known or type(row["repetition"]) is not int or
+                not 1 <= row["repetition"] <= 20
+            ):
+                raise ValueError("Invalid planned coding sample")
+            key = (row["candidate"], row["case_id"], row["repetition"])
+            if key in planned:
+                raise ValueError("Duplicate planned coding sample")
+            planned.add(key)
+        candidates = {candidate for candidate, _, _ in planned}
+        repetitions = {repetition for _, _, repetition in planned}
+        expected = {(candidate, case_id, repetition) for candidate in candidates
+                    for case_id in known for repetition in repetitions}
+        if planned != expected or repetitions != set(range(1, max(repetitions) + 1)):
+            raise ValueError("Planned candidates must cover every case and repetition equally")
+    elif recording.planned_samples is not None:
+        raise ValueError("Version 1 recordings cannot replace the installed schedule")
     seen, responses = set(), set()
     for sample in recording.samples:
         key = (sample.candidate, sample.case_id, sample.repetition)
         if key in seen or sample.case_id not in known:
             raise ValueError("Duplicate or unknown candidate/case/repetition")
+        if planned is not None and key not in planned:
+            raise ValueError("Recorded sample was not in the frozen schedule")
         seen.add(key)
         latencies = [c.latency_ms for a in sample.attempts for c in a.calls]
         if sample.observed_end_to_end_duration_ms is not None and all(t is not None for t in latencies):
@@ -248,7 +321,7 @@ def grades(run, tests):
 
 def evaluate(value, runner):
     recording = verify_recording(value)
-    cases = {case["id"]: case for case in dataset()["cases"]}
+    cases = {case["id"]: case for case in recording_dataset(recording)["cases"]}
     baselines, original_checks = {}, {}
     for identity, case in cases.items():
         tests = case["public_tests"] + case["acceptance_tests"]
@@ -315,9 +388,11 @@ def evaluate(value, runner):
                     "network": "none", "memory_mb": 128, "cpus": 1, "attempt_timeout_seconds": runner.timeout,
                     "verifier_api_calls": 0, "verifier_external_api_usd": "0"},
         "limitations": [
-            "Six authored Python functions are a demonstration, not a representative coding benchmark.",
-            "Acceptance tests are withheld from the prompt, but are public in this repository; this is not a secret held-out dataset.",
-            "Fixture patches, tokens, API estimates and model latency are authored; only container test duration/outcomes are measured.",
+            "Authored Python function repairs are a calibration workload, not evidence of representative repository-level coding performance.",
+            "Acceptance tests are withheld from model prompts. Public bundled cases are not a secret holdout; private datasets require independent review.",
+            ("Fixture patches, tokens, API estimates and model latency are authored; only container test duration/outcomes are measured."
+             if recording.mode == "fixture" else
+             "Model outputs, usage and latency are recorded by the collector; container test outcomes are measured independently during replay."),
             "Imported model recordings are operator-supplied, not independently authenticated.",
             "Cost per accepted patch includes every submitted attempt, including failed tasks. Missing costs remain unknown.",
             "Replay measures test execution, not end-to-end model/agent duration. Hardware, electricity and human review costs are unmeasured.",
@@ -331,8 +406,9 @@ def evaluate(value, runner):
 
 def summarize(report):
     summaries = []
-    candidates = sorted({task["candidate"] for task in report["tasks"]})
-    case_ids = {case["id"] for case in dataset()["cases"]}
+    candidates = sorted({task["candidate"] for task in report["tasks"]} |
+                        {row["candidate"] for row in report["recording"].get("planned_samples", [])})
+    case_ids = {case["id"] for case in recording_dataset(report["recording"])["cases"]}
     for candidate in candidates:
         rows = [task for task in report["tasks"] if task["candidate"] == candidate]
         accepted = sum(task["accepted"] for task in rows)
@@ -341,6 +417,10 @@ def summarize(report):
         amount = total(costs) if complete_cost else None
         repetitions = {row["repetition"] for row in rows}
         complete_cases = all({row["case_id"] for row in rows if row["repetition"] == repetition} == case_ids for repetition in repetitions)
+        planned = report["recording"].get("planned_samples")
+        if planned is not None:
+            expected = {(row["case_id"], row["repetition"]) for row in planned if row["candidate"] == candidate}
+            complete_cases = complete_cases and expected == {(row["case_id"], row["repetition"]) for row in rows}
         summaries.append({
             "candidate": candidate, "tasks": len(rows), "accepted": accepted,
             "failed": len(rows) - accepted, "attempts": sum(len(row["attempts"]) for row in rows),
@@ -372,7 +452,7 @@ def verify_result(value):
     tasks = value["tasks"]
     if len(tasks) != len(recording.samples):
         raise ValueError("Coding tasks differ from recorded samples")
-    cases = {case["id"]: case for case in dataset()["cases"]}
+    cases = {case["id"]: case for case in recording_dataset(recording)["cases"]}
     for sample, task in zip(recording.samples, tasks):
         if (task["candidate"], task["case_id"], task["repetition"]) != (
                 sample.candidate, sample.case_id, sample.repetition) or len(task["attempts"]) != len(sample.attempts):
