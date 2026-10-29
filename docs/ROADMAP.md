@@ -98,11 +98,11 @@ The existing seeded and clean AWS test workspaces have been
 [upgraded and verified on schema 4](VERIFICATION-HOSTED-BILLING.md), including
 fresh restore checks and the isolated fictional billing example.
 
-The source checkout adds [independent billing acceptance checks](BILLING-ACCEPTANCE.md),
+Version 0.6.0 adds [independent billing acceptance checks](BILLING-ACCEPTANCE.md),
 a [downloadable fictional sample](../data/billing-sample/README.md), and
 [scheduled collection](BILLING-COLLECTION.md) for versioned Legacy CUR CSV/gzip
 assemblies in S3. Collection status, failure preservation and alerts are included.
-These additions are not in the v0.5.0 archive.
+These additions, native Ledger aggregation and integrity checks are included in the v0.6.0 archive.
 
 Real customer export acceptance and a real scheduled S3 delivery remain pending:
 the configured account had no exports and the supplied sample is explicitly
@@ -128,3 +128,17 @@ should be compared with realized cost and quality after rollout.
 
 The product can grow around these components without turning AxonLLM or Ostiari
 into an unrelated company-wide dashboard.
+
+## v0.6.0 operational follow-through
+
+The [reference drill](REFERENCE-ACCEPTANCE.md) now checks concurrent HTTP/replay,
+paced reads, abandoned worker recovery and restoration into a separate PostgreSQL
+container with exact table hashes and billing comparisons. It runs on one Docker
+host; customer load objectives, fresh AWS host recovery and human alert delivery
+remain acceptance work.
+
+The [preparation tools](PREPARATION.md) create private billing input templates and
+an 18-task coding calibration packet with balanced repeated candidate scheduling.
+Real billing exports, scheduled S3 delivery, exact live models/budget, and a
+representative private coding holdout remain required. Preparation is not a
+customer acceptance pass or a model leaderboard.

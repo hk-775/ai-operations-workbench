@@ -1,6 +1,22 @@
 # Publication inventory
 
-## v0.5.0 destination and distribution
+## v0.6.0 destination and distribution
+
+- Public MIT-0 repository: `hk-775/ai-operations-workbench`.
+- Release `v0.6.0`: `ai-operations-workbench-0.6.0.tar.gz` and `SHA256SUMS`.
+- Includes native Ledger aggregation/integrity, scheduled versioned CUR collection,
+  coding evidence, private preparation tools and isolated reference acceptance.
+- Schema remains 4. No new hosted resources, deployment, credentials or private data.
+- Canonical public player and architecture retain existing media, colors and
+  animated circles; the player links to v0.6.0.
+- Existing editable draw.io and PNG AWS architecture still describes the optional
+  single-host test topology. Local reference testing adds no AWS topology.
+- Previous assets are retained; no package/container registry or publisher signature.
+
+See [release instructions](RELEASE-0.6.0.md), [verification](VERIFICATION-0.6.0.md),
+[preparation](PREPARATION.md) and [reference acceptance](REFERENCE-ACCEPTANCE.md).
+
+## Historical v0.5.0 destination and distribution
 
 - Repository: `hk-775/ai-operations-workbench`, public and MIT-0.
 - GitHub Release `v0.5.0`: `ai-operations-workbench-0.5.0.tar.gz` and `SHA256SUMS`.
