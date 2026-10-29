@@ -43,7 +43,7 @@ def test_paginated_totals_time_windows_and_call_pages(pilot):
     pilot.db.ingest(pilot.team, identity, [sample(event_id=f"long-{n}", task_id="long") for n in range(125)])
     task = pilot.client.get("/api/pilot/usage?task_id=long").json()["tasks"][0]
     assert len(task["calls"]) == 100 and task["call_count"] == 125 and task["calls_has_more"]
-    calls = pilot.client.get("/api/pilot/calls",params={"source_id":identity,"task_id":"long","offset":100}).json()
+    calls = pilot.client.get("/api/pilot/calls",params={"source_id":identity,"task_id":"long","cursor":task["calls_cursor"]}).json()
     assert len(calls["calls"]) == 25 and not calls["has_more"]
 
 

@@ -19,7 +19,7 @@ import sys
 
 import httpx
 
-from .connector import Outbox
+from .connector import DeliveryError, Outbox
 from .domain import digest, money
 from .pilot.events import CodingToolContext, CodingToolUsage, CodingToolUsageEvent, UsageEvent
 
@@ -106,6 +106,7 @@ class NativeOutbox:
                     raise NativeInputError("Use an empty outbox for a new native connector")
                 db.execute("INSERT INTO native_binding VALUES (1,?,?,?,?)",
                            (tool, project, evidence, secrets.token_hex(32)))
+            self.outbox._bind_kind(db, tool)
             self.key = db.execute("SELECT pseudonym_key FROM native_binding WHERE singleton=1").fetchone()[0]
 
     def opaque(self, *parts):
@@ -400,7 +401,7 @@ def main():
                                  window=(start, end))
         print(json.dumps({"tool": tool, **report, "pending": native.outbox.pending(),
                           "model_calls_made": 0}))
-    except (ValueError, KeyError, TypeError, AttributeError, OSError, InvalidOperation):
+    except (ValueError, KeyError, TypeError, AttributeError, OSError, InvalidOperation, DeliveryError):
         parser.exit(1, "Native collection stopped. Check format, bounds and private configuration. "
                     "Existing outbox evidence was preserved; completed streamed turns may already be queued.\n")
 

@@ -270,7 +270,7 @@ def test_wrong_tool_token_does_not_bind_or_strand_native_outbox(pilot, tmp_path)
             json={"name": tool, "kind": tool}).json()["id"]
         tokens[tool] = pilot.client.post(f"/api/pilot/sources/{source}/token", json={}).json()["token"]
     endpoint = pilot.settings.public_origin + "/api/pilot/ingest"
-    with pytest.raises(DeliveryError, match="native coding tool"):
+    with pytest.raises(DeliveryError, match="connector type"):
         Connector(endpoint, tokens["cursor"], native.outbox, client=pilot.client).flush()
     with native.outbox.connect() as db:
         assert db.execute("SELECT * FROM source_binding").fetchone() is None

@@ -112,6 +112,7 @@ def test_recording_rejects_price_and_request_tampering():
 
 def test_cheapest_failing_model_cannot_win_and_cost_includes_failures():
     doc = fixture_recording()
+    doc["mode"] = "live"  # Authored input exercises the recorded-mode eligibility policy only.
     bad = next(s for s in doc["samples"] if s["model"] == MODELS[2] and s["case_id"] == "S21")
     decision = json.loads(bad["stages"][1]["output"])
     decision.update(resolution="refund_eligible", refund_minor=19900)
@@ -132,6 +133,7 @@ def test_cheapest_failing_model_cannot_win_and_cost_includes_failures():
 
 def test_incomplete_or_failed_evidence_cannot_produce_recommendation():
     doc = fixture_recording()
+    doc["mode"] = "live"
     doc["samples"] = doc["samples"][:3]
     assert recommend(analyze(doc))["status"] == "no_eligible_model"
     doc = fixture_recording()

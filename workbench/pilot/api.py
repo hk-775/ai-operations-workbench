@@ -27,7 +27,7 @@ from .database import Conflict, Database, audits, recordings, users, events
 from .events import CollectorHealth, EventBatch, SOURCE_SCHEMAS
 from .identity import BINDING_COOKIE, CALLBACK, CompanyIdentity, provision
 from .operations import Instrumentation, Metrics, snapshot
-from .queries import call_rows, conditions
+from .queries import call_page
 
 
 class Boundary:
@@ -335,10 +335,11 @@ def create_pilot_app(settings: Settings | None = None) -> FastAPI:
               task_id: str | None = None, include_fixtures: bool = False,
               start: str | None = Query(None, max_length=50), end: str | None = Query(None, max_length=50),
               page: int = Query(0, ge=0, le=100_000), page_size: int = Query(50, ge=1, le=100),
+              cost_basis: Literal["api_estimate_usd", "reported_model_estimate_usd", "reported_charge_usd"] = "api_estimate_usd",
               actor=Depends(member)):
         try:
             return database.usage(actor["team_id"], project, source_id, include_fixtures, task_id,
-                                  start=start, end=end, page=page, page_size=page_size)
+                                  start=start, end=end, page=page, page_size=page_size, cost_basis=cost_basis)
         except ValueError:
             raise HTTPException(422, "Invalid usage filters") from None
 
@@ -346,15 +347,15 @@ def create_pilot_app(settings: Settings | None = None) -> FastAPI:
     def calls(source_id: str, task_id: str, project: str | None = None,
               start: str | None = None, end: str | None = None,
               include_fixtures: bool = False, offset: int = Query(0, ge=0, le=1_000_000),
+              cursor: str | None = Query(None, max_length=2048),
               actor=Depends(member)):
         try:
-            where = conditions(actor["team_id"], project=project, source_id=source_id, task_id=task_id,
-                               include_fixtures=include_fixtures, start=start, end=end)
+            if offset:
+                raise ValueError("Offset pagination was replaced by snapshot cursors")
+            return call_page(database, actor["team_id"], source_id, task_id, project=project,
+                             include_fixtures=include_fixtures, start=start, end=end, cursor=cursor)
         except ValueError:
-            raise HTTPException(422, "Invalid time window") from None
-        with database.engine.connect() as db:
-            rows = call_rows(db, where, limit=101, offset=offset)
-        return {"calls": rows[:100], "has_more": len(rows) > 100, "offset": offset}
+            raise HTTPException(422, "Invalid call cursor or filters; refresh the task and use its next cursor") from None
 
     @app.get("/api/pilot/sources")
     def sources(actor=Depends(member)):
@@ -442,12 +443,6 @@ def create_pilot_app(settings: Settings | None = None) -> FastAPI:
             raise HTTPException(409, "Evaluator changed; queue a new replay before making a proposal")
         analysis = job["analysis"]
         result = recommend(analysis, **payload.model_dump())
-        if analysis["mode"] != "live":
-            result.update(status="fixture_only", recommended_model=None,
-                          projected_monthly_api_savings_usd=None)
-            for candidate in result["candidates"]:
-                candidate["eligible"] = False
-                candidate["exclusions"].insert(0, "Fixture evidence cannot justify a measured recommendation")
         result.update(recording_id=job["recording_id"], evaluation_revision=job["revision"],
                       scope="Support-v1 saved comparison only; not a recommendation for other captured tasks")
         return database.save_proposal(actor["team_id"], identity, result, actor["username"])
@@ -455,6 +450,11 @@ def create_pilot_app(settings: Settings | None = None) -> FastAPI:
     @app.get("/api/pilot/proposals")
     def proposals(actor=Depends(member)):
         return {"proposals": database.list_proposals(actor["team_id"])}
+
+    @app.get("/api/pilot/proposals/{identity}/export")
+    def export_proposal(identity: str, actor=Depends(member)):
+        return JSONResponse(database.export_proposal(actor["team_id"], identity), headers={
+            "Content-Disposition": 'attachment; filename="routing-evidence.json"'})
 
     @app.get("/api/pilot/users")
     def team_users(actor=Depends(admin)):

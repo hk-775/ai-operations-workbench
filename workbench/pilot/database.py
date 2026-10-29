@@ -11,7 +11,7 @@ from decimal import Decimal
 
 from sqlalchemy import (BigInteger, Boolean, Column, ForeignKey, ForeignKeyConstraint, Index, Integer, event,
                         MetaData, String, Table, Text, UniqueConstraint, and_,
-                        create_engine, delete, func, insert, or_, select, update)
+                        create_engine, delete, func, insert, inspect, or_, select, text, update)
 from sqlalchemy.exc import IntegrityError
 
 from workbench.domain import digest, evaluation_revision, money
@@ -20,6 +20,7 @@ from .events import (CollectorHealth, CodingToolUsageEvent, SOURCE_SCHEMAS, Usag
                      account, pricebook, recording_events)
 
 metadata = MetaData()
+SCHEMA_VERSION = 5
 schema = Table("wb_schema", metadata, Column("version", Integer, primary_key=True))
 teams = Table("wb_teams", metadata, Column("id", String(36), primary_key=True),
               Column("name", String(100), nullable=False))
@@ -46,6 +47,7 @@ sources = Table("wb_sources", metadata, Column("id", String(36), primary_key=Tru
                 Column("team_id", ForeignKey("wb_teams.id"), nullable=False),
                 Column("name", String(100), nullable=False),
                 Column("kind", String(30), nullable=False),
+                Column("ingest_sequence", BigInteger, nullable=False, default=0, server_default=text("0")),
                 Column("created_at", BigInteger, nullable=False),
                 UniqueConstraint("team_id", "name"))
 tokens = Table("wb_source_tokens", metadata, Column("id", String(64), primary_key=True),
@@ -73,7 +75,8 @@ events = Table("wb_events", metadata,
                Column("fingerprint", String(64), nullable=False),
                Column("payload", Text, nullable=False),
                Column("accounting", Text, nullable=False),
-               Column("received_at", BigInteger, nullable=False))
+               Column("received_at", BigInteger, nullable=False),
+               Column("ingest_sequence", BigInteger, nullable=False, default=0, server_default=text("0")))
 Index("wb_events_team_task", events.c.team_id, events.c.source_id, events.c.task_id)
 Index("wb_events_team_time", events.c.team_id, events.c.occurred_at)
 facts = Table("wb_event_facts", metadata,
@@ -191,10 +194,18 @@ class Database:
                 db.exec_driver_sql("SELECT pg_advisory_xact_lock(2026102301)")
             schema.create(db, checkfirst=True)
             versions = db.execute(select(schema.c.version)).scalars().all()
-            if versions and versions not in ([1], [2], [3], [4]):
+            if versions and versions not in ([1], [2], [3], [4], [SCHEMA_VERSION]):
                 raise RuntimeError("Unsupported pilot database schema")
             metadata.create_all(db)
-            if versions not in ([2], [3], [4]):
+            if versions != [SCHEMA_VERSION]:
+                # v5 fences call pagination by a transactionally assigned
+                # per-source sequence. Legacy evidence is sequence zero;
+                # payloads, fingerprints and financial accounting stay intact.
+                for table in (sources, events):
+                    if "ingest_sequence" not in {c["name"] for c in inspect(db).get_columns(table.name)}:
+                        db.exec_driver_sql(
+                            f"ALTER TABLE {table.name} ADD COLUMN ingest_sequence BIGINT NOT NULL DEFAULT 0")
+            if versions not in ([2], [3], [4], [SCHEMA_VERSION]):
                 # Only copy persisted accounting: repricing would rewrite historical evidence.
                 while True:
                     batch = db.execute(select(events.c.source_id, events.c.event_id, events.c.accounting)
@@ -205,18 +216,16 @@ class Database:
                         break
                     db.execute(insert(facts), [self.fact(row["source_id"], row["event_id"],
                                                         json.loads(row["accounting"])) for row in batch])
-            if versions != [4]:
-                # v4 adds billing snapshots/bindings; historical event accounting
-                # and the v3 collector records remain byte-for-byte intact.
+            if versions != [SCHEMA_VERSION]:
                 db.execute(delete(schema))
-                db.execute(insert(schema).values(version=4))
+                db.execute(insert(schema).values(version=SCHEMA_VERSION))
             book = pricebook()
             if not db.execute(select(books.c.id).where(books.c.id == book["id"])).first():
                 db.execute(insert(books).values(id=book["id"], payload=json.dumps(book["snapshot"])))
 
     def check_schema(self):
         with self.engine.connect() as db:
-            if db.execute(select(schema.c.version)).scalars().all() != [4]:
+            if db.execute(select(schema.c.version)).scalars().all() != [SCHEMA_VERSION]:
                 raise RuntimeError("Run the explicit database migration before starting this release")
 
     @staticmethod
@@ -308,6 +317,7 @@ class Database:
             events.c.source_id == source_id,
             events.c.event_id.in_({event.event_id for event in batch}))).all())
         new_events, new_facts = [], []
+        sequence = source["ingest_sequence"] + 1
         for event in batch:
             payload = event.model_dump()
             fingerprint = digest(payload)
@@ -323,11 +333,12 @@ class Database:
                 occurred_at=event.occurred_at, evidence=event.evidence,
                 recording_id=event.recording_id, fingerprint=fingerprint,
                 payload=json.dumps(payload), accounting=json.dumps(charge),
-                received_at=int(time.time())))
+                received_at=int(time.time()), ingest_sequence=sequence))
             new_facts.append(self.fact(source_id, event.event_id, charge))
             existing_ids[event.event_id] = fingerprint
             added += 1
         if new_events:
+            db.execute(update(sources).where(sources.c.id == source_id).values(ingest_sequence=sequence))
             db.execute(insert(events), new_events)
             db.execute(insert(facts), new_facts)
         return {"added_events": added, "duplicate_events": duplicated}
@@ -508,6 +519,33 @@ class Database:
             return [{"id": r["id"], "job_id": r["job_id"], "created_at": r["created_at"],
                      **json.loads(r["payload"])} for r in db.execute(select(proposals).where(
                 proposals.c.team_id == team_id).order_by(proposals.c.created_at.desc()).limit(100)).mappings()]
+
+    def export_proposal(self, team_id, identity):
+        from workbench.proposals import evidence_bundle
+
+        with self.engine.connect() as db:
+            if db.dialect.name == "postgresql":
+                db = db.execution_options(isolation_level="REPEATABLE READ")
+            with db.begin():
+                saved = db.execute(select(proposals).where(
+                    proposals.c.team_id == team_id, proposals.c.id == identity)).mappings().first()
+                if saved is None:
+                    raise KeyError("Routing review not found")
+                job = db.execute(select(jobs).where(
+                    jobs.c.team_id == team_id, jobs.c.id == saved["job_id"])).mappings().first()
+                if job is None or not job["result"]:
+                    raise Conflict("Saved evaluation evidence is unavailable")
+                recording = db.execute(select(recordings.c.payload).where(
+                    recordings.c.team_id == team_id,
+                    recordings.c.id == job["recording_id"])).scalar_one_or_none()
+                if recording is None:
+                    raise Conflict("Original recording is unavailable")
+                try:
+                    proposal = {"id": saved["id"], "job_id": saved["job_id"],
+                                "created_at": saved["created_at"], **json.loads(saved["payload"])}
+                    return evidence_bundle(proposal, json.loads(job["result"]), json.loads(recording))
+                except (ValueError, TypeError, KeyError, RecursionError):
+                    raise Conflict("Saved review evidence failed integrity checks; preserve it for operator review") from None
 
     @staticmethod
     def public_job(row):

@@ -12,7 +12,7 @@ from fastapi.testclient import TestClient
 
 from test_pilot import pilot, settings
 from workbench.coding import (DATA, DockerRunner, dataset, evaluate, fingerprint, grades, prompt,
-                              summarize, verify_recording, verify_result)
+                              summarize, verify_recording, verify_result, candidate_values)
 from workbench.coding_collect import collect, planned_envelope
 from workbench.domain import MODELS, prices
 
@@ -53,6 +53,30 @@ def test_json_number_spelling_round_trips_without_weakening_type_or_cost_identit
     assert fingerprint({"cost": "0.002"}) != fingerprint({"cost": "0.02"})
     with pytest.raises(ValueError, match="non-finite"):
         fingerprint(float("nan"))
+
+@pytest.mark.parametrize("output", ['[{"value":NaN}]', '[{"value":Infinity}]',
+    '[{"value":-Infinity}]', '[{"value":1e309}]', '[{"value":1,"value":2}]',
+    '[' * 100 + '0' + ']' * 100, '[{"value":1}, {"value":2}]'])
+def test_invalid_candidate_json_is_rejected(output):
+    with pytest.raises((ValueError, RecursionError)):
+        candidate_values(output.encode(), 1)
+
+
+def test_malformed_candidate_does_not_abort_remaining_evaluation_or_hide_its_cost():
+    class MalformedRunner(ContractRunner):
+        def run(self, source, inputs):
+            if source == "malformed candidate":
+                return {"status": "completed", "values": [{"value": float("nan")} for _ in inputs],
+                        "duration_ms": 1}
+            return super().run(source, inputs)
+    recording = example()
+    recording["samples"][0]["attempts"][0]["replacement"] = "malformed candidate"
+    result = evaluate(recording, MalformedRunner())
+    assert not result["tasks"][0]["accepted"]
+    assert result["tasks"][0]["api_estimate_usd"] != "0"
+    assert len(result["tasks"]) == len(recording["samples"])
+    assert any(task["accepted"] for task in result["tasks"][1:])
+    verify_result(result)
 
 
 def test_all_attempts_and_failed_tasks_count_and_final_patch_controls_acceptance():
@@ -181,3 +205,24 @@ def test_real_container_contract_and_execution_limits(tmp_path):
     isolation = "import os,socket\n\ndef solve(x):\n    blocked=False\n    try:\n        open('/task/tampered','w')\n    except OSError:\n        blocked=True\n    return {'uid':os.getuid(),'read_only':blocked,'key_present':'OPENAI_API_KEY' in os.environ}\n"
     result = runner.run(isolation, [{}])
     assert result["values"] == [{"value": {"uid": 65534, "read_only": True, "key_present": False}}]
+    for output in ('[{"value": NaN}]', '[{"value":Infinity}]', '[{"value":-Infinity}]',
+                   '[{"value":1e309}]', '['*100+'0'+']'*100, '['*2000+'0'+']'*2000):
+        source = f"import os\nos.write(1,{output.encode()!r})\nos._exit(0)\n"
+        malformed = runner.run(source, [{}])
+        assert malformed["status"] == "invalid_output"
+        assert grades(malformed, [{"expected": 0}]) == [False]
+    assert runner.run("def solve(x): return 42", [{}])["values"] == [{"value": 42}]
+    recording = example()
+    recording["samples"] = recording["samples"][:2]
+    recording["samples"][0]["attempts"][0]["replacement"] = (
+        "import json,sys,os\ninputs=json.load(sys.stdin)\n"
+        "os.write(1,json.dumps([{'value':float('nan')} for _ in inputs]).encode())\nos._exit(0)\n")
+    next_case = next(c for c in dataset()["cases"] if c["id"] == recording["samples"][1]["case_id"])
+    recording["samples"][1]["attempts"][0]["replacement"] = next_case["reference"]
+    report = evaluate(recording, runner)
+    assert report["tasks"][0]["attempts"][0]["execution_status"] == "invalid_output"
+    assert not report["tasks"][0]["accepted"] and report["tasks"][1]["accepted"]
+    assert Decimal(report["tasks"][0]["api_estimate_usd"]) > 0
+    exported = tmp_path / "invalid-candidate-result.json"
+    exported.write_text(json.dumps(report))
+    verify_result(json.loads(exported.read_text()))

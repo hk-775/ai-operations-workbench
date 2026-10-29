@@ -338,7 +338,7 @@ def test_v2_migration_preserves_payload_facts_pricebooks_and_requires_explicit_u
     pilot.db.migrate()
     pilot.db.check_schema()
     with pilot.db.engine.connect() as db:
-        assert db.execute(select(schema.c.version)).scalars().all() == [4]
+        assert db.execute(select(schema.c.version)).scalars().all() == [5]
         assert db.execute(select(events)).mappings().all() == before
         assert db.execute(select(facts)).mappings().all() == before_facts
     assert pilot.db.ingest(pilot.team, identity, [sample()])["duplicate_events"] == 1

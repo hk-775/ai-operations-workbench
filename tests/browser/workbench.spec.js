@@ -148,4 +148,8 @@ test('fixture and incomplete evidence remain explicitly labeled',async({page})=>
   await expect(page.getByRole('heading',{name:'Same workload. Visible tradeoffs.'})).toBeVisible();
   const row=page.getByRole('row').filter({hasText:'Current baseline'});
   await expect(row.getByText('Unmeasured',{exact:true})).toHaveCount(2);
+  await page.getByRole('button',{name:'Review routing proposal',exact:false}).click();
+  await expect(page.getByText('FIXTURE EVIDENCE ONLY',{exact:true})).toBeVisible();
+  await expect(page.getByText('Collect recorded model evidence.',{exact:true})).toBeVisible();
+  await expect(page.locator('.recommendation .amount')).toHaveCount(0);
 });

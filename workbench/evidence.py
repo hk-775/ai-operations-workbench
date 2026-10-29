@@ -161,6 +161,8 @@ def recommend(analysis: dict, min_pass_rate: float = .95, max_p95_ms: float = 20
     candidates = []
     for summary in analysis["models"]:
         reasons = []
+        if analysis["mode"] != "live":
+            reasons.append("Fixture evidence cannot justify a measured recommendation")
         if not summary["complete"]:
             reasons.append("Incomplete dataset or unknown request costs")
         if summary["pass_rate"] < min_pass_rate:
@@ -179,7 +181,8 @@ def recommend(analysis: dict, min_pass_rate: float = .95, max_p95_ms: float = 20
         savings = money((Decimal(baseline["mean_cost_usd"]) - Decimal(winner["mean_cost_usd"])) *
                         monthly_tasks)
     return {
-        "status": "proposal" if winner else "no_eligible_model",
+        "status": "fixture_only" if analysis["mode"] != "live" else
+                  "proposal" if winner else "no_eligible_model",
         "evidence_mode": analysis["mode"],
         "recommended_model": winner["model"] if winner else None,
         "baseline": BASELINE, "candidates": candidates,
@@ -190,7 +193,9 @@ def recommend(analysis: dict, min_pass_rate: float = .95, max_p95_ms: float = 20
         "limitations": [
             *([] if analysis["mode"] == "live" else
               ["Fixture evidence: outputs, usage, and latency are invented test data; no measured recommendation or savings."]),
-            "24 authored synthetic cases, one measured run per model; not a production-quality guarantee.",
+            ("24 authored synthetic cases, one recorded run per model; not a production-quality guarantee."
+             if analysis["mode"] == "live" else
+             "24 authored synthetic cases with invented model answers; not measured model performance."),
             "Checks cover structured decisions, citations, and selected false-execution phrases; prose quality is not fully graded.",
             "Projection uses the same task mix and published API rates; hardware, electricity, subscriptions, and human review are excluded.",
             "Recorded runs are observations; a replay does not invoke or remeasure a model.",

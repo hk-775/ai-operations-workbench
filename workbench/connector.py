@@ -22,7 +22,7 @@ import httpx
 
 from .domain import digest, strict_json
 from .evidence import verify_recording
-from .pilot.events import CollectorHealth, Usage, UsageEvent, event_adapter, recording_events
+from .pilot.events import CollectorHealth, SOURCE_SCHEMAS, Usage, UsageEvent, event_adapter, recording_events
 
 
 class DeliveryError(RuntimeError):
@@ -50,6 +50,7 @@ class Outbox:
                 retry_after REAL NOT NULL DEFAULT 0)""")
             db.execute("CREATE TABLE IF NOT EXISTS destination (singleton INTEGER PRIMARY KEY, url TEXT NOT NULL)")
             db.execute("CREATE TABLE IF NOT EXISTS source_binding (singleton INTEGER PRIMARY KEY, source_id TEXT NOT NULL)")
+            db.execute("CREATE TABLE IF NOT EXISTS connector_binding (singleton INTEGER PRIMARY KEY, kind TEXT NOT NULL)")
             db.execute("CREATE TABLE IF NOT EXISTS collector_identity (singleton INTEGER PRIMARY KEY, id TEXT NOT NULL)")
             db.execute("INSERT OR IGNORE INTO collector_identity VALUES (1, ?)", (uuid.uuid4().hex,))
 
@@ -78,6 +79,7 @@ class Outbox:
         fingerprint = digest(document)
         with self.connect() as db:
             db.execute("BEGIN IMMEDIATE")
+            self._bind_kind(db, self.event_kind(event))
             row = db.execute("SELECT fingerprint FROM outbox WHERE id=?", (event.event_id,)).fetchone()
             if row and row["fingerprint"] != fingerprint:
                 raise ValueError("An application event ID was reused with different data")
@@ -97,6 +99,66 @@ class Outbox:
                 raise DeliveryError("Token belongs to a different source; use that source's own outbox")
             if not existing:
                 db.execute("INSERT INTO source_binding VALUES (1, ?)", (source_id,))
+
+    @staticmethod
+    def event_kind(event):
+        if event.schema_version == "coding-tool.usage.v1":
+            return event.coding_tool.tool
+        return {"axon.usage.v1": "axonllm", "bedrock.usage.v1": "bedrock"}[event.schema_version]
+
+    @staticmethod
+    def _kind(db):
+        row = db.execute("SELECT kind FROM connector_binding WHERE singleton=1").fetchone()
+        if row:
+            return row["kind"]
+        kinds = {row[0] for row in db.execute("""SELECT DISTINCT CASE
+            json_extract(payload,'$.schema_version')
+            WHEN 'axon.usage.v1' THEN 'axonllm'
+            WHEN 'bedrock.usage.v1' THEN 'bedrock'
+            WHEN 'coding-tool.usage.v1' THEN json_extract(payload,'$.coding_tool.tool')
+            ELSE 'unsupported' END FROM outbox LIMIT 2""")}
+        if db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='native_binding'").fetchone():
+            native = db.execute("SELECT tool FROM native_binding WHERE singleton=1").fetchone()
+            if native:
+                kinds.add(native["tool"])
+        if len(kinds) > 1 or any(kind not in SOURCE_SCHEMAS for kind in kinds):
+            raise DeliveryError("Outbox contains incompatible connector types; preserve it for operator review")
+        if kinds:
+            kind = next(iter(kinds))
+            db.execute("INSERT INTO connector_binding VALUES (1, ?)", (kind,))
+            return kind
+        return None
+
+    @classmethod
+    def _bind_kind(cls, db, kind):
+        previous = cls._kind(db)
+        if previous and previous != kind:
+            raise DeliveryError("Use a separate outbox for another connector type")
+        if not previous:
+            db.execute("INSERT INTO connector_binding VALUES (1, ?)", (kind,))
+
+    def connector_kind(self):
+        with self.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            return self._kind(db)
+
+    def reserve_kind(self, event):
+        with self.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            self._bind_kind(db, self.event_kind(event))
+
+    def release_wrong_kind_binding(self, source_id, kind):
+        """Only detach a source that could not have accepted this event schema."""
+        with self.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            expected = self._kind(db)
+            bound = db.execute("SELECT source_id FROM source_binding WHERE singleton=1").fetchone()
+            if (not expected or kind not in SOURCE_SCHEMAS or expected == kind or not bound
+                    or bound["source_id"] != source_id
+                    or db.execute("SELECT 1 FROM outbox WHERE delivered=1 LIMIT 1").fetchone()):
+                raise DeliveryError("Binding cannot be repaired safely; preserve this outbox for operator review")
+            db.execute("DELETE FROM source_binding")
+            db.execute("UPDATE outbox SET retry_after=0 WHERE delivered=0")
 
     def native_tool(self):
         with self.connect() as db:
@@ -176,10 +238,16 @@ class Connector:
                 source_id = identity.json()["source_id"]
                 if not isinstance(source_id, str) or len(source_id) != 36:
                     raise ValueError("Invalid source identity")
-                tool = self.outbox.native_tool()
-                if tool and identity.json().get("kind") != tool:
-                    raise DeliveryError("Choose a source token for this native coding tool")
-                self.outbox.bind_source(source_id)
+                kind = self.outbox.connector_kind()
+                received_kind = identity.json().get("kind")
+                # Older Axon/Bedrock servers may expose the schema without kind.
+                if received_kind is None:
+                    received_kind = {"axon.usage.v1": "axonllm", "bedrock.usage.v1": "bedrock"}.get(
+                        identity.json().get("schema_version"))
+                if kind and received_kind != kind:
+                    raise DeliveryError("Choose a source token matching this outbox's connector type")
+                if kind:
+                    self.outbox.bind_source(source_id)
             except (httpx.HTTPError, ValueError, KeyError, TypeError):
                 raise DeliveryError("Cannot verify ingestion source; events remain in the outbox") from None
             if self.report_health:
@@ -211,6 +279,22 @@ class Connector:
             if self.report_health:
                 self.heartbeat(client)
         return {"acknowledged": sent, "pending": self.outbox.pending()}
+
+    def repair_source_binding(self):
+        """Authenticate the original wrong-kind source before releasing its fence."""
+        with httpx.Client(timeout=15, follow_redirects=False, trust_env=False) if self.client is None else _borrow(self.client) as client:
+            try:
+                response = client.get(self.endpoint, headers={"Authorization": f"Bearer {self.token}"},
+                                      follow_redirects=False)
+                response.raise_for_status()
+                identity = response.json()
+                kind = identity.get("kind") or {
+                    "axon.usage.v1": "axonllm", "bedrock.usage.v1": "bedrock"
+                }.get(identity.get("schema_version"))
+                self.outbox.release_wrong_kind_binding(identity["source_id"], kind)
+            except (httpx.HTTPError, ValueError, KeyError, TypeError):
+                raise DeliveryError("Cannot verify the original wrong source; binding was preserved") from None
+        return {"repaired": True, "pending": self.outbox.pending()}
 
 
 class _borrow:
@@ -275,6 +359,7 @@ async def capture_completion(router, outbox: Outbox, *, task_id: str, project: s
 
 def reserve_call(outbox, pending):
     """Persist metadata before the billable operation; sync directory entries too."""
+    outbox.reserve_kind(pending)
     reservation = Path(str(outbox.path) + ".inflight")
     reservation.mkdir(mode=0o700, exist_ok=True)
     call_file = reservation / (pending.event_id + ".json")
@@ -317,6 +402,8 @@ def main():
     backfill.add_argument("recording", type=Path)
     command.add_parser("recover-inflight")
     command.add_parser("status")
+    command.add_parser("repair-source-binding",
+        help="Use the ORIGINAL wrong-kind source token to repair an unacknowledged outbox")
     delivery = command.add_parser("deliver")
     delivery.add_argument("--watch", action="store_true")
     delivery.add_argument("--no-health", action="store_true", help="Compatibility with pre-connector-health servers")
@@ -336,7 +423,13 @@ def main():
         token_file = os.environ.get("WORKBENCH_INGEST_TOKEN_FILE")
         token = Path(token_file).read_text().strip() if token_file else os.environ.get("WORKBENCH_INGEST_TOKEN", "")
         connector = Connector(os.environ.get("WORKBENCH_INGEST_URL", ""), token, outbox,
-                              report_health=not args.no_health)
+                              report_health=not getattr(args, "no_health", False))
+        if args.command == "repair-source-binding":
+            try:
+                print(json.dumps(connector.repair_source_binding()))
+            except DeliveryError as exc:
+                parser.exit(1, f"{exc}\n")
+            return
         while True:
             try:
                 result = connector.flush()
